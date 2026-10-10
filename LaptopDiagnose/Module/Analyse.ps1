@@ -125,6 +125,64 @@ function Add-MemoryTestFinding {
 
 #endregion
 
+#region ---------- Programm-Hänger ----------
+
+function Get-ToolSessions {
+    <# Zeiträume, in denen LaptopDiagnose lief (aus den Sitzungsprotokollen im Berichtsordner). #>
+    $sessions = foreach ($f in Get-ChildItem -LiteralPath $BerichtOrdner -Filter 'Protokoll_*.txt' -File -ErrorAction SilentlyContinue) {
+        if ($f.BaseName -match '(\d{8}_\d{6})$') {
+            $start = [datetime]::ParseExact($Matches[1], 'yyyyMMdd_HHmmss', $null)
+            [pscustomobject]@{ Start = $start; Ende = $f.LastWriteTime }
+        }
+    }
+    return @($sessions)
+}
+
+function Add-HangFindings {
+    param([string]$Category, [int]$Days = 7)
+    $since = (Get-Date).AddDays(-$Days)
+    $hangs = @(Get-WinEvent -FilterHashtable @{ LogName = 'Application'; ProviderName = 'Application Hang'; Id = 1002; StartTime = $since } -ErrorAction SilentlyContinue)
+    Set-Metric 'ProgrammHaenger' $hangs.Count
+    if ($hangs) {
+        $byApp = $hangs | Group-Object { "$($_.Properties[0].Value)" } | Sort-Object Count -Descending
+        $sessions = @(Get-ToolSessions | Where-Object { $_.Ende -gt $since })
+        $near = @($hangs | Where-Object { $t = $_.TimeCreated; $sessions | Where-Object { $t -ge $_.Start -and $t -le $_.Ende.AddMinutes(30) } })
+        $detail = if (-not $sessions) {
+            'Diese Programme reagierten zeitweise nicht mehr. Betroffene Programme aktualisieren; bei Explorer-Hängern Autostarts und Kontextmenü-Erweiterungen prüfen.'
+        } elseif ($near) {
+            "$($near.Count) von $($hangs.Count) Hängern traten während oder bis 30 Minuten nach einer Nutzung der Laptop-Diagnose auf ($($sessions.Count) Sitzungen). Bitte die Zeitpunkte unter »Details« prüfen."
+        } else {
+            "Keiner der Hänger trat während oder bis 30 Minuten nach einer Nutzung der Laptop-Diagnose auf ($($sessions.Count) Sitzungen)."
+        }
+        $items = @($byApp | Select-Object -First 8 | ForEach-Object { '{0} – {1}×' -f $_.Name, $_.Count })
+        $items += @($hangs | Sort-Object TimeCreated -Descending | Select-Object -First 10 | ForEach-Object {
+                $t = $_.TimeCreated
+                $mark = if ($sessions | Where-Object { $t -ge $_.Start -and $t -le $_.Ende.AddMinutes(30) }) { '  ← nach Laptop-Diagnose' } else { '' }
+                '{0:dd.MM. HH:mm}  {1}{2}' -f $t, $_.Properties[0].Value, $mark
+            })
+        $sev = if ($hangs.Count -ge 3) { 'Warnung' } else { 'Info' }
+        Add-Finding $Category $sev "$($hangs.Count) Programm-Hänger in den letzten $Days Tagen" -Detail $detail -Items $items
+    } else {
+        Add-Finding $Category OK "Keine Programm-Hänger in den letzten $Days Tagen protokolliert"
+    }
+
+    $low = @(Get-WinEvent -FilterHashtable @{ LogName = 'System'; ProviderName = 'Microsoft-Windows-Resource-Exhaustion-Detector'; Id = 2004; StartTime = $since } -ErrorAction SilentlyContinue)
+    if ($low) {
+        $users = @{}
+        foreach ($e in $low) {
+            foreach ($m in [regex]::Matches("$($e.Message)", '([^\s,:]+\.exe)\s*\(\d+\)[^\d]*(\d{6,})')) {
+                $n = $m.Groups[1].Value; $b = [double]$m.Groups[2].Value
+                if (-not $users.ContainsKey($n) -or $users[$n] -lt $b) { $users[$n] = $b }
+            }
+        }
+        $top = @($users.GetEnumerator() | Sort-Object Value -Descending | Select-Object -First 6 | ForEach-Object { '{0} – bis {1}' -f $_.Key, (Format-Bytes $_.Value) })
+        Add-Finding $Category Warnung "Windows hatte $($low.Count)× zu wenig Arbeitsspeicher" `
+            -Detail 'Speicherengpässe führen zu Hängern und Abstürzen. Die größten Verbraucher schließen oder aktualisieren; bei wenig RAM ggf. aufrüsten.' -Items $top
+    }
+}
+
+#endregion
+
 #region ---------- Speicherplatzbelegung ----------
 
 function Get-DirectorySizeFast {

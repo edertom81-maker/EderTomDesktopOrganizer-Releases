@@ -49,7 +49,7 @@ param(
 
 if ($Unbeaufsichtigt) { $NurPruefen = $true }
 
-$Script:ToolVersion = '2.2.0'
+$Script:ToolVersion = '2.2.1'
 $Script:InstallDir = $PSScriptRoot
 $Script:ChangeCounter = 0
 $Script:SoftwareUpdateCache = $null
@@ -419,6 +419,8 @@ function Invoke-ErrorScan {
     Invoke-Check $cat 'Bluescreens und Absturzursachen (30 Tage)' { Add-BugcheckFindings -Category $cat }
     Invoke-Check $cat 'Ergebnis des letzten Arbeitsspeicher-Tests' { Add-MemoryTestFinding -Category $cat }
 
+    Invoke-Check $cat 'Programm-Hänger und Speicherengpässe (7 Tage)' { Add-HangFindings -Category $cat }
+
     Invoke-Check $cat 'Geräte-Manager auf Problemgeräte' {
         $bad = @(Get-CimInstance Win32_PnPEntity | Where-Object { $_.ConfigManagerErrorCode -and $_.ConfigManagerErrorCode -ne 0 -and $_.ConfigManagerErrorCode -ne 22 })
         if ($bad) {
@@ -553,7 +555,6 @@ function Get-JunkLocations {
         @{ Name = 'Absturzabbilder (Programme)'; Path = (Join-Path $env:LOCALAPPDATA 'CrashDumps'); Hours = 0 }
         @{ Name = 'Windows-Fehlerberichte'; Path = (Join-Path $env:ProgramData 'Microsoft\Windows\WER\ReportArchive'); Hours = 0 }
         @{ Name = 'Windows-Fehlerberichte (Warteschlange)'; Path = (Join-Path $env:ProgramData 'Microsoft\Windows\WER\ReportQueue'); Hours = 0 }
-        @{ Name = 'Miniaturansicht-Cache'; Path = (Join-Path $env:LOCALAPPDATA 'Microsoft\Windows\Explorer'); Hours = 0; Filter = 'thumbcache_*.db' }
     )
     $memDump = Join-Path $env:windir 'MEMORY.DMP'
     if (Test-Path -LiteralPath $memDump) { $list += @{ Name = 'Großes Speicherabbild (MEMORY.DMP)'; File = $memDump } }
@@ -608,7 +609,11 @@ function Clear-Junk {
     return "$(Format-Bytes $freed) freigegeben."
 }
 
+function Invoke-MemoryScanDetailed { Invoke-MemoryScan -Tiefenanalyse }
+
 function Invoke-MemoryScan {
+    <# -Tiefenanalyse: zusätzlich die Speicherbelegung aller Ordner messen (viele Laufwerkszugriffe, daher nicht in der Komplett-Diagnose). #>
+    param([switch]$Tiefenanalyse)
     $cat = 'Speicher'
     Clear-CategoryFindings $cat
     Write-Title 'Speicherfresser'
@@ -701,7 +706,12 @@ function Invoke-MemoryScan {
         }
     }
 
-    Invoke-Check $cat 'Speicherbelegung analysieren (kann 1–2 Minuten dauern)' { Add-StorageBreakdownFindings -Category $cat }
+    if ($Tiefenanalyse) {
+        Invoke-Check $cat 'Speicherbelegung analysieren (kann 1–2 Minuten dauern)' { Add-StorageBreakdownFindings -Category $cat }
+    } else {
+        Add-Finding $cat Info 'Speicherbelegung als Grafik: im Bereich »Speicherfresser« einzeln prüfen' -Silent `
+            -Detail 'Die Ordner-Analyse liest alle Dateien des Laufwerks und läuft deshalb nicht in der Komplett-Diagnose mit.'
+    }
 
     Invoke-Check $cat 'Große Dateien in den Benutzerordnern' {
         $folders = 'Downloads', 'Desktop', 'Documents', 'Videos', 'Pictures' | ForEach-Object { Join-Path $env:USERPROFILE $_ }
@@ -816,23 +826,36 @@ function Invoke-PerformanceScan {
     Clear-CategoryFindings $cat
     Write-Title 'Leistungsbremsen'
 
-    Invoke-Check $cat 'Prozessorauslastung (5 Sekunden Messung)' {
-        $samples = @()
-        $procSamples = @{}
-        for ($i = 0; $i -lt 5; $i++) {
-            $samples += [double](Get-CimInstance Win32_PerfFormattedData_PerfOS_Processor -Filter "Name='_Total'").PercentProcessorTime
-            Get-CimInstance Win32_PerfFormattedData_PerfProc_Process | Where-Object { $_.Name -notin '_Total', 'Idle' } | ForEach-Object {
-                $n = $_.Name -replace '#\d+$', ''
-                if (-not $procSamples.ContainsKey($n)) { $procSamples[$n] = 0.0 }
-                $procSamples[$n] += [double]$_.PercentProcessorTime
+    Invoke-Check $cat 'Prozessorauslastung (3 Sekunden Messung)' {
+        # Messung über die Prozessorzeiten der Prozesse – ohne WMI-Leistungsklassen, die WmiPrvSE stark belasten können
+        $snapshot = {
+            $h = @{}
+            foreach ($p in Get-Process) {
+                try { $t = $p.TotalProcessorTime.TotalMilliseconds; if ($t) { $h["$($p.Id)"] = @{ Name = $p.ProcessName; T = $t } } } catch { }
             }
-            Start-Sleep -Milliseconds 800
+            $h
         }
         $cores = [Environment]::ProcessorCount
-        $avg = [math]::Round(($samples | Measure-Object -Average).Average)
+        $first = & $snapshot
+        $sw = [Diagnostics.Stopwatch]::StartNew()
+        Start-Sleep -Seconds 3
+        $second = & $snapshot
+        $elapsed = [math]::Max($sw.Elapsed.TotalMilliseconds, 1) * $cores
+        $perName = @{}
+        $total = 0.0
+        foreach ($k in $second.Keys) {
+            if (-not $first.ContainsKey($k) -or $second[$k].Name -eq 'Idle') { continue }
+            $d = $second[$k].T - $first[$k].T
+            if ($d -le 0) { continue }
+            $total += $d
+            $n = $second[$k].Name
+            if (-not $perName.ContainsKey($n)) { $perName[$n] = 0.0 }
+            $perName[$n] += $d
+        }
+        $avg = [math]::Min(100, [math]::Round($total / $elapsed * 100))
         Set-Metric 'CPULast' $avg
-        $top = $procSamples.GetEnumerator() | ForEach-Object {
-            [pscustomobject]@{ Name = $_.Key; Cpu = [math]::Round($_.Value / 5 / $cores, 1) }
+        $top = $perName.GetEnumerator() | ForEach-Object {
+            [pscustomobject]@{ Name = $_.Key; Cpu = [math]::Round($_.Value / $elapsed * 100, 1) }
         } | Sort-Object Cpu -Descending | Select-Object -First 5
         $items = $top | Where-Object { $_.Cpu -gt 0 } | ForEach-Object { '{0,-30} {1,5} %' -f $_.Name, $_.Cpu }
         if ($avg -ge 80) {
@@ -1728,7 +1751,7 @@ function Invoke-SingleModule {
     switch ($Name) {
         'Fehler'      { Invoke-ErrorScan; Invoke-Repairs -Category 'Fehler' }
         'Sicherheit'  { Invoke-SecurityScan; Invoke-Repairs -Category 'Sicherheit' }
-        'Speicher'    { Invoke-MemoryScan; Invoke-Repairs -Category 'Speicher' }
+        'Speicher'    { Invoke-MemoryScan -Tiefenanalyse; Invoke-Repairs -Category 'Speicher' }
         'Leistung'    { Invoke-PerformanceScan; Invoke-Repairs -Category 'Leistung' }
         'Herunterfahren' { Invoke-ShutdownScan; Invoke-Repairs -Category 'Herunterfahren' }
         'Akku'        { Invoke-BatteryScan; Invoke-Repairs -Category 'Akku' }

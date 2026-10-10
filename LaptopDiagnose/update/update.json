@@ -1,7 +1,7 @@
 {
-    "version": "2.2.0",
-    "datei": "LaptopDiagnose-2.2.0.zip",
-    "sha256": "826d247978b617eb528cd160dfad139d49a01b5818c4897b83ee8ef89f72c4f5",
-    "notizen": "Neu: Diagnose und Reparatur für langsames Herunterfahren. Updates kommen jetzt direkt aus dem Repository; Signaturen mit selbst ausgestelltem Zertifikat werden unterstützt.",
+    "version": "2.2.1",
+    "datei": "LaptopDiagnose-2.2.1.zip",
+    "sha256": "6ec052bfe0f9cf89d3cf2e06fe0f2eddab32befaf7c875b61c87c7c7e539e80d",
+    "notizen": "Weniger Systemlast: CPU-Messung ohne WMI-Leistungszähler, Ordner-Analyse nur noch auf Wunsch, Miniaturansichten werden nicht mehr gelöscht, das Programm beendet sich sauber. Neu: Erkennung von Programm-Hängern und Speicherengpässen.",
     "veroeffentlicht": "2026-10-10"
 }
