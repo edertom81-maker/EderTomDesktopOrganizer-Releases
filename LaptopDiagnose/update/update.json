@@ -1,7 +1,7 @@
 {
-    "version": "2.3.1",
-    "datei": "LaptopDiagnose-2.3.1.zip",
-    "sha256": "3c7a66a7caf4eaed696b8ba6d3353d181c72dafcae013376294d595b74890d07",
-    "notizen": "Copyright-Hinweis »© 2026 Eder Tom« im Programmfenster (Seitenleiste, Titelleiste, Einstellungen › Über), in der Konsolenversion, in Berichten und Benachrichtigungen.",
+    "version": "2.3.2",
+    "datei": "LaptopDiagnose-2.3.2.zip",
+    "sha256": "ec76f8dab24ee31c2005dd81d4c671bedc45a7e75bbd1b0d234d0cc58724a4d2",
+    "notizen": "Weniger Last beim Arbeiten: Protokolle werden lokal und gebündelt gespeichert (nicht mehr Zeile für Zeile im OneDrive-Ordner), Berichte öffnen sich, ohne das Fenster zu blockieren, Schließen wartet nicht mehr auf laufende Prüfungen. Korrigiert: falsche Programmabstürze (z. B. Codex-Dienst) und Windows-eigene virtuelle WLAN-Adapter als »alter Treiber«.",
     "veroeffentlicht": "2026-10-10"
 }

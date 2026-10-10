@@ -129,7 +129,8 @@ function Add-MemoryTestFinding {
 
 function Get-ToolSessions {
     <# Zeiträume, in denen LaptopDiagnose lief (aus den Sitzungsprotokollen im Berichtsordner). #>
-    $sessions = foreach ($f in Get-ChildItem -LiteralPath $BerichtOrdner -Filter 'Protokoll_*.txt' -File -ErrorAction SilentlyContinue) {
+    $dirs = @((Join-Path $env:LOCALAPPDATA 'LaptopDiagnose\Protokolle'), $BerichtOrdner)
+    $sessions = foreach ($f in Get-ChildItem -LiteralPath $dirs -Filter 'Protokoll_*.txt' -File -ErrorAction SilentlyContinue) {
         if ($f.BaseName -match '(\d{8}_\d{6})$') {
             $start = [datetime]::ParseExact($Matches[1], 'yyyyMMdd_HHmmss', $null)
             [pscustomobject]@{ Start = $start; Ende = $f.LastWriteTime }

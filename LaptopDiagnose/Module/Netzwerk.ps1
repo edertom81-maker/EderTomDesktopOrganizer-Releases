@@ -170,8 +170,10 @@ function Invoke-NetworkScan {
     }
 
     Invoke-Check $cat 'WLAN-Treiber' {
+        # Nur echte WLAN-Hardware: virtuelle Adapter und Windows-eigene Treiber (Datum 2006) ausklammern, doppelte Einträge zusammenfassen
         $drv = @(Get-CimInstance Win32_PnPSignedDriver -Filter "DeviceClass='NET'" -ErrorAction Stop |
-                Where-Object { $_.DeviceName -match 'Wi-?Fi|Wireless|WLAN|802\.11' })
+                Where-Object { $_.DeviceName -match 'Wi-?Fi|Wireless|WLAN|802\.11' -and $_.DeviceName -notmatch 'Virtual|Direct|Miniport' -and $_.DriverProviderName -notmatch '^Microsoft' } |
+                Sort-Object DeviceName -Unique)
         foreach ($d in $drv) {
             if ($d.DriverDate -and $d.DriverDate -lt (Get-Date).AddYears(-3)) {
                 Add-Finding $cat Info ('WLAN-Treiber ist über 3 Jahre alt ({0:dd.MM.yyyy})' -f $d.DriverDate) `
