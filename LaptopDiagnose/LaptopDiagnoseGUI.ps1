@@ -79,7 +79,7 @@ function Get-PaletteXaml {
 $Script:Xaml = @'
 <Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Laptop-Diagnose &amp; Reparatur" Width="1240" Height="840" MinWidth="1020" MinHeight="640"
+        Title="Laptop-Diagnose &amp; Reparatur  ·  © 2026 Eder Tom" Width="1240" Height="840" MinWidth="1020" MinHeight="640"
         WindowStartupLocation="CenterScreen" Background="{DynamicResource BgWindow}" FontFamily="Segoe UI" FontSize="13"
         TextOptions.TextFormattingMode="Display" UseLayoutRounding="True">
   <Window.Resources>
@@ -320,6 +320,7 @@ $Script:Xaml = @'
           <Button x:Name="BtnFolder" Style="{StaticResource Btn}" Margin="0,8,0,0" Background="Transparent" Foreground="{DynamicResource SidebarMuted}" BorderBrush="Transparent" Padding="4">
             <TextBlock Text="Berichtsordner öffnen" TextDecorations="Underline"/>
           </Button>
+          <TextBlock Text="© 2026 Eder Tom" Foreground="{DynamicResource SidebarMuted}" FontSize="11" Margin="4,12,0,0"/>
         </StackPanel>
 
         <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
@@ -634,7 +635,9 @@ $Script:Xaml = @'
 
             <Border Style="{StaticResource Card}">
               <StackPanel>
-                <TextBlock Text="Programmdateien" Style="{StaticResource CardTitle}"/>
+                <TextBlock Text="Über Laptop-Diagnose" Style="{StaticResource CardTitle}"/>
+                <TextBlock x:Name="AboutText" Foreground="{DynamicResource TextPrimary}" TextWrapping="Wrap" Margin="0,0,0,8"
+                           Text="Laptop-Diagnose &amp; Reparatur&#x0a;© 2026 Eder Tom – alle Rechte vorbehalten."/>
                 <TextBlock x:Name="SignatureText" Style="{StaticResource Muted}"/>
               </StackPanel>
             </Border>
@@ -1392,7 +1395,7 @@ try {
         'SystemList', 'EmptyHint', 'EmptyHintText', 'FindingsList', 'LogBox', 'FixButtons', 'BtnSelectRecommended', 'BtnClearSelection', 'BtnFix',
         'BtnFixText', 'Busy', 'StatusText', 'HistoryPanel', 'HistoryHint', 'HistoryList', 'ChangesPanel', 'ChangesHint', 'ChangesList',
         'SettingsPanel', 'ThemeSystem', 'ThemeLight', 'ThemeDark', 'MaintStatus', 'IntWeekly', 'IntDaily', 'DayRow', 'MaintTime', 'BtnMaintSet',
-        'BtnMaintRemove', 'ChkPdf', 'BtnFleet', 'UpdateStatus', 'BtnUpdateCheck', 'BtnUpdateInstall', 'SignatureText', 'ChkAutoUpdate', 'BadgeUpdate'
+        'BtnMaintRemove', 'ChkPdf', 'BtnFleet', 'UpdateStatus', 'BtnUpdateCheck', 'BtnUpdateInstall', 'SignatureText', 'ChkAutoUpdate', 'BadgeUpdate', 'AboutText'
     )
     $navNames = @('NavAlle') + @($Script:CategoryKeys | ForEach-Object { "Nav$_" }) + @('NavVerlauf', 'NavAenderungen', 'NavEinstellungen', 'NavLog')
     $names += $navNames
@@ -1537,7 +1540,10 @@ try {
             $null = Start-WorkerJob -Code $init -Status 'Systeminformationen werden gelesen …' -OnDone {
                 param($out)
                 $ver = @($out) | Where-Object { $_ -is [string] } | Select-Object -First 1
-                if ($ver) { $Script:UI.VersionText.Text = "& Reparatur  ·  v$ver" }
+                if ($ver) {
+                    $Script:UI.VersionText.Text = "& Reparatur  ·  v$ver"
+                    $Script:UI.AboutText.Text = "Laptop-Diagnose & Reparatur  ·  Version $ver`n© 2026 Eder Tom – alle Rechte vorbehalten."
+                }
                 Update-FromSnapshot (@($out) | Where-Object { $_.IsSnapshot } | Select-Object -Last 1)
                 if ((Read-UiSettings).AutoUpdate) { Find-ToolUpdate -BeimStart }
             }

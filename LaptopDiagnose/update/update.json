@@ -1,7 +1,7 @@
 {
-    "version": "2.3.0",
-    "datei": "LaptopDiagnose-2.3.0.zip",
-    "sha256": "5e6b1ae74512aa6c90017528038be552a12e89bde2aa3d369ccca162cc9138ec",
-    "notizen": "Neu: Option »Beim Start automatisch nach Updates suchen« (Einstellungen › Programm-Updates). Gefundene Updates werden mit einem Hinweis in der Seitenleiste angezeigt und können direkt installiert werden.",
+    "version": "2.3.1",
+    "datei": "LaptopDiagnose-2.3.1.zip",
+    "sha256": "3c7a66a7caf4eaed696b8ba6d3353d181c72dafcae013376294d595b74890d07",
+    "notizen": "Copyright-Hinweis »© 2026 Eder Tom« im Programmfenster (Seitenleiste, Titelleiste, Einstellungen › Über), in der Konsolenversion, in Berichten und Benachrichtigungen.",
     "veroeffentlicht": "2026-10-10"
 }
