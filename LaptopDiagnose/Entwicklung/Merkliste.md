@@ -10,6 +10,12 @@ Stand: 10.10.2026. Neue Wünsche hier ergänzen.
     - Gleich heißt gleicher Inhalt (Größe, dann Prüfsumme) – nicht nur gleicher Name. Standard ab 1 MB Dateigröße. Windows-, Programm- und Systemordner sowie reine OneDrive-Cloud-Dateien werden nicht angefasst.
     - Anzeige gruppiert je Duplikat-Gruppe mit Pfad, Größe und Datum, sortiert nach freigebbarem Platz. Vorausgewählt sind alle Kopien außer einer (die älteste bzw. die im Dokumente-Ordner bleibt). Alles lässt sich vor dem Löschen ändern.
     - Löschen nur in den Papierkorb, Eintrag im Änderungsprotokoll.
+17. **Leere Ordner aufspüren und löschen**:
+    - Werkzeug »Leere Ordner suchen« (Bereich »Reparatur-Werkzeuge« und Knopf im Bereich »Speicherfresser«), dieselben Orte wie bei Punkt 16, auf Wunsch eigener Ordner/Laufwerk.
+    - Leer heißt: keine Dateien, auch nicht in Unterordnern. Reine Windows-Hilfsdateien (desktop.ini, Thumbs.db) zählen nicht als Inhalt. Ein Ordner, der nur leere Unterordner enthält, erscheint als ein Eintrag.
+    - Nie angeboten: die Benutzerordner selbst (Dokumente, Bilder …), AppData, Programm- und Systemordner, OneDrive-Ordner mit Cloud-Dateien sowie Ordner, die gerade ein Programm benutzt.
+    - Anzeige als Ankreuz-Liste mit Pfad und Änderungsdatum, alle vorausgewählt. Löschen in den Papierkorb, Eintrag im Änderungsprotokoll.
+    - Nach dem Löschen von Duplikaten (Punkt 16) bietet das Tool an, dabei leer gewordene Ordner gleich mit zu entfernen.
 
 ## Erledigt in Version 2.6.0
 
