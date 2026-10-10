@@ -1,5 +1,4 @@
 @echo off
-REM Laptop-Diagnose ^& Reparatur - Startdatei
-REM Startet das Diagnose-Tool; Administratorrechte werden automatisch angefordert.
-chcp 65001 >nul
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0LaptopDiagnose.ps1" %*
+REM Laptop-Diagnose ^& Reparatur - grafische Oberflaeche
+REM Startet das Programmfenster; Administratorrechte werden automatisch angefordert.
+start "" powershell.exe -NoProfile -ExecutionPolicy Bypass -STA -WindowStyle Hidden -File "%~dp0LaptopDiagnoseGUI.ps1" %*

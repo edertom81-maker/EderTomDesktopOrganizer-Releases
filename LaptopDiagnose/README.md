@@ -5,10 +5,23 @@ Diagnose-Tool für Windows-10/11-Laptops. Es findet Fehler, Speicherfresser und 
 ## Start
 
 1. Den Ordner `LaptopDiagnose` auf den Laptop kopieren.
-2. **`Start-LaptopDiagnose.cmd`** doppelklicken.
+2. **`Start-LaptopDiagnose.cmd`** doppelklicken. Das Programmfenster öffnet sich.
 3. Die Abfrage nach Administratorrechten bestätigen. Diese Rechte braucht das Tool für Reparaturen, Updates und einige Prüfungen.
 
-Alternativ in PowerShell:
+### Programmfenster
+
+- **Links** stehen die Bereiche: Übersicht, Fehlersuche, Speicherfresser, Leistungsbremsen, Akku, Software-Updates, Windows & Treiber und Protokoll. Rote oder orange Zähler zeigen offene Probleme.
+- **Oben** startet »Komplett-Diagnose starten« alle Prüfungen. Mit »… prüfen« prüfst du nur den gerade gewählten Bereich. Die Kacheln zeigen den Gesundheitswert (0–100) und die Anzahl der Ergebnisse.
+- **Ergebniskarten** sind farbig nach Dringlichkeit markiert. »Details anzeigen« klappt Listen auf, z. B. die größten Programme oder verfügbare Updates. Behebbare Punkte haben ein Ankreuzfeld.
+- **Unten** markiert »Empfohlene auswählen« alle kritischen Punkte und Warnungen. »Ausgewählte beheben« zeigt zuerst eine Zusammenfassung zur Bestätigung und fragt nach einem Wiederherstellungspunkt. Bei Autostarts und Updates wählst du vorher in einer Liste einzelne Einträge aus.
+- **»Nur prüfen«** in der Seitenleiste sperrt alle Änderungen.
+- **»Bericht speichern & öffnen«** erstellt den HTML-Bericht und öffnet ihn im Browser.
+
+Während eine Prüfung läuft, bleibt das Fenster bedienbar. Was gerade passiert, steht unten in der Statuszeile und ausführlich unter »Protokoll«.
+
+### Konsolenversion
+
+`Start-LaptopDiagnose-Konsole.cmd` startet die Textversion mit Menü. Sie kann dasselbe und lässt sich auch mit Parametern aufrufen:
 
 ```powershell
 .\LaptopDiagnose.ps1                        # Menü
@@ -42,7 +55,7 @@ Gespeichert wird in `Dokumente\LaptopDiagnose`:
 - `Diagnosebericht_<Datum>.html`: Bericht mit Gesundheitswert, allen Ergebnissen und den durchgeführten Maßnahmen
 - `Diagnosebericht_<Datum>.json`: dieselben Daten maschinenlesbar
 - `Akkubericht_<Datum>.html`: ausführlicher Windows-Akkubericht
-- `Protokoll_<Datum>.txt`: vollständiges Sitzungsprotokoll
+- `Protokoll_<Datum>.txt` bzw. `Protokoll_GUI_<Datum>.txt`: vollständiges Sitzungsprotokoll
 
 ## Voraussetzungen
 

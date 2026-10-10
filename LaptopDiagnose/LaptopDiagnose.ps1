@@ -160,6 +160,8 @@ function Add-Finding {
         [scriptblock]$Fix,
         $FixData,
         [switch]$RequiresReboot,
+        [string[]]$SelectLabels,
+        [switch]$SelectAllByDefault,
         [switch]$Silent
     )
     $finding = [pscustomobject]@{
@@ -172,6 +174,9 @@ function Add-Finding {
         Fix            = $Fix
         FixData        = $FixData
         RequiresReboot = [bool]$RequiresReboot
+        SelectLabels   = $SelectLabels
+        SelectAll      = [bool]$SelectAllByDefault
+        Selection      = $null
         Fixed          = $false
         FixResult      = $null
         Time           = Get-Date
@@ -826,9 +831,13 @@ function Disable-AutostartEntries {
     $sel = Read-Host '   Nummern der zu deaktivierenden Einträge (z. B. 1,3,5-7 – leer = keine)'
     $idx = Read-Selection $sel $Entries.Count
     if (-not $idx.Count) { return 'Keine Autostarts geändert.' }
+    Set-AutostartDisabled @($idx | ForEach-Object { $Entries[$_] })
+}
+
+function Set-AutostartDisabled {
+    param($Entries)
     $done = @()
-    foreach ($n in $idx) {
-        $e = $Entries[$n]
+    foreach ($e in $Entries) {
         if (-not (Test-Path $e.Approved)) { $null = New-Item -Path $e.Approved -Force }
         $bytes = [byte[]](@(3, 0, 0, 0) + [BitConverter]::GetBytes((Get-Date).ToFileTime()))
         Set-ItemProperty -Path $e.Approved -Name $e.Name -Value $bytes -Type Binary
@@ -881,11 +890,13 @@ function Invoke-PerformanceScan {
         if ($enabled.Count -gt 8) {
             Add-Finding $cat Warnung "$($enabled.Count) Programme starten automatisch mit Windows" `
                 -Detail 'Viele Autostarts verlängern den Systemstart und belegen dauerhaft Arbeitsspeicher.' -Items $items `
-                -FixLabel 'Autostart-Programme auswählen und deaktivieren' -FixData $enabled -Fix { param($d) Disable-AutostartEntries $d }
+                -FixLabel 'Autostart-Programme auswählen und deaktivieren' -FixData $enabled -Fix { param($d, $pre) if ($pre) { Set-AutostartDisabled $d } else { Disable-AutostartEntries $d } } `
+                -SelectLabels @($enabled | ForEach-Object { '{0}  [{1}]' -f $_.Name, $_.Scope })
         } else {
             Add-Finding $cat OK "$($enabled.Count) Autostart-Programme (unkritisch)" -Items $items `
                 -FixLabel $(if ($enabled.Count) { 'Autostart-Programme auswählen und deaktivieren' }) `
-                -FixData $enabled -Fix $(if ($enabled.Count) { { param($d) Disable-AutostartEntries $d } })
+                -FixData $enabled -Fix $(if ($enabled.Count) { { param($d, $pre) if ($pre) { Set-AutostartDisabled $d } else { Disable-AutostartEntries $d } } }) `
+                -SelectLabels @($enabled | ForEach-Object { '{0}  [{1}]' -f $_.Name, $_.Scope })
         }
     }
 
@@ -1186,7 +1197,8 @@ function Invoke-SoftwareScan {
     }
     $items = $updates | ForEach-Object { '{0}  {1} → {2}' -f $_.Name, $_.Version, $_.Available }
     Add-Finding $cat Warnung "$($updates.Count) Programm-Update(s) verfügbar" -Items $items `
-        -FixLabel "Alle $($updates.Count) Programm-Updates installieren" -FixData $updates -Fix { param($d) Install-SoftwareUpdates $d } -Silent:($Interactive -and -not $NurPruefen)
+        -FixLabel "Alle $($updates.Count) Programm-Updates installieren" -FixData $updates -Fix { param($d) Install-SoftwareUpdates $d } -Silent:($Interactive -and -not $NurPruefen) `
+        -SelectLabels $items -SelectAllByDefault
 
     if ($Interactive -and -not $NurPruefen) {
         Write-Host ''
@@ -1279,6 +1291,7 @@ function Invoke-WindowsUpdateScan {
             $sev = if ($sec) { 'Kritisch' } else { 'Warnung' }
             Add-Finding $cat $sev "$($sw.Count) Windows-Update(s) verfügbar$(if ($sec) { " – davon $($sec.Count) sicherheitsrelevant" })" `
                 -Items ($sw | ForEach-Object { '{0} ({1})' -f $_.Title, (Format-Bytes $_.MaxDownloadSize) }) `
+                -SelectLabels @($sw | ForEach-Object { $_.Title }) -SelectAllByDefault `
                 -FixLabel 'Alle Windows-Updates installieren' -FixData $sw -Fix { param($d) Install-WindowsUpdates $d } -Silent:$quiet
         } else {
             Add-Finding $cat OK 'Windows ist auf dem neuesten Stand'
@@ -1291,6 +1304,7 @@ function Invoke-WindowsUpdateScan {
         if ($drv) {
             Add-Finding $cat Warnung "$($drv.Count) Treiber-Update(s) verfügbar" `
                 -Items ($drv | ForEach-Object { '{0} – {1} ({2:dd.MM.yyyy})' -f $_.DriverManufacturer, $_.Title, $_.DriverVerDate }) `
+                -SelectLabels @($drv | ForEach-Object { $_.Title }) -SelectAllByDefault `
                 -FixLabel 'Alle Treiber-Updates installieren' -FixData $drv -Fix { param($d) Install-WindowsUpdates $d } -Silent:$quiet
         } else {
             Add-Finding $cat OK 'Keine Treiber-Updates über Windows Update ausstehend'
@@ -1372,6 +1386,41 @@ function New-RestorePoint {
     }
 }
 
+function Invoke-FixList {
+    <#
+        Führt die Behebung der übergebenen Ergebnisse ohne Rückfragen aus (Auswahl erfolgt vorher).
+        Hat ein Ergebnis eine Teilauswahl (Selection = Indizes in FixData), wird nur diese bearbeitet.
+    #>
+    param($Findings, [switch]$RestorePoint)
+    if ($RestorePoint) { New-RestorePoint }
+    foreach ($f in $Findings) {
+        Write-Host ''
+        Write-Host "   ▶ $($f.FixLabel)" -ForegroundColor White
+        $data = $f.FixData
+        $preselected = $false
+        if ($null -ne $f.Selection -and $f.SelectLabels) {
+            $all = @($f.FixData)
+            $data = @(foreach ($i in $f.Selection) { if ($i -ge 0 -and $i -lt $all.Count) { $all[$i] } })
+            $preselected = $true
+            if (-not $data.Count) { Write-Host '     – übersprungen (nichts ausgewählt)' -ForegroundColor Gray; continue }
+        }
+        try {
+            $res = & $f.Fix $data $preselected
+            $res = (@($res) | Where-Object { $_ -is [string] }) -join ' '
+            if (-not $res) { $res = 'Erledigt.' }
+            $f.Fixed = $true
+            $f.FixResult = $res
+            if ($f.RequiresReboot) { $Script:RebootNeeded = $true }
+            Write-Host "     ✔ $res" -ForegroundColor Green
+            Add-ActionLog $f.FixLabel $res $true
+        } catch {
+            $f.FixResult = "Fehlgeschlagen: $($_.Exception.Message)"
+            Write-Host "     ✖ $($f.FixResult)" -ForegroundColor Red
+            Add-ActionLog $f.FixLabel $f.FixResult $false
+        }
+    }
+}
+
 function Invoke-Repairs {
     param([string]$Category)
     if ($NurPruefen) { return }
@@ -1398,26 +1447,8 @@ function Invoke-Repairs {
     $chosen = if ($sel -match '^\s*(a|alle)\s*$') { $recommended } else { @((Read-Selection $sel $fixable.Count) | ForEach-Object { $fixable[$_] }) }
     if (-not $chosen) { Write-Host '   Es wurde nichts verändert.' -ForegroundColor Gray; return }
 
-    if (Read-YesNo 'Vorher einen Systemwiederherstellungspunkt erstellen?' $true) { New-RestorePoint }
-
-    foreach ($f in $chosen) {
-        Write-Host ''
-        Write-Host "   ▶ $($f.FixLabel)" -ForegroundColor White
-        try {
-            $res = & $f.Fix $f.FixData
-            $res = (@($res) | Where-Object { $_ -is [string] }) -join ' '
-            if (-not $res) { $res = 'Erledigt.' }
-            $f.Fixed = $true
-            $f.FixResult = $res
-            if ($f.RequiresReboot) { $Script:RebootNeeded = $true }
-            Write-Host "     ✔ $res" -ForegroundColor Green
-            Add-ActionLog $f.FixLabel $res $true
-        } catch {
-            $f.FixResult = "Fehlgeschlagen: $($_.Exception.Message)"
-            Write-Host "     ✖ $($f.FixResult)" -ForegroundColor Red
-            Add-ActionLog $f.FixLabel $f.FixResult $false
-        }
-    }
+    $restore = Read-YesNo 'Vorher einen Systemwiederherstellungspunkt erstellen?' $true
+    Invoke-FixList -Findings $chosen -RestorePoint:$restore
 
     if ($Script:RebootNeeded) {
         Write-Host ''
