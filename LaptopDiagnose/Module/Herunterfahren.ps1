@@ -237,7 +237,7 @@ function Invoke-ShutdownScan {
                 ForEach-Object { (Get-ItemProperty -Path $_.PSPath -ErrorAction SilentlyContinue).Script } | Where-Object { $_ })
         if ($scripts) {
             Add-Finding $cat Info "$($scripts.Count) Skript(e) laufen beim Herunterfahren (Gruppenrichtlinie)" -Items $scripts `
-                -Detail 'Bei Firmen-Laptops üblich. Bei privaten Geräten prüfen, woher die Skripte stammen.'
+                -Detail 'Bei Firmengeräten üblich. Bei privaten Geräten prüfen, woher die Skripte stammen.'
         }
     }
 

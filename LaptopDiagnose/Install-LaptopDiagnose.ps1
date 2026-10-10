@@ -1,7 +1,7 @@
 ﻿#Requires -Version 5.1
 <#
 .SYNOPSIS
-    Installiert Laptop-Diagnose & Reparatur für den aktuellen Benutzer.
+    Installiert PC Repair Pro für den aktuellen Benutzer.
 
 .DESCRIPTION
     Kopiert das Programm nach %LOCALAPPDATA%\Programs\LaptopDiagnose, legt einen Startmenü-Eintrag
@@ -29,7 +29,7 @@ $version = if ((Get-Content -LiteralPath (Join-Path $source 'LaptopDiagnose.ps1'
 $uninstallKey = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\EderTom.LaptopDiagnose'
 
 Write-Host ''
-Write-Host "   Laptop-Diagnose & Reparatur $version – Installation" -ForegroundColor Cyan
+Write-Host "   PC Repair Pro $version – Installation" -ForegroundColor Cyan
 Write-Host "   Zielordner: $target" -ForegroundColor Gray
 Write-Host ''
 
@@ -38,13 +38,13 @@ if ($source.TrimEnd('\') -eq $target.TrimEnd('\')) { throw 'Das Programm ist ber
 # Dateien kopieren
 if (-not (Test-Path -LiteralPath $target)) { $null = New-Item -ItemType Directory -Path $target -Force }
 $files = @('LaptopDiagnose.ps1', 'LaptopDiagnoseGUI.ps1', 'Start-LaptopDiagnose.cmd', 'Start-LaptopDiagnose-Konsole.cmd',
-    'Uninstall-LaptopDiagnose.ps1', 'LaptopDiagnose.ico', 'README.md')
+    'Uninstall-LaptopDiagnose.ps1', 'LaptopDiagnose.ico', 'Logo.png', 'README.md')
 foreach ($f in $files) {
     $p = Join-Path $source $f
     if (-not (Test-Path -LiteralPath $p)) { continue }
     try { Copy-Item -LiteralPath $p -Destination $target -Force -ErrorAction Stop }
     catch {
-        if ($f -like '*.ps1') { throw "$f konnte nicht kopiert werden. Bitte die Laptop-Diagnose schließen und die Installation erneut starten." }
+        if ($f -like '*.ps1') { throw "$f konnte nicht kopiert werden. Bitte PC Repair Pro schließen und die Installation erneut starten." }
         Write-Host "   ! $f ist in Benutzung und wurde nicht ersetzt." -ForegroundColor Yellow
     }
 }
@@ -66,13 +66,17 @@ function New-AppShortcut {
     $lnk.Arguments = "-NoProfile -ExecutionPolicy Bypass -STA -WindowStyle Minimized -File `"$gui`""
     $lnk.WorkingDirectory = $target
     $lnk.IconLocation = "$icon,0"
-    $lnk.Description = 'Laptop-Diagnose & Reparatur – Fehler finden, Leistung verbessern, Updates installieren · © 2026 Eder Tom'
+    $lnk.Description = 'PC Repair Pro – Fehler finden, Leistung verbessern, Updates installieren · © 2026 Eder Tom'
     $lnk.WindowStyle = 7
     $lnk.Save()
 }
-$startMenu = Join-Path ([Environment]::GetFolderPath('Programs')) 'Laptop-Diagnose.lnk'
+# Verknüpfungen früherer Versionen (»Laptop-Diagnose«) entfernen
+foreach ($folder in [Environment]::GetFolderPath('Programs'), [Environment]::GetFolderPath('Desktop')) {
+    Remove-Item -LiteralPath (Join-Path $folder 'Laptop-Diagnose.lnk') -Force -ErrorAction SilentlyContinue
+}
+$startMenu = Join-Path ([Environment]::GetFolderPath('Programs')) 'PC Repair Pro.lnk'
 New-AppShortcut -Path $startMenu
-Write-Host '   ✔ Startmenü-Eintrag »Laptop-Diagnose« angelegt' -ForegroundColor Green
+Write-Host '   ✔ Startmenü-Eintrag »PC Repair Pro« angelegt' -ForegroundColor Green
 
 $wantDesktop = $Desktop
 if (-not $Desktop -and -not $Still) {
@@ -80,7 +84,7 @@ if (-not $Desktop -and -not $Still) {
     $wantDesktop = [string]::IsNullOrWhiteSpace($a) -or $a -match '^\s*(j|ja|y)'
 }
 if ($wantDesktop) {
-    New-AppShortcut -Path (Join-Path ([Environment]::GetFolderPath('Desktop')) 'Laptop-Diagnose.lnk')
+    New-AppShortcut -Path (Join-Path ([Environment]::GetFolderPath('Desktop')) 'PC Repair Pro.lnk')
     Write-Host '   ✔ Desktop-Verknüpfung angelegt' -ForegroundColor Green
 }
 
@@ -88,7 +92,7 @@ if ($wantDesktop) {
 if (-not (Test-Path $uninstallKey)) { $null = New-Item -Path $uninstallKey -Force }
 $size = [int](((Get-ChildItem -LiteralPath $target -Recurse -File | Measure-Object Length -Sum).Sum) / 1KB)
 $values = @{
-    DisplayName     = 'Laptop-Diagnose & Reparatur'
+    DisplayName     = 'PC Repair Pro'
     DisplayVersion  = $version
     Publisher       = 'Eder Tom'
     DisplayIcon     = $icon
@@ -103,7 +107,7 @@ Set-ItemProperty -Path $uninstallKey -Name EstimatedSize -Value $size -Type DWor
 Write-Host '   ✔ Unter »Einstellungen › Apps › Installierte Apps« eingetragen' -ForegroundColor Green
 
 Write-Host ''
-Write-Host '   Installation abgeschlossen. Start über das Startmenü: »Laptop-Diagnose«.' -ForegroundColor Cyan
+Write-Host '   Installation abgeschlossen. Start über das Startmenü: »PC Repair Pro«.' -ForegroundColor Cyan
 if (-not $Still) {
     $a = Read-Host '   Jetzt starten? [J/n]'
     if ([string]::IsNullOrWhiteSpace($a) -or $a -match '^\s*(j|ja|y)') {

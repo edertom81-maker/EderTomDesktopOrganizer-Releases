@@ -43,7 +43,7 @@ if (Test-Path -LiteralPath $staging) { Remove-Item -LiteralPath $staging -Recurs
 $null = New-Item -ItemType Directory -Path $staging -Force
 
 $include = @('LaptopDiagnose.ps1', 'LaptopDiagnoseGUI.ps1', 'Start-LaptopDiagnose.cmd', 'Start-LaptopDiagnose-Konsole.cmd',
-    'Install-LaptopDiagnose.ps1', 'Install-LaptopDiagnose.cmd', 'Uninstall-LaptopDiagnose.ps1', 'LaptopDiagnose.ico', 'README.md')
+    'Install-LaptopDiagnose.ps1', 'Install-LaptopDiagnose.cmd', 'Uninstall-LaptopDiagnose.ps1', 'LaptopDiagnose.ico', 'Logo.png', 'README.md')
 foreach ($f in $include) { Copy-Item -LiteralPath (Join-Path $root $f) -Destination $staging }
 Copy-Item -LiteralPath (Join-Path $root 'Module') -Destination $staging -Recurse
 

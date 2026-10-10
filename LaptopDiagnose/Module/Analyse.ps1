@@ -151,14 +151,14 @@ function Add-HangFindings {
         $detail = if (-not $sessions) {
             'Diese Programme reagierten zeitweise nicht mehr. Betroffene Programme aktualisieren; bei Explorer-Hängern Autostarts und Kontextmenü-Erweiterungen prüfen.'
         } elseif ($near) {
-            "$($near.Count) von $($hangs.Count) Hängern traten während oder bis 30 Minuten nach einer Nutzung der Laptop-Diagnose auf ($($sessions.Count) Sitzungen). Bitte die Zeitpunkte unter »Details« prüfen."
+            "$($near.Count) von $($hangs.Count) Hängern traten während oder bis 30 Minuten nach einer Nutzung von PC Repair Pro auf ($($sessions.Count) Sitzungen). Bitte die Zeitpunkte unter »Details« prüfen."
         } else {
-            "Keiner der Hänger trat während oder bis 30 Minuten nach einer Nutzung der Laptop-Diagnose auf ($($sessions.Count) Sitzungen)."
+            "Keiner der Hänger trat während oder bis 30 Minuten nach einer Nutzung von PC Repair Pro auf ($($sessions.Count) Sitzungen)."
         }
         $items = @($byApp | Select-Object -First 8 | ForEach-Object { '{0} – {1}×' -f $_.Name, $_.Count })
         $items += @($hangs | Sort-Object TimeCreated -Descending | Select-Object -First 10 | ForEach-Object {
                 $t = $_.TimeCreated
-                $mark = if ($sessions | Where-Object { $t -ge $_.Start -and $t -le $_.Ende.AddMinutes(30) }) { '  ← nach Laptop-Diagnose' } else { '' }
+                $mark = if ($sessions | Where-Object { $t -ge $_.Start -and $t -le $_.Ende.AddMinutes(30) }) { '  ← nach PC Repair Pro' } else { '' }
                 '{0:dd.MM. HH:mm}  {1}{2}' -f $t, $_.Properties[0].Value, $mark
             })
         $sev = if ($hangs.Count -ge 3) { 'Warnung' } else { 'Info' }

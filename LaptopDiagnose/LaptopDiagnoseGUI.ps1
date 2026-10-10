@@ -1,7 +1,7 @@
 ﻿#Requires -Version 5.1
 <#
 .SYNOPSIS
-    Grafische Oberfläche für Laptop-Diagnose & Reparatur.
+    Grafische Oberfläche für PC Repair Pro.
 
 .DESCRIPTION
     Fenster mit Navigation, Ergebniskarten, Verlauf, Rückgängig-Zentrale und Einstellungen. Alle Prüfungen und
@@ -51,6 +51,7 @@ Add-Type -AssemblyName PresentationFramework, PresentationCore, WindowsBase, Sys
 
 # Berichtordner festlegen (beim ersten Start ab 2.4 einmalig aus dem OneDrive-Dokumente-Ordner umziehen)
 . (Join-Path $PSScriptRoot 'Module\Berichtordner.ps1')
+. (Join-Path $PSScriptRoot 'Module\Programm.ps1')
 $Script:FolderMigrationMessage = $null
 $folderInfo = Resolve-ReportFolder -Requested $BerichtOrdner
 $BerichtOrdner = $folderInfo.Folder
@@ -88,7 +89,7 @@ function Get-PaletteXaml {
 $Script:Xaml = @'
 <Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Laptop-Diagnose &amp; Reparatur  ·  © 2026 Eder Tom" Width="1240" Height="840" MinWidth="1020" MinHeight="640"
+        Title="PC Repair Pro  ·  © 2026 Eder Tom" Width="1240" Height="840" MinWidth="1020" MinHeight="640"
         WindowStartupLocation="CenterScreen" WindowState="Maximized" Background="{DynamicResource BgWindow}" FontFamily="Segoe UI" FontSize="13"
         TextOptions.TextFormattingMode="Display" UseLayoutRounding="True">
   <Window.Resources>
@@ -332,10 +333,14 @@ $Script:Xaml = @'
       <DockPanel>
         <StackPanel DockPanel.Dock="Top" Margin="22,24,22,14">
           <StackPanel Orientation="Horizontal">
-            <TextBlock Text="&#xE90F;" FontFamily="Segoe MDL2 Assets" FontSize="22" Foreground="#5BA7EF" VerticalAlignment="Center" Margin="0,0,10,0"/>
-            <TextBlock Text="Laptop-Diagnose" FontSize="19" FontWeight="Bold" Foreground="White" VerticalAlignment="Center"/>
+            <Image x:Name="SidebarLogo" Width="44" Height="44" Margin="0,0,12,0" VerticalAlignment="Center" RenderOptions.BitmapScalingMode="HighQuality"/>
+            <StackPanel VerticalAlignment="Center">
+              <TextBlock FontSize="19" FontWeight="Black">
+                <Run Text="PC REPAIR " Foreground="White"/><Run Text="PRO" Foreground="#2E9BFF"/>
+              </TextBlock>
+              <TextBlock x:Name="VersionText" Text="Diagnose • Repair • Keep it running" FontSize="11" Foreground="{DynamicResource SidebarMuted}" Margin="0,1,0,0"/>
+            </StackPanel>
           </StackPanel>
-          <TextBlock x:Name="VersionText" Text="&amp; Reparatur" Foreground="{DynamicResource SidebarMuted}" Margin="32,2,0,0"/>
         </StackPanel>
 
         <StackPanel DockPanel.Dock="Bottom" Margin="20,8,20,18">
@@ -561,7 +566,7 @@ $Script:Xaml = @'
         <ScrollViewer x:Name="ChangesPanel" Visibility="Collapsed" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
           <StackPanel>
             <Border Style="{StaticResource Card}">
-              <TextBlock x:Name="ChangesHint" Style="{StaticResource Muted}" Text="Hier steht jede Änderung, die LaptopDiagnose vorgenommen hat. Umkehrbare Änderungen lassen sich einzeln zurücknehmen."/>
+              <TextBlock x:Name="ChangesHint" Style="{StaticResource Muted}" Text="Hier steht jede Änderung, die PC Repair Pro vorgenommen hat. Umkehrbare Änderungen lassen sich einzeln zurücknehmen."/>
             </Border>
             <ItemsControl x:Name="ChangesList">
               <ItemsControl.ItemTemplate>
@@ -609,7 +614,7 @@ $Script:Xaml = @'
             <Border Style="{StaticResource Card}">
               <StackPanel>
                 <TextBlock Text="Geplante Wartung" Style="{StaticResource CardTitle}"/>
-                <TextBlock Style="{StaticResource Muted}" Margin="0,0,0,8" Text="Prüft den Laptop regelmäßig im Hintergrund – ohne Änderungen. Bericht und Verlauf werden gespeichert, kritische Probleme erscheinen als Windows-Benachrichtigung."/>
+                <TextBlock Style="{StaticResource Muted}" Margin="0,0,0,8" Text="Prüft das Gerät regelmäßig im Hintergrund – ohne Änderungen. Bericht und Verlauf werden gespeichert, kritische Probleme erscheinen als Windows-Benachrichtigung."/>
                 <TextBlock x:Name="MaintStatus" Text="Status wird geladen …" Foreground="{DynamicResource TextPrimary}" FontWeight="SemiBold" Margin="0,0,0,10" TextWrapping="Wrap"/>
                 <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
                   <TextBlock Text="Häufigkeit" Width="100" VerticalAlignment="Center" Foreground="{DynamicResource TextSecondary}"/>
@@ -658,7 +663,7 @@ $Script:Xaml = @'
                 <CheckBox x:Name="ChkPdf" Margin="0,4,0,12" Cursor="Hand">
                   <TextBlock Text="Berichte zusätzlich als PDF speichern (über Microsoft Edge)" Foreground="{DynamicResource TextPrimary}"/>
                 </CheckBox>
-                <TextBlock Style="{StaticResource Muted}" Margin="0,0,0,8" Text="Geräteübersicht: Die JSON-Berichte (Diagnosebericht_*.json) mehrerer Laptops in einen gemeinsamen Ordner legen – z. B. USB-Stick oder OneDrive – und daraus eine Vergleichsübersicht erstellen."/>
+                <TextBlock Style="{StaticResource Muted}" Margin="0,0,0,8" Text="Geräteübersicht: Die JSON-Berichte (Diagnosebericht_*.json) mehrerer PCs und Laptops in einen gemeinsamen Ordner legen – z. B. USB-Stick oder OneDrive – und daraus eine Vergleichsübersicht erstellen."/>
                 <StackPanel Orientation="Horizontal">
                   <Button x:Name="BtnFleet" Style="{StaticResource Btn}" Margin="0" Content="Geräteübersicht erstellen …"/>
                 </StackPanel>
@@ -681,9 +686,18 @@ $Script:Xaml = @'
 
             <Border Style="{StaticResource Card}">
               <StackPanel>
-                <TextBlock Text="Über Laptop-Diagnose" Style="{StaticResource CardTitle}"/>
+                <TextBlock Text="Über PC Repair Pro" Style="{StaticResource CardTitle}"/>
+                <StackPanel Orientation="Horizontal" Margin="0,4,0,12">
+                  <Image x:Name="AboutLogo" Width="96" Height="96" Margin="0,0,18,0" VerticalAlignment="Center" RenderOptions.BitmapScalingMode="HighQuality"/>
+                  <StackPanel VerticalAlignment="Center">
+                    <TextBlock FontSize="28" FontWeight="Black">
+                      <Run Text="PC REPAIR " Foreground="{DynamicResource TextHeading}"/><Run Text="PRO" Foreground="#1E90FF"/>
+                    </TextBlock>
+                    <TextBlock Text="DIAGNOSE  •  REPAIR  •  KEEP IT RUNNING" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource TextMuted}" Margin="0,2,0,0"/>
+                  </StackPanel>
+                </StackPanel>
                 <TextBlock x:Name="AboutText" Foreground="{DynamicResource TextPrimary}" TextWrapping="Wrap" Margin="0,0,0,8"
-                           Text="Laptop-Diagnose &amp; Reparatur&#x0a;© 2026 Eder Tom – alle Rechte vorbehalten."/>
+                           Text="PC Repair Pro&#x0a;© 2026 Eder Tom – alle Rechte vorbehalten."/>
                 <TextBlock x:Name="SignatureText" Style="{StaticResource Muted}"/>
               </StackPanel>
             </Border>
@@ -823,6 +837,7 @@ function global:Get-GuiSnapshot {
         System     = $Script:SystemInfo
         Reboot     = [bool]$Script:RebootNeeded
         Comparison = [string[]]@($Script:LastComparison)
+        DeviceKind = (Get-DeviceKind)
     }
 }
 '@
@@ -883,16 +898,16 @@ function Complete-WorkerJob {
 #region ---------- Darstellung ----------
 
 $Script:Pages = [ordered]@{
-    'Alle'          = @{ Kind = 'Findings'; Title = 'Übersicht'; Sub = 'Gesamtzustand des Laptops – alle Ergebnisse nach Dringlichkeit sortiert.' }
+    'Alle'          = @{ Kind = 'Findings'; Title = 'Übersicht'; Sub = 'Gesamtzustand des Geräts – alle Ergebnisse nach Dringlichkeit sortiert.' }
     'Fehler'        = @{ Kind = 'Findings'; Title = 'Fehlersuche'; Sub = 'Bluescreens mit Ursachen, Abstürze, Problemgeräte, Dienste, Systemdateien, Datenträger und Speichertest.'; Scan = 'Invoke-ErrorScan' }
     'Sicherheit'    = @{ Kind = 'Findings'; Title = 'Sicherheit'; Sub = 'Virenschutz, Firewall, Secure Boot, TPM, Verschlüsselung, Kernisolierung, UAC, SMB1, Freigaben und veraltete Browser.'; Scan = 'Invoke-SecurityScan' }
     'Speicher'      = @{ Kind = 'Findings'; Title = 'Speicherfresser'; Sub = 'Arbeitsspeicher, größte Programme, freier Speicherplatz, Speicherbelegung als Grafik und Datenmüll.'; Scan = 'Invoke-MemoryScanDetailed' }
-    'Leistung'      = @{ Kind = 'Findings'; Title = 'Leistungsbremsen'; Sub = 'Prozessorlast, Autostart, Startdauer, Energieeinstellungen, Laufwerk, Temperatur und Zusatzsoftware.'; Scan = 'Invoke-PerformanceScan' }
+    'Leistung'      = @{ Kind = 'Findings'; Title = 'Leistungsbremsen'; Sub = 'Prozessorlast, Autostart, Startdauer, Bildwiederholrate, Arbeitsspeicher-Takt, Energie- und Standby-Einstellungen, Laufwerk, Temperatur und Zusatzsoftware.'; Scan = 'Invoke-PerformanceScan' }
     'Herunterfahren' = @{ Kind = 'Findings'; Title = 'Herunterfahren & Neustart'; Sub = 'Dauer der letzten Herunterfahrvorgänge, bremsende Programme, Dienste und Treiber, Wartezeiten, ausstehende Updates und Netzlaufwerke.'; Scan = 'Invoke-ShutdownScan'; ScanText = 'Herunterfahren prüfen' }
     'Akku'          = @{ Kind = 'Findings'; Title = 'Akku'; Sub = 'Gesundheit, Kapazitätsverlauf, Ladezyklen, Ladezustand, Standby und was das Energiesparen verhindert.'; Scan = 'Invoke-BatteryScan' }
-    'Netzwerk'      = @{ Kind = 'Findings'; Title = 'Netzwerk & WLAN'; Sub = 'Internetverbindung, WLAN-Signal und -Sicherheit, Geschwindigkeit, Latenz, Proxy und WLAN-Treiber.'; Scan = 'Invoke-NetworkScan' }
+    'Netzwerk'      = @{ Kind = 'Findings'; Title = 'Netzwerk & WLAN'; Sub = 'Internetverbindung, WLAN-Signal und -Sicherheit, Netzwerkkabel (LAN), Geschwindigkeit, Latenz, Proxy und WLAN-Treiber.'; Scan = 'Invoke-NetworkScan' }
     'Software'      = @{ Kind = 'Findings'; Title = 'Software-Updates'; Sub = 'Verfügbare Updates für installierte Programme (über WinGet).'; Scan = 'Invoke-SoftwareScan' }
-    'Windows'       = @{ Kind = 'Findings'; Title = 'Windows & Treiber'; Sub = 'Windows-Updates, Treiber-Updates und Hersteller-Tools für BIOS und Firmware.'; Scan = 'Invoke-WindowsUpdateScan' }
+    'Windows'       = @{ Kind = 'Findings'; Title = 'Windows & Treiber'; Sub = 'Windows-Updates, Treiber-Updates, Grafiktreiber, BIOS-Alter und Hersteller-Tools für BIOS und Firmware.'; Scan = 'Invoke-WindowsUpdateScan' }
     'Werkzeuge'     = @{ Kind = 'Findings'; Title = 'Reparatur-Werkzeuge'; Sub = 'Gezielte Reparaturen und Tests – Werkzeug ankreuzen und »Ausgewählte beheben« klicken.'; Scan = 'Invoke-ToolsScan'; ScanText = 'Werkzeuge laden' }
     'Verlauf'       = @{ Kind = 'History'; Title = 'Verlauf & Trends'; Sub = 'Entwicklung der wichtigsten Kennzahlen über alle Komplett-Diagnosen.' }
     'Aenderungen'   = @{ Kind = 'Changes'; Title = 'Änderungen'; Sub = 'Protokoll aller Änderungen mit Rückgängig-Funktion.' }
@@ -972,7 +987,7 @@ function Set-Theme {
 #endregion
 
 function Show-Message {
-    param([string]$Text, [string]$Title = 'Laptop-Diagnose', [string]$Icon = 'Information', [string]$Buttons = 'OK')
+    param([string]$Text, [string]$Title = 'PC Repair Pro', [string]$Icon = 'Information', [string]$Buttons = 'OK')
     return [System.Windows.MessageBox]::Show($Script:Window, $Text, $Title, $Buttons, $Icon)
 }
 
@@ -1128,7 +1143,7 @@ function Update-View {
     if (-not $Script:View.Count) {
         $Script:UI.EmptyHint.Visibility = 'Visible'
         $Script:UI.EmptyHintText.Text = if ($page -eq 'Alle') {
-            "Noch keine Ergebnisse.`nKlicken Sie auf »Komplett-Diagnose starten«, um den Laptop vollständig zu prüfen."
+            "Noch keine Ergebnisse.`nKlicken Sie auf »Komplett-Diagnose starten«, um das Gerät vollständig zu prüfen."
         } elseif ($page -eq 'Werkzeuge') {
             'Die Werkzeuge werden geladen …'
         } else {
@@ -1539,6 +1554,20 @@ try {
             $Script:Window.Icon = [System.Windows.Media.Imaging.BitmapFrame]::Create($iconStream, [System.Windows.Media.Imaging.BitmapCreateOptions]::None, [System.Windows.Media.Imaging.BitmapCacheOption]::OnLoad)
         } catch { }
     }
+    # Logo ebenfalls über den Speicher laden (keine Dateisperre)
+    $Script:LogoImage = $null
+    $logoPath = Join-Path $PSScriptRoot 'Logo.png'
+    if (Test-Path -LiteralPath $logoPath) {
+        try {
+            $bmp = New-Object System.Windows.Media.Imaging.BitmapImage
+            $bmp.BeginInit()
+            $bmp.CacheOption = [System.Windows.Media.Imaging.BitmapCacheOption]::OnLoad
+            $bmp.StreamSource = New-Object System.IO.MemoryStream(, [IO.File]::ReadAllBytes($logoPath))
+            $bmp.EndInit()
+            $bmp.Freeze()
+            $Script:LogoImage = $bmp
+        } catch { }
+    }
 
     $Script:UI = @{}
     $names = @(
@@ -1547,7 +1576,7 @@ try {
         'SystemList', 'EmptyHint', 'EmptyHintText', 'FindingsList', 'LogBox', 'FixButtons', 'BtnSelectRecommended', 'BtnClearSelection', 'BtnFix',
         'BtnFixText', 'Busy', 'StatusText', 'HistoryPanel', 'HistoryHint', 'HistoryList', 'ChangesPanel', 'ChangesHint', 'ChangesList',
         'SettingsPanel', 'ThemeSystem', 'ThemeLight', 'ThemeDark', 'MaintStatus', 'IntWeekly', 'IntDaily', 'DayRow', 'MaintTime', 'BtnMaintSet',
-        'BtnMaintRemove', 'ChkPdf', 'BtnFleet', 'UpdateStatus', 'BtnUpdateCheck', 'BtnUpdateInstall', 'SignatureText', 'ChkAutoUpdate', 'BadgeUpdate', 'AboutText',
+        'BtnMaintRemove', 'ChkPdf', 'BtnFleet', 'UpdateStatus', 'BtnUpdateCheck', 'BtnUpdateInstall', 'SignatureText', 'ChkAutoUpdate', 'BadgeUpdate', 'AboutText', 'SidebarLogo', 'AboutLogo',
         'ReportFolderText', 'BtnReportFolderChange', 'BtnReportFolderOpen', 'Keep10', 'Keep30', 'Keep100', 'Keep0'
     )
     $navNames = @('NavAlle') + @($Script:CategoryKeys | ForEach-Object { "Nav$_" }) + @('NavVerlauf', 'NavAenderungen', 'NavEinstellungen', 'NavLog')
@@ -1559,6 +1588,7 @@ try {
         if ($null -eq $Script:UI[$n]) { throw "Oberflächenelement »$n« fehlt." }
     }
 
+    if ($Script:LogoImage) { $Script:UI.SidebarLogo.Source = $Script:LogoImage; $Script:UI.AboutLogo.Source = $Script:LogoImage }
     Set-Theme -Mode ("$((Read-UiSettings).Design)" -replace '^(?!Hell$|Dunkel$).*$', 'System')
     $Script:UI.ChkNurPruefen.IsChecked = [bool]$NurPruefen
     if (-not $Script:IsAdmin) { $Script:UI.AdminBanner.Visibility = 'Visible' }
@@ -1714,10 +1744,15 @@ try {
                 param($out)
                 $ver = @($out) | Where-Object { $_ -is [string] } | Select-Object -First 1
                 if ($ver) {
-                    $Script:UI.VersionText.Text = "& Reparatur  ·  v$ver"
-                    $Script:UI.AboutText.Text = "Laptop-Diagnose & Reparatur  ·  Version $ver`n© 2026 Eder Tom – alle Rechte vorbehalten."
+                    $Script:UI.VersionText.Text = "Diagnose • Repair • Keep it running  ·  v$ver"
+                    $Script:UI.AboutText.Text = "PC Repair Pro  ·  Version $ver  (früher »Laptop-Diagnose & Reparatur«)`n© 2026 Eder Tom – alle Rechte vorbehalten."
                 }
-                Update-FromSnapshot (@($out) | Where-Object { $_.IsSnapshot } | Select-Object -Last 1)
+                $first = @($out) | Where-Object { $_.IsSnapshot } | Select-Object -Last 1
+                Update-FromSnapshot $first
+                # Desktop-PC: Akku-Bereich ausblenden
+                if ($first -and $first.DeviceKind -eq 'Desktop') { $Script:UI.NavAkku.Visibility = 'Collapsed' }
+                # Nach einem Programm-Update: Startmenü, Desktop-Verknüpfung und »Installierte Apps« angleichen
+                if ($ver) { try { $null = Update-AppRegistration -InstallDir $PSScriptRoot -Version $ver } catch { } }
                 if ($Script:FolderMigrationMessage) {
                     Add-LogLine $Script:FolderMigrationMessage
                     $null = Show-Message ($Script:FolderMigrationMessage + ".`n`nDer Ordner lässt sich jederzeit unter »Einstellungen › Berichte« ändern.") 'Berichtordner'
@@ -1731,7 +1766,7 @@ try {
     $null = $Script:Window.ShowDialog()
 } catch {
     $msg = $_.Exception.Message
-    try { $null = [System.Windows.MessageBox]::Show("Die Oberfläche konnte nicht gestartet werden:`n`n$msg", 'Laptop-Diagnose', 'OK', 'Error') }
+    try { $null = [System.Windows.MessageBox]::Show("Die Oberfläche konnte nicht gestartet werden:`n`n$msg", 'PC Repair Pro', 'OK', 'Error') }
     catch { Write-Host "Fehler: $msg" -ForegroundColor Red }
 } finally {
     # Hintergrundarbeit beenden, ohne zu blockieren (z. B. eine laufende Update-Suche), und den Prozess sicher schließen

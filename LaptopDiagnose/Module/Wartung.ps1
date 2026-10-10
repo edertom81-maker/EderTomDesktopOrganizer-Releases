@@ -55,7 +55,7 @@ function Register-MaintenanceTask {
     $settings = New-ScheduledTaskSettingsSet -StartWhenAvailable -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -ExecutionTimeLimit (New-TimeSpan -Hours 1) -MultipleInstances IgnoreNew
     $existed = [bool](Get-MaintenanceTask)
     $null = Register-ScheduledTask -TaskPath $Script:TaskPath -TaskName $Script:TaskName -Action $action -Trigger $trigger -Principal $principal -Settings $settings `
-        -Description 'Regelmäßige Laptop-Diagnose (nur prüfen, keine Änderungen). Meldet kritische Probleme per Windows-Benachrichtigung. Eder Tom.' -Force -ErrorAction Stop
+        -Description 'PC Repair Pro: regelmäßige Diagnose (nur prüfen, keine Änderungen). Meldet kritische Probleme per Windows-Benachrichtigung. Eder Tom.' -Force -ErrorAction Stop
     $t = Get-MaintenanceTask
     if (-not $existed -and (Get-Command Register-Change -ErrorAction SilentlyContinue)) {
         Register-Change -Beschreibung "Geplante Wartung eingerichtet ($($t.Beschreibung))" -Typ 'Wartungsaufgabe' -Daten @{}
@@ -83,7 +83,7 @@ function Show-MaintenanceConsole {
         if (Read-YesNo 'Geplante Wartung entfernen?' $false) { Write-Host "   $(Unregister-MaintenanceTask)" -ForegroundColor Green }
         return
     }
-    Write-Host '   Die geplante Wartung prüft den Laptop regelmäßig im Hintergrund (ohne Änderungen),' -ForegroundColor Gray
+    Write-Host "   Die geplante Wartung prüft den $(Get-DeviceWord) regelmäßig im Hintergrund (ohne Änderungen)," -ForegroundColor Gray
     Write-Host '   speichert Bericht und Verlauf und meldet kritische Probleme per Windows-Benachrichtigung.' -ForegroundColor Gray
     if (-not (Read-YesNo 'Jetzt einrichten?' $true)) { return }
     $daily = (Read-Host '   [W]öchentlich oder [T]äglich? (Standard: W)') -match '^\s*t'
@@ -115,7 +115,7 @@ function Show-Notification {
         $null = [Windows.UI.Notifications.ToastNotificationManager, Windows.UI.Notifications, ContentType = WindowsRuntime]
         $null = [Windows.Data.Xml.Dom.XmlDocument, Windows.Data.Xml.Dom.XmlDocument, ContentType = WindowsRuntime]
         $xml = New-Object Windows.Data.Xml.Dom.XmlDocument
-        $xml.LoadXml("<toast$launch><visual><binding template=""ToastGeneric""><text>$(& $esc $Title)</text><text>$(& $esc $Text)</text><text placement=""attribution"">© 2026 Eder Tom</text></binding></visual></toast>")
+        $xml.LoadXml("<toast$launch><visual><binding template=""ToastGeneric""><text>$(& $esc $Title)</text><text>$(& $esc $Text)</text><text placement=""attribution"">PC Repair Pro · © 2026 Eder Tom</text></binding></visual></toast>")
         $appId = '{1AC14E77-02E7-4E5D-B744-2EB1AE5198B7}\WindowsPowerShell\v1.0\powershell.exe'
         [Windows.UI.Notifications.ToastNotificationManager]::CreateToastNotifier($appId).Show([Windows.UI.Notifications.ToastNotification]::new($xml))
         return $true
