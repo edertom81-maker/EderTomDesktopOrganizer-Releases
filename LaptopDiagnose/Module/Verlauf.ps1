@@ -18,6 +18,7 @@ $Script:MetricCatalog = [ordered]@{
     'Datenmuell'        = @{ Label = 'Datenmüll'; Unit = 'GB'; Better = 'niedrig' }
     'Autostarts'        = @{ Label = 'Autostart-Programme'; Unit = ''; Better = 'niedrig' }
     'Programmabstuerze' = @{ Label = 'Programmabstürze (7 Tage)'; Unit = ''; Better = 'niedrig' }
+    'ProgrammHaenger'   = @{ Label = 'Programm-Hänger (7 Tage)'; Unit = ''; Better = 'niedrig' }
     'Bluescreens'       = @{ Label = 'Bluescreens (7 Tage)'; Unit = ''; Better = 'niedrig' }
     'Ereignisfehler'    = @{ Label = 'Fehler im Ereignisprotokoll (7 Tage)'; Unit = ''; Better = 'niedrig' }
     'SoftwareUpdates'   = @{ Label = 'Offene Programm-Updates'; Unit = ''; Better = 'niedrig' }

@@ -828,7 +828,7 @@ $Script:Pages = [ordered]@{
     'Alle'          = @{ Kind = 'Findings'; Title = 'Übersicht'; Sub = 'Gesamtzustand des Laptops – alle Ergebnisse nach Dringlichkeit sortiert.' }
     'Fehler'        = @{ Kind = 'Findings'; Title = 'Fehlersuche'; Sub = 'Bluescreens mit Ursachen, Abstürze, Problemgeräte, Dienste, Systemdateien, Datenträger und Speichertest.'; Scan = 'Invoke-ErrorScan' }
     'Sicherheit'    = @{ Kind = 'Findings'; Title = 'Sicherheit'; Sub = 'Virenschutz, Firewall, Secure Boot, TPM, Verschlüsselung, Kernisolierung, UAC, SMB1, Freigaben und veraltete Browser.'; Scan = 'Invoke-SecurityScan' }
-    'Speicher'      = @{ Kind = 'Findings'; Title = 'Speicherfresser'; Sub = 'Arbeitsspeicher, größte Programme, freier Speicherplatz, Speicherbelegung als Grafik und Datenmüll.'; Scan = 'Invoke-MemoryScan' }
+    'Speicher'      = @{ Kind = 'Findings'; Title = 'Speicherfresser'; Sub = 'Arbeitsspeicher, größte Programme, freier Speicherplatz, Speicherbelegung als Grafik und Datenmüll.'; Scan = 'Invoke-MemoryScanDetailed' }
     'Leistung'      = @{ Kind = 'Findings'; Title = 'Leistungsbremsen'; Sub = 'Prozessorlast, Autostart, Startdauer, Energieeinstellungen, Laufwerk, Temperatur und Zusatzsoftware.'; Scan = 'Invoke-PerformanceScan' }
     'Herunterfahren' = @{ Kind = 'Findings'; Title = 'Herunterfahren & Neustart'; Sub = 'Dauer der letzten Herunterfahrvorgänge, bremsende Programme, Dienste und Treiber, Wartezeiten, ausstehende Updates und Netzlaufwerke.'; Scan = 'Invoke-ShutdownScan'; ScanText = 'Herunterfahren prüfen' }
     'Akku'          = @{ Kind = 'Findings'; Title = 'Akku'; Sub = 'Gesundheit, Kapazitätsverlauf, Ladezyklen, Ladezustand, Standby und was das Energiesparen verhindert.'; Scan = 'Invoke-BatteryScan' }
@@ -1518,7 +1518,11 @@ try {
     try { $null = [System.Windows.MessageBox]::Show("Die Oberfläche konnte nicht gestartet werden:`n`n$msg", 'Laptop-Diagnose', 'OK', 'Error') }
     catch { Write-Host "Fehler: $msg" -ForegroundColor Red }
 } finally {
-    if ($Script:Runspace) { try { $Script:Runspace.Close(); $Script:Runspace.Dispose() } catch { } }
+    # Hintergrundarbeit beenden, ohne zu blockieren (z. B. eine laufende Update-Suche), und den Prozess sicher schließen
+    if ($Script:Job) { try { $null = $Script:Job.PS.BeginStop($null, $null) } catch { } }
+    elseif ($Script:Runspace) { try { $Script:Runspace.Close(); $Script:Runspace.Dispose() } catch { } }
+    try { if ($Script:Timer) { $Script:Timer.Stop() } } catch { }
+    [Environment]::Exit(0)
 }
 
 #endregion
