@@ -9,6 +9,7 @@ Stand: 10.10.2026. Neue Wünsche hier ergänzen.
     - Defekt heißt: Das Ziel (Datei oder Ordner) existiert nicht mehr, z. B. nach einer Deinstallation.
     - Nicht melden: Ziele auf Netzlaufwerken, USB-Sticks oder externen Platten, die gerade nicht verbunden sind.
     - Reparatur nach Auswahl in der Ankreuz-Liste: Verknüpfungen in den Papierkorb, defekte Autostart-Einträge deaktivieren (rückgängig über »Änderungen«).
+15. **Umfang der Komplett-Diagnose wählbar** (Einstellungen › Komplett-Diagnose): je Prüfbereich ein Haken – Fehlersuche, Speicherfresser, Leistungsbremsen, Herunterfahren, Akku, Netzwerk & WLAN, Software-Updates, Sicherheit, Windows & Treiber – plus der vorhandene Haken für die Speicherbelegung. Standard: alle an (Speicherbelegung aus). Gilt für Fenster, Konsole und geplante Wartung. Mindestens ein Bereich muss gewählt bleiben. »Akku« erscheint nur bei Laptops. Abgewählte Bereiche lassen sich weiterhin einzeln über »Prüfen« starten; Bericht und Verlauf weisen aus, welche Bereiche nicht geprüft wurden.
 
 ## Erledigt in Version 2.5.2
 
