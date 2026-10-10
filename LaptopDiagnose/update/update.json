@@ -1,7 +1,7 @@
 {
-    "version": "2.3.2",
-    "datei": "LaptopDiagnose-2.3.2.zip",
-    "sha256": "ec76f8dab24ee31c2005dd81d4c671bedc45a7e75bbd1b0d234d0cc58724a4d2",
-    "notizen": "Weniger Last beim Arbeiten: Protokolle werden lokal und gebündelt gespeichert (nicht mehr Zeile für Zeile im OneDrive-Ordner), Berichte öffnen sich, ohne das Fenster zu blockieren, Schließen wartet nicht mehr auf laufende Prüfungen. Korrigiert: falsche Programmabstürze (z. B. Codex-Dienst) und Windows-eigene virtuelle WLAN-Adapter als »alter Treiber«.",
+    "version": "2.4.0",
+    "datei": "LaptopDiagnose-2.4.0.zip",
+    "sha256": "385ab4e887b4f1c76163c4d1346a51d81dbdf24d5b747b968880832611871e25",
+    "notizen": "Berichte jetzt lokal statt in OneDrive (einmaliger Umzug, Ordner unter Einstellungen wählbar), alte Berichte werden automatisch aufgeräumt. Neu: Downloads aufräumen (alte Installationsdateien, Duplikate – in den Papierkorb), Prüfung der Akku-Ladegrenze mit Link zu MyASUS, Vorher/Nachher-Vergleich nach Reparaturen, Speicherbelegung als Kachelgrafik. Edge und andere Browser werden nicht mehr fälschlich als veraltet gemeldet. Das Fenster öffnet sich maximiert.",
     "veroeffentlicht": "2026-10-10"
 }

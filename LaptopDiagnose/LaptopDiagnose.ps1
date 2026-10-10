@@ -18,7 +18,8 @@
     Nur Diagnose und Bericht – es werden keine Reparaturen oder Updates angeboten.
 
 .PARAMETER BerichtOrdner
-    Zielordner für Berichte und Protokolle (Standard: Dokumente\LaptopDiagnose).
+    Zielordner für Berichte, Verlauf und Einstellungen (Standard: der in den Einstellungen gewählte Ordner,
+    sonst der lokale Ordner Dokumente\LaptopDiagnose).
 
 .PARAMETER Unbeaufsichtigt
     Für die geplante Wartung: Komplett-Diagnose ohne Rückfragen und ohne Änderungen, speichert Bericht und Verlauf
@@ -42,14 +43,14 @@ param(
         'Werkzeuge', 'Verlauf', 'Aenderungen', 'Wartung', 'Update')]
     [string]$Modus = 'Menue',
     [switch]$NurPruefen,
-    [string]$BerichtOrdner = (Join-Path ([Environment]::GetFolderPath('MyDocuments')) 'LaptopDiagnose'),
+    [string]$BerichtOrdner,
     [switch]$Unbeaufsichtigt,
     [switch]$Pdf
 )
 
 if ($Unbeaufsichtigt) { $NurPruefen = $true }
 
-$Script:ToolVersion = '2.3.2'
+$Script:ToolVersion = '2.4.0'
 $Script:InstallDir = $PSScriptRoot
 $Script:ChangeCounter = 0
 $Script:SoftwareUpdateCache = $null
@@ -58,6 +59,7 @@ $Script:Findings = New-Object System.Collections.Generic.List[object]
 $Script:ActionLog = New-Object System.Collections.Generic.List[object]
 $Script:SystemInfo = $null
 $Script:RebootNeeded = $false
+$Script:LastComparison = @()
 $Script:SeverityOrder = @{ 'Kritisch' = 0; 'Warnung' = 1; 'Info' = 2; 'OK' = 3 }
 $Script:Categories = [ordered]@{
     'Fehler'     = 'Fehler & Systemzustand'
@@ -133,7 +135,7 @@ function Write-Finding {
     foreach ($item in ($Finding.Items | Select-Object -First 10)) {
         Write-Host "                • $item" -ForegroundColor DarkGray
     }
-    foreach ($c in @($Finding.Chart)) {
+    foreach ($c in @($Finding.Chart | Where-Object { $Finding.ChartStyle -ne 'Kacheln' })) {
         Write-Host ('                • {0,-34} {1,12}' -f $c.Label, $c.Text) -ForegroundColor DarkGray
     }
     if (@($Finding.Items).Count -gt 10) {
@@ -188,8 +190,15 @@ function Add-Finding {
         [string[]]$SelectLabels,
         [switch]$SelectAllByDefault,
         [object[]]$Chart,
+        [ValidateSet('Balken', 'Kacheln')][string]$ChartStyle = 'Balken',
         [switch]$Silent
     )
+    $chartPoints = @($Chart | Where-Object { $_ })
+    if ($ChartStyle -eq 'Kacheln' -and $chartPoints) {
+        $chartPoints = @(Get-TreemapLayout -Items $chartPoints)
+        # Kleine Kacheln haben keinen Platz für Text – die Werte stehen deshalb zusätzlich in den Details
+        if (-not $Items) { $Items = @($chartPoints | ForEach-Object { '{0,-34} {1,10}  ({2} %)' -f $_.Label, $_.Text, $_.Anteil }) }
+    }
     $finding = [pscustomobject]@{
         Category       = $Category
         Severity       = $Severity
@@ -202,7 +211,8 @@ function Add-Finding {
         RequiresReboot = [bool]$RequiresReboot
         SelectLabels   = $SelectLabels
         SelectAll      = [bool]$SelectAllByDefault
-        Chart          = @($Chart | Where-Object { $_ })
+        Chart          = $chartPoints
+        ChartStyle     = $ChartStyle
         Selection      = $null
         Fixed          = $false
         FixResult      = $null
@@ -211,6 +221,63 @@ function Add-Finding {
     $Script:Findings.Add($finding)
     if (-not $Silent) { Write-Finding $finding }
     return
+}
+
+function Get-TreemapLayout {
+    <#
+        Kachelgrafik (»Squarified Treemap«): verteilt die Werte auf eine Fläche, sodass jede Kachel ihrem Anteil
+        entspricht und möglichst quadratisch bleibt. X, Y, W und H sind Anteile (0–1) der Gesamtfläche im Seitenverhältnis 5:2.
+    #>
+    param([object[]]$Items, [double]$Aspect = 2.5)
+    $vals = @($Items | Where-Object { [double]$_.Value -gt 0 } | Sort-Object { [double]$_.Value } -Descending)
+    if (-not $vals) { return @() }
+    $total = [double](($vals | Measure-Object Value -Sum).Sum)
+    # Achtung: PowerShell unterscheidet keine Groß-/Kleinschreibung – daher eigene Namen für die Gesamtfläche
+    $areaW = $Aspect; $areaH = 1.0
+    $scale = $areaW * $areaH / $total
+    $x = 0.0; $y = 0.0; $w = $areaW; $h = $areaH
+    $out = New-Object System.Collections.Generic.List[object]
+    $row = New-Object System.Collections.Generic.List[object]
+    $worst = {
+        param($areas, $side)
+        $sum = 0.0; $mx = 0.0; $mn = [double]::MaxValue
+        foreach ($a in $areas) { $sum += $a; if ($a -gt $mx) { $mx = $a }; if ($a -lt $mn) { $mn = $a } }
+        [math]::Max($side * $side * $mx / ($sum * $sum), ($sum * $sum) / ($side * $side * $mn))
+    }
+    $layoutRow = {
+        # Wird per Punkt-Aufruf ausgeführt und ändert dadurch direkt $x, $y, $w und $h
+        $sum = 0.0
+        foreach ($r in $row) { $sum += $r.Area }
+        if ($w -ge $h) {
+            $colW = $sum / $h; $yy = $y
+            foreach ($r in $row) { $rh = $r.Area / $colW; $out.Add(@($r.Item, $x, $yy, $colW, $rh)); $yy += $rh }
+            $x += $colW; $w -= $colW
+        } else {
+            $rowH = $sum / $w; $xx = $x
+            foreach ($r in $row) { $rw = $r.Area / $rowH; $out.Add(@($r.Item, $xx, $y, $rw, $rowH)); $xx += $rw }
+            $y += $rowH; $h -= $rowH
+        }
+    }
+    $i = 0
+    while ($i -lt $vals.Count) {
+        $area = [double]$vals[$i].Value * $scale
+        $side = [math]::Min($w, $h)
+        $current = @($row | ForEach-Object { $_.Area })
+        if ($row.Count -eq 0 -or (& $worst ($current + $area) $side) -le (& $worst $current $side)) {
+            $row.Add([pscustomobject]@{ Item = $vals[$i]; Area = $area }); $i++
+        } else {
+            . $layoutRow   # im selben Gültigkeitsbereich: verkleinert die freie Fläche (x, y, w, h)
+            $row.Clear()
+        }
+    }
+    if ($row.Count) { . $layoutRow }
+    foreach ($o in $out) {
+        [pscustomobject]@{
+            Label = "$($o[0].Label)"; Value = [double]$o[0].Value; Text = "$($o[0].Text)"
+            X = $o[1] / $areaW; Y = $o[2] / $areaH; W = $o[3] / $areaW; H = $o[4] / $areaH
+            Anteil = [math]::Round([double]$o[0].Value / $total * 100)
+        }
+    }
 }
 
 function Clear-CategoryFindings {
@@ -293,6 +360,12 @@ function Stop-ProcessGroup {
 foreach ($moduleFile in Get-ChildItem -LiteralPath (Join-Path $PSScriptRoot 'Module') -Filter '*.ps1' -File -ErrorAction SilentlyContinue | Sort-Object Name) {
     . $moduleFile.FullName
 }
+
+# Berichtordner: Standard ist der lokale Dokumente-Ordner (nicht OneDrive); beim ersten Start werden alte Daten übernommen
+$Script:FolderMigrationMessage = $null
+$folderInfo = Resolve-ReportFolder -Requested $BerichtOrdner
+$BerichtOrdner = $folderInfo.Folder
+$Script:FolderMigrationMessage = $folderInfo.Message
 
 #region ---------- Systemübersicht ----------
 
@@ -727,12 +800,9 @@ function Invoke-MemoryScan {
                 -Detail 'Nicht mehr benötigte Dateien manuell löschen oder auf externe Speicher auslagern.' `
                 -Items ($big | ForEach-Object { '{0,10}  {1}' -f (Format-Bytes $_.Length), $_.FullName.Replace($env:USERPROFILE, '%USERPROFILE%') })
         }
-        $dl = Join-Path $env:USERPROFILE 'Downloads'
-        $dlSize = Get-FolderSize -Path $dl
-        if ($dlSize -ge 5GB) {
-            Add-Finding $cat Info "Downloads-Ordner belegt $(Format-Bytes $dlSize)" -Detail 'Alte Installationsdateien und Archive können meist gelöscht werden.'
-        }
     }
+
+    Invoke-Check $cat 'Downloads-Ordner (alte Installationsdateien, Duplikate, große Dateien)' { Add-DownloadCleanupFindings -Category $cat }
 }
 
 function Invoke-CleanMgr {
@@ -1113,6 +1183,12 @@ function Invoke-BatteryScan {
         }
     }
 
+    Invoke-Check $cat 'Ladegrenze (Akkuschonung)' {
+        $h = 0
+        try { if ($Script:Metrics.Contains('AkkuGesundheit')) { $h = [double]$Script:Metrics['AkkuGesundheit'] } } catch { }
+        Add-ChargeLimitFindings -Category $cat -Health $h
+    }
+
     Invoke-Check $cat 'Standby-Art und Akkuverbrauch nach Apps' { Add-StandbyFindings -Category $cat }
 
     Invoke-Check $cat 'Was den Energiesparmodus verhindert' {
@@ -1171,12 +1247,55 @@ function ConvertFrom-WingetTable {
     return $result
 }
 
+function Get-RealBrowserVersion {
+    <#
+        Liest die tatsächlich installierte Version von Browsern, die sich selbst aktualisieren. WinGet kennt oft nur
+        die Version aus der Installation und meldet dann ein Update, obwohl der Browser längst aktuell ist.
+    #>
+    param([string]$Id)
+    $candidates = switch -Regex ($Id) {
+        '^Microsoft\.Edge$' { @("${env:ProgramFiles(x86)}\Microsoft\Edge\Application\msedge.exe", "$env:ProgramFiles\Microsoft\Edge\Application\msedge.exe") }
+        '^Google\.Chrome' { @("$env:ProgramFiles\Google\Chrome\Application\chrome.exe", "${env:ProgramFiles(x86)}\Google\Chrome\Application\chrome.exe", "$env:LOCALAPPDATA\Google\Chrome\Application\chrome.exe") }
+        '^Mozilla\.Firefox' { @("$env:ProgramFiles\Mozilla Firefox\firefox.exe", "${env:ProgramFiles(x86)}\Mozilla Firefox\firefox.exe") }
+        '^Brave\.Brave' { @("$env:ProgramFiles\BraveSoftware\Brave-Browser\Application\brave.exe", "$env:LOCALAPPDATA\BraveSoftware\Brave-Browser\Application\brave.exe") }
+        default { @() }
+    }
+    $best = $null
+    foreach ($c in $candidates) {
+        if (-not $c -or -not (Test-Path -LiteralPath $c)) { continue }
+        try {
+            $v = [version](((Get-Item -LiteralPath $c).VersionInfo.ProductVersion -replace '[^\d\.].*$', '').Trim('.'))
+            if (-not $best -or $v -gt $best) { $best = $v }
+        } catch { }
+    }
+    return $best
+}
+
+function Repair-BrowserVersions {
+    <# Entfernt Browser aus der Update-Liste, die tatsächlich schon aktuell sind, und korrigiert die angezeigte Version. #>
+    param($Updates)
+    foreach ($u in @($Updates)) {
+        $real = Get-RealBrowserVersion -Id "$($u.Id)"
+        if (-not $real) { $u; continue }
+        $avail = $null
+        try { $avail = [version](("$($u.Available)" -replace '[^\d\.].*$', '').Trim('.')) } catch { }
+        if ($avail -and $real -ge $avail) { continue }
+        $u.Version = $real.ToString()
+        $u
+    }
+}
+
 function Get-SoftwareUpdates {
+    $list = @(Get-SoftwareUpdatesRaw)
+    return @(Repair-BrowserVersions $list)
+}
+
+function Get-SoftwareUpdatesRaw {
     if (Get-Module -ListAvailable -Name Microsoft.WinGet.Client) {
         try {
             Import-Module Microsoft.WinGet.Client -ErrorAction Stop
             return @(Get-WinGetPackage -ErrorAction Stop | Where-Object { $_.IsUpdateAvailable } | ForEach-Object {
-                    [pscustomobject]@{ Name = $_.Name; Id = $_.Id; Version = $_.InstalledVersion; Available = @($_.AvailableVersions)[0]; Source = $_.Source }
+                    [pscustomobject]@{ Name = $_.Name; Id = $_.Id; Version = "$($_.InstalledVersion)"; Available = "$(@($_.AvailableVersions)[0])"; Source = $_.Source }
                 })
         } catch { }
     }
@@ -1437,6 +1556,8 @@ function Invoke-FixList {
         Hat ein Ergebnis eine Teilauswahl (Selection = Indizes in FixData), wird nur diese bearbeitet.
     #>
     param($Findings, [switch]$RestorePoint)
+    $stateBefore = $null
+    try { $stateBefore = Get-QuickState } catch { }
     if ($RestorePoint) { New-RestorePoint }
     foreach ($f in $Findings) {
         Write-Host ''
@@ -1465,6 +1586,18 @@ function Invoke-FixList {
             Write-Host "     ✖ $($f.FixResult)" -ForegroundColor Red
             Add-ActionLog $f.FixLabel $f.FixResult $false
         }
+    }
+    # Vorher/Nachher-Vergleich
+    $Script:LastComparison = @()
+    if ($stateBefore) {
+        try {
+            $Script:LastComparison = @(Compare-QuickState -Before $stateBefore -After (Get-QuickState))
+            Write-Host ''
+            Write-Host '   Vorher → Nachher' -ForegroundColor Cyan
+            foreach ($l in $Script:LastComparison) { Write-Host "     $l" -ForegroundColor Gray }
+            Write-Host '     Startzeit und Dauer des Herunterfahrens: Vergleich nach dem nächsten Neustart im Bereich »Verlauf«.' -ForegroundColor DarkGray
+            Add-ActionLog 'Vorher/Nachher-Vergleich' ($Script:LastComparison -join '; ') $true
+        } catch { }
     }
 }
 
@@ -1515,7 +1648,7 @@ function ConvertTo-SafeHtml { param([string]$Text) [System.Net.WebUtility]::Html
 
 function Get-AppSettings {
     $path = Join-Path $BerichtOrdner 'Einstellungen.json'
-    $defaults = [ordered]@{ Design = 'System'; Pdf = $false; AutoUpdate = $true }
+    $defaults = [ordered]@{ Design = 'System'; Pdf = $false; AutoUpdate = $true; BerichteBehalten = 30 }
     if (Test-Path -LiteralPath $path) {
         try {
             $j = [IO.File]::ReadAllText($path, [Text.Encoding]::UTF8) | ConvertFrom-Json
@@ -1557,7 +1690,6 @@ function Export-Report {
     $stamp = '{0:yyyyMMdd_HHmm}' -f (Get-Date)
     $htmlPath = Join-Path $BerichtOrdner "Diagnosebericht_$stamp.html"
     $jsonPath = Join-Path $BerichtOrdner "Diagnosebericht_$stamp.json"
-    $e = { param($t) ConvertTo-SafeHtml $t }
 
     $openFindings = @($Script:Findings | Where-Object { -not $_.Fixed })
     $counts = @{}
@@ -1588,6 +1720,8 @@ table.kv{width:100%;border-collapse:collapse}table.kv td{padding:6px 8px;border-
 .bars{margin-top:10px}.bar{display:grid;grid-template-columns:minmax(120px,240px) 1fr 90px;gap:10px;align-items:center;font-size:13px;margin:4px 0}
 .bar .bt{background:var(--track);border-radius:6px;height:12px;overflow:hidden}.bar .bt i{display:block;height:100%;background:var(--info);border-radius:6px}
 .bar .bl{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.bar .bv{text-align:right;color:var(--muted);font-variant-numeric:tabular-nums}
+.tm{position:relative;width:100%;aspect-ratio:5/2;margin-top:10px;border-radius:8px;overflow:hidden}.tmc{position:absolute;box-sizing:border-box;border:1px solid var(--card);color:#fff;padding:5px 7px;overflow:hidden;font-size:12px;line-height:1.3}
+.tmc b{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.tmc span{opacity:.85;white-space:nowrap}
 .better{color:var(--ok)}.worse{color:var(--warn)}.same{color:var(--muted)}
 .fix{margin-top:8px;font-size:13px}.fix.done{color:var(--ok)}.fix.open{color:var(--accent)}
 footer{margin-top:40px;color:var(--muted);font-size:13px;text-align:center}
@@ -1634,7 +1768,19 @@ footer{margin-top:40px;color:var(--muted);font-size:13px;text-align:center}
                 $null = $sb.Append('</ul>')
             }
             $chart = @($f.Chart)
-            if ($chart) {
+            if ($chart -and $f.ChartStyle -eq 'Kacheln') {
+                $inv = [Globalization.CultureInfo]::InvariantCulture
+                $colors = @('#1570ef', '#0e9384', '#7a5af8', '#dc6803', '#079455', '#c11574', '#3e4784', '#b54708', '#155eef', '#667085')
+                $null = $sb.Append('<div class="tm">')
+                for ($ci = 0; $ci -lt $chart.Count; $ci++) {
+                    $c = $chart[$ci]
+                    $style = [string]::Format($inv, 'left:{0:0.###}%;top:{1:0.###}%;width:{2:0.###}%;height:{3:0.###}%;background:{4}', $c.X * 100, $c.Y * 100, $c.W * 100, $c.H * 100, $colors[$ci % $colors.Count])
+                    $tip = [System.Net.WebUtility]::HtmlEncode("$($c.Label): $($c.Text) ($($c.Anteil) %)")
+                    $label = if ($c.W * $c.H -ge 0.012) { "<b>$([System.Net.WebUtility]::HtmlEncode("$($c.Label)"))</b><span>$([System.Net.WebUtility]::HtmlEncode("$($c.Text)"))</span>" } else { '' }
+                    $null = $sb.Append("<div class=""tmc"" style=""$style"" title=""$tip"">$label</div>")
+                }
+                $null = $sb.Append('</div>')
+            } elseif ($chart) {
                 $max = [double](($chart | Measure-Object Value -Maximum).Maximum)
                 if ($max -le 0) { $max = 1 }
                 $null = $sb.Append('<div class="bars">')
@@ -1678,7 +1824,8 @@ footer{margin-top:40px;color:var(--muted);font-size:13px;text-align:center}
     }
     [IO.File]::WriteAllText($jsonPath, ($export | ConvertTo-Json -Depth 5), (New-Object System.Text.UTF8Encoding $false))
 
-    if ($AsPdf -or $Pdf -or (Get-AppSettings).Pdf) {
+    $appSettings = Get-AppSettings
+    if ($AsPdf -or $Pdf -or $appSettings.Pdf) {
         try {
             $pdfPath = Convert-HtmlToPdf -HtmlPath $htmlPath
             if (-not $Quiet) { Write-Host "   PDF gespeichert: $pdfPath" -ForegroundColor Green }
@@ -1687,6 +1834,10 @@ footer{margin-top:40px;color:var(--muted);font-size:13px;text-align:center}
         }
     }
     Write-Host ('   Bericht erstellt in {0:N1} s: {1}' -f $reportTimer.Elapsed.TotalSeconds, $htmlPath) -ForegroundColor $(if ($Quiet) { 'DarkGray' } else { 'Green' })
+    $keep = 30
+    try { $keep = [int]$appSettings.BerichteBehalten } catch { }
+    $removed = Remove-OldReports -Folder $BerichtOrdner -Keep $keep
+    if ($removed) { Write-Host "   $removed alte Berichtsdatei(en) entfernt (es bleiben die neuesten $keep je Art)." -ForegroundColor DarkGray }
     if ($Open) { Start-Process -FilePath 'explorer.exe' -ArgumentList "`"$htmlPath`"" }
     return $htmlPath
 }
@@ -1852,6 +2003,7 @@ function Start-LaptopDiagnose {
     if (-not (Test-Path -LiteralPath $logDir)) { $null = New-Item -ItemType Directory -Path $logDir -Force }
     $logPath = Join-Path $logDir ('Protokoll_{0:yyyyMMdd_HHmmss}.txt' -f (Get-Date))
     try { Start-Transcript -Path $logPath -ErrorAction Stop | Out-Null } catch { }
+    if ($Script:FolderMigrationMessage) { Write-Host "   $Script:FolderMigrationMessage" -ForegroundColor Cyan }
     try {
         if ($Unbeaufsichtigt) { Invoke-UnattendedDiagnosis }
         else {

@@ -21,20 +21,22 @@ Beim Start fragt Windows nach Administratorrechten. Diese Rechte braucht das Pro
 | **Übersicht** | Systemdaten, Gesundheitswert (0–100) und alle Ergebnisse nach Dringlichkeit |
 | **Fehlersuche** | Bluescreens **mit Ursachenanalyse** (Stoppcode → wahrscheinliche Ursache und Empfehlung, optional Auswertung der Absturzabbilder mit dem Windows-Debugger), unerwartete Abschaltungen, Hardware- und Datenträgerfehler, Programmabstürze, Ereignisprotokoll, Problemgeräte, Dienste, Systemabbild, SMART, Dateisystem, Ergebnis des Arbeitsspeicher-Tests |
 | **Sicherheit** | Virenschutz, Firewall, Secure Boot, TPM, BitLocker/Geräteverschlüsselung, Kernisolierung, Benutzerkontensteuerung, SMB1, freigegebene Ordner, Remotedesktop, pausierte Updates, veraltete Browser und Mailprogramme |
-| **Speicherfresser** | RAM, größte Prozesse, freier Speicher, **Speicherbelegung als Balkendiagramm** (Laufwerk C: und Benutzerordner), Datenmüll, Windows.old, große Dateien |
+| **Speicherfresser** | RAM, größte Prozesse, freier Speicher, **Speicherbelegung als Kachelgrafik** (Laufwerk C: und Benutzerordner, je größer die Kachel, desto mehr Platz), Datenmüll, Windows.old, große Dateien, **Downloads aufräumen** (alte Installationsdateien und Archive, doppelte Dateien, große alte Dateien – nur Angekreuztes, und zwar in den Papierkorb) |
 | **Leistungsbremsen** | CPU-Last, Autostarts, Startdauer (inkl. »langsamer als üblich«), Energiesparplan, Drosselung, SSD/TRIM, Auslagerungsdatei, Temperatur, **vorinstallierte Zusatz-Apps und Testversionen** |
 | **Herunterfahren** | **Gemessene Dauer** der letzten Herunterfahrvorgänge mit Diagramm und Verlauf, **bremsende Programme, Dienste und Treiber** laut Windows-Leistungsdiagnose, hängende Dienste, zu lange Wartezeiten (auf Standard zurücksetzbar), Löschen der Auslagerungsdatei beim Herunterfahren (abschaltbar), ausstehende Updates, nicht erreichbare Netzlaufwerke (entfernbar), Herunterfahr-Skripte, Schnellstart, optional automatisches Beenden hängender Programme |
-| **Akku** | Gesundheit, Ladezyklen, **Kapazitätsverlauf als Diagramm** mit Prognose, Ladezustand, Standby-Art, Akkuverbrauch nach Apps, ausführlicher Akkubericht |
+| **Akku** | Gesundheit, Ladezyklen, **Kapazitätsverlauf als Diagramm** mit Prognose, **Ladegrenze** (erkennt, ob der Akku am Netzteil nur bis ca. 80 % geladen wird, und öffnet sonst MyASUS bzw. die Hersteller-App), Ladezustand, Standby-Art, Akkuverbrauch nach Apps, ausführlicher Akkubericht |
 | **Netzwerk & WLAN** | Internet/DNS, WLAN-Signal, Band, Kanal, Verschlüsselung, **Geschwindigkeitstest und Latenz**, Proxy, Alter des WLAN-Treibers, WLAN-Bericht |
-| **Software-Updates** | Alle über WinGet verwalteten Programme, einzeln oder alle installieren |
+| **Software-Updates** | Alle über WinGet verwalteten Programme, einzeln oder alle installieren. Bei Browsern, die sich selbst aktualisieren (Edge, Chrome, Firefox, Brave), wird die tatsächlich installierte Version gegengeprüft – so gibt es keine falschen »veraltet«-Meldungen. |
 | **Windows & Treiber** | Windows- und Treiber-Updates, veraltete Treiber, Hersteller-Tools für BIOS und Firmware |
 | **Reparatur-Werkzeuge** | Windows Update reparieren, Systemdateien (SFC/DISM), Startmenü und Suche reparieren, Microsoft Store zurücksetzen, Druckerwarteschlange leeren, Audio- und Bluetooth-Dienste neu starten, Netzwerk zurücksetzen, **Arbeitsspeicher-Test**, **Belastungstest** (Lüfter, Temperatur, Drosselung), Energiebericht, Standby-Analyse, Komponentenspeicher bereinigen, Defender-Schnellscan, Wiederherstellungspunkt |
 | **Verlauf & Trends** | Diagramme der wichtigsten Kennzahlen über alle Komplett-Diagnosen, z. B. Akku-Gesundheit, Start- und Herunterfahrdauer, freier Speicher, Abstürze und Internetgeschwindigkeit. Grün bedeutet verbessert, Orange verschlechtert. |
 | **Änderungen** | Jede Änderung mit Zeitpunkt und Ergebnis. Umkehrbare Änderungen haben eine Schaltfläche **»Rückgängig«** (deaktivierte Autostarts, Energieplan, Prozessorleistung, TRIM, Auslagerungsdatei, Remotedesktop, SMB1, Wartezeiten beim Herunterfahren, entfernte Netzlaufwerke, geplante Wartung). |
-| **Einstellungen** | Design **System / Hell / Dunkel**, geplante Wartung, PDF-Berichte, Geräteübersicht, Programm-Updates (Option **»Beim Start automatisch nach Updates suchen«**, standardmäßig an), Signaturstatus |
+| **Einstellungen** | Design **System / Hell / Dunkel**, geplante Wartung, **Berichtordner** (»Ändern …«), Aufbewahrung alter Berichte (10 / 30 / 100 / alle), PDF-Berichte, Geräteübersicht, Programm-Updates (Option **»Beim Start automatisch nach Updates suchen«**, standardmäßig an), Signaturstatus |
 | **Protokoll** | Alle Ausgaben der Sitzung |
 
-Unten markiert **»Empfohlene auswählen«** alle kritischen Punkte und Warnungen. **»Ausgewählte beheben«** zeigt vorher eine Zusammenfassung zur Bestätigung und fragt nach einem Wiederherstellungspunkt. Bei Autostarts, Updates und Zusatz-Apps wählst du die einzelnen Einträge in einer Liste aus. **»Nur prüfen«** in der Seitenleiste sperrt alle Änderungen.
+Unten markiert **»Empfohlene auswählen«** alle kritischen Punkte und Warnungen. **»Ausgewählte beheben«** zeigt vorher eine Zusammenfassung zur Bestätigung und fragt nach einem Wiederherstellungspunkt. Bei Autostarts, Updates, Zusatz-Apps und Downloads wählst du die einzelnen Einträge in einer Liste aus. Danach zeigt ein **Vorher/Nachher-Vergleich**, was sich verbessert hat (Gesundheitswert, offene Probleme, freier Speicher, Autostarts, Arbeitsspeicher). Start- und Herunterfahrdauer lassen sich erst nach einem Neustart vergleichen und erscheinen unter *Verlauf*. **»Nur prüfen«** in der Seitenleiste sperrt alle Änderungen.
+
+Das Programmfenster öffnet sich maximiert.
 
 ## Geplante Wartung
 
@@ -46,14 +48,18 @@ Unter *Einstellungen › Geplante Wartung* richtest du eine wöchentliche oder t
 
 ## Berichte
 
-Gespeichert wird in `Dokumente\LaptopDiagnose`:
+Gespeichert wird standardmäßig im **lokalen** Ordner `C:\Users\<Name>\Documents\LaptopDiagnose`. Das gilt auch dann, wenn Windows den Dokumente-Ordner nach OneDrive umgeleitet hat: Ein von OneDrive synchronisierter Ordner macht das Speichern spürbar langsamer. Beim ersten Start ab Version 2.4 werden vorhandene Berichte, Verlauf, Änderungsprotokoll und Einstellungen einmalig aus dem bisherigen Ordner übernommen. Unter *Einstellungen › Berichte › Ändern …* lässt sich jeder andere Ordner wählen, auf Wunsch mit Umzug der vorhandenen Daten.
+
+Alte Berichte werden beim Speichern eines neuen automatisch gelöscht; standardmäßig bleiben je Berichtsart die neuesten 30 erhalten. Verlauf und Änderungsprotokoll werden nie gelöscht.
+
+Inhalt des Berichtordners:
 
 - `Diagnosebericht_<Datum>.html` und `.json`: Bericht mit Gesundheitswert, Trends, Diagrammen und Maßnahmen. Ein `.pdf` kommt hinzu, wenn PDF in den Einstellungen aktiviert ist (erzeugt über Microsoft Edge).
 - `Verlauf\`: ein Messpunkt pro Komplett-Diagnose
 - `Aenderungen.json`: das Änderungsprotokoll
 - `Einstellungen.json`: Design und PDF-Option
 - `Akkubericht_…`, `WLAN-Bericht_…`, `Energiebericht_…`, `Standby-Analyse_…`: ausführliche Windows-Berichte
-- `Protokoll_…txt`: Sitzungsprotokolle
+- Sitzungsprotokolle (`Protokoll_…txt`) liegen lokal unter `%LOCALAPPDATA%\LaptopDiagnose\Protokolle`, ebenso die Angabe des gewählten Berichtordners (`Berichtordner.json`)
 - **Geräteübersicht:** Lege die JSON-Berichte mehrerer Laptops in einen gemeinsamen Ordner (z. B. USB-Stick oder OneDrive) und klicke in den Einstellungen auf *Geräteübersicht erstellen*. Du bekommst eine Vergleichstabelle mit Gesundheitswert, kritischen Punkten, Akku, freiem Speicher und offenen Updates.
 
 ## Sicherheit
