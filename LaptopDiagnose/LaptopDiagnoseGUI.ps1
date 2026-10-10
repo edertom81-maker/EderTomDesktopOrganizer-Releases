@@ -1284,7 +1284,12 @@ function Import-SettingsPage {
         try {
             $a = Get-AuthenticodeSignature -FilePath $f
             $who = if ($a.SignerCertificate) { ($a.SignerCertificate.Subject -split ',')[0] -replace '^CN=', '' } else { '' }
-            $sig += '{0}: {1}' -f [IO.Path]::GetFileName($f), $(switch ("$($a.Status)") { 'Valid' { "signiert von $who" } 'NotSigned' { 'nicht signiert' } default { "Signatur ungültig ($($a.Status))" } })
+            $sig += '{0}: {1}' -f [IO.Path]::GetFileName($f), $(switch ("$($a.Status)") {
+                    'Valid' { "signiert von $who" }
+                    'NotSigned' { 'nicht signiert' }
+                    { $_ -in 'UnknownError', 'NotTrusted' -and $a.SignerCertificate } { "signiert von $who (selbst ausgestelltes Zertifikat)" }
+                    default { "Signatur ungültig ($($a.Status))" }
+                })
         } catch { }
     }
     $Script:UI.SignatureText.Text = "Installationsordner: $PSScriptRoot`nBerichtsordner: $BerichtOrdner`n" + ($sig -join "`n")

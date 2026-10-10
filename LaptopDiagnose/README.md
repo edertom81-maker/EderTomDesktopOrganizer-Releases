@@ -1,4 +1,4 @@
-# Laptop-Diagnose & Reparatur
+﻿# Laptop-Diagnose & Reparatur
 
 Diagnose- und Wartungsprogramm für Windows-10/11-Laptops. Es findet Fehler, Sicherheitslücken, Speicherfresser und Leistungsbremsen, prüft Akku und WLAN, hält Programme, Windows und Treiber aktuell und verfolgt die Entwicklung über die Zeit. Gefundene Probleme werden **erst nach Rückfrage** behoben, und jede Änderung wird protokolliert. Umkehrbare Änderungen lassen sich mit einem Klick zurücknehmen.
 
@@ -63,7 +63,7 @@ Gespeichert wird in `Dokumente\LaptopDiagnose`:
 - Jede Änderung landet im Änderungsprotokoll. Sicherheitsrelevante Verbesserungen werden bewusst nicht automatisch zurückgenommen, etwa eine eingeschaltete Firewall oder Benutzerkontensteuerung.
 - Systemprozesse werden nie zum Beenden angeboten, und vor dem Beenden eines Programms warnt das Tool vor ungespeicherten Daten.
 - Absturzabbilder werden erst nach 30 Tagen als Datenmüll angeboten, damit die Bluescreen-Analyse sie nutzen kann.
-- Programm-Updates werden vor der Installation per **SHA-256-Prüfsumme** kontrolliert. Ist die installierte Version signiert, muss auch das Update vom selben Herausgeber signiert sein.
+- Programm-Updates werden vor der Installation per **SHA-256-Prüfsumme** kontrolliert. Ist die installierte Version signiert, muss jede Datei des Updates mit **demselben Zertifikat** signiert sein. Das gilt auch für selbst ausgestellte Zertifikate. Eine nachträglich veränderte Datei wird immer abgelehnt. Wichtig: Wer einmal signiert ausliefert, muss alle weiteren Updates mit demselben Zertifikat signieren.
 
 ## Virenscanner meldet das Tool
 

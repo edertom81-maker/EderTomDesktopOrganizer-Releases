@@ -158,6 +158,15 @@ function Get-ToolUpdateInfo {
     }
 }
 
+function Test-SignatureIntact {
+    <#
+        Signatur vorhanden und Datei unverändert. »UnknownError«/»NotTrusted« bedeuten bei einem
+        selbst ausgestellten Zertifikat nur, dass Windows der Zertifikatskette nicht vertraut.
+    #>
+    param($Signature)
+    return [bool]($Signature -and $Signature.SignerCertificate -and "$($Signature.Status)" -in 'Valid', 'UnknownError', 'NotTrusted')
+}
+
 function Install-ToolUpdate {
     <# Lädt das Update, prüft SHA-256 und Signatur und ersetzt die Programmdateien. #>
     param([Parameter(Mandatory)]$Release)
@@ -183,15 +192,21 @@ function Install-ToolUpdate {
             if (-not (Test-Path (Join-Path $root $required))) { throw "Updatepaket unvollständig ($required fehlt)." }
         }
 
-        # Signaturprüfung: Ist die installierte Version signiert, muss das Update vom selben Herausgeber signiert sein.
+        # Signaturprüfung: Ist die installierte Version signiert, muss jede Datei des Updates mit demselben
+        # Zertifikat signiert sein (Zertifikat wird »angeheftet«). Selbst ausgestellte Zertifikate sind erlaubt,
+        # solange die Datei unverändert ist – eine manipulierte Datei (HashMismatch) wird immer abgelehnt.
         $currentSig = Get-AuthenticodeSignature -FilePath (Join-Path $installDir 'LaptopDiagnose.ps1')
+        $pinned = if (Test-SignatureIntact $currentSig) { $currentSig.SignerCertificate.Thumbprint }
         foreach ($ps1 in Get-ChildItem -LiteralPath $root -Filter '*.ps1' -Recurse) {
             $sig = Get-AuthenticodeSignature -FilePath $ps1.FullName
-            if ($currentSig.Status -eq 'Valid') {
-                if ($sig.Status -ne 'Valid' -or $sig.SignerCertificate.Thumbprint -ne $currentSig.SignerCertificate.Thumbprint) {
-                    throw "Signatur von $($ps1.Name) ist ungültig oder stammt von einem anderen Herausgeber – Update wurde verworfen."
+            if ("$($sig.Status)" -eq 'HashMismatch') {
+                throw "$($ps1.Name) wurde nach dem Signieren verändert – Update wurde verworfen."
+            }
+            if ($pinned) {
+                if (-not (Test-SignatureIntact $sig) -or $sig.SignerCertificate.Thumbprint -ne $pinned) {
+                    throw "$($ps1.Name) ist nicht mit demselben Zertifikat signiert wie die installierte Version – Update wurde verworfen."
                 }
-            } elseif ($sig.Status -notin 'Valid', 'NotSigned') {
+            } elseif ("$($sig.Status)" -notin 'Valid', 'NotSigned', 'UnknownError', 'NotTrusted') {
                 throw "Signatur von $($ps1.Name) ist ungültig ($($sig.Status)) – Update wurde verworfen."
             }
         }
