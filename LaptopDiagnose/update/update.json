@@ -1,7 +1,7 @@
 {
-    "version": "2.5.0",
-    "datei": "LaptopDiagnose-2.5.0.zip",
-    "sha256": "3d2747dc6e4be93ee10078c32cc9f27adedf1adfb59b85cafece6ea61f9f0364",
-    "notizen": "Neuer Name: PC Repair Pro – mit neuem Logo und Programmsymbol (Startmenü und »Installierte Apps« werden automatisch angepasst). Jetzt auch für Desktop-PCs: Gerätetyp wird erkannt (Akku-Bereich nur bei Laptops). Neue Prüfungen: Bildwiederholrate des Monitors, Arbeitsspeicher-Takt und Single-Channel, Netzwerkkabel-Geschwindigkeit und -Abbrüche, Alter des Grafiktreibers, BIOS-Alter, Standby-Zeiten bei PCs und ein Staub-/Lüfterhinweis im Belastungstest.",
+    "version": "2.5.1",
+    "datei": "LaptopDiagnose-2.5.1.zip",
+    "sha256": "544b04658e963a8e12b7b3eb9906c727df557a3b78c08a2aebed3ef270ec271e",
+    "notizen": "Seitenleiste: Der Slogan »Diagnose • Repair • Keep it running« steht jetzt in einer eigenen Zeile und ist vollständig lesbar, die Versionsnummer darunter.",
     "veroeffentlicht": "2026-10-10"
 }
