@@ -1,52 +1,68 @@
 # Laptop-Diagnose & Reparatur
 
-Diagnose-Tool für Windows-10/11-Laptops. Es findet Fehler, Speicherfresser und Leistungsbremsen, prüft den Akku und hält Programme, Windows und Treiber aktuell. Gefundene Probleme werden **erst nach Rückfrage** behoben.
+Diagnose- und Wartungsprogramm für Windows-10/11-Laptops. Es findet Fehler, Sicherheitslücken, Speicherfresser und Leistungsbremsen, prüft Akku und WLAN, hält Programme, Windows und Treiber aktuell und verfolgt die Entwicklung über die Zeit. Gefundene Probleme werden **erst nach Rückfrage** behoben, und jede Änderung wird protokolliert. Umkehrbare Änderungen lassen sich mit einem Klick zurücknehmen.
 
-## Start
+## Installation und Start
 
-1. Den Ordner `LaptopDiagnose` auf den Laptop kopieren.
-2. **`Start-LaptopDiagnose.cmd`** doppelklicken. Das Programmfenster öffnet sich.
-3. Die Abfrage nach Administratorrechten bestätigen. Diese Rechte braucht das Tool für Reparaturen, Updates und einige Prüfungen.
+**Empfohlen:** `Install-LaptopDiagnose.cmd` doppelklicken. Das Programm wird für den aktuellen Benutzer installiert, ohne dass Administratorrechte nötig sind:
 
-### Programmfenster
+- Programmordner: `%LOCALAPPDATA%\Programs\LaptopDiagnose`
+- Startmenü-Eintrag **»Laptop-Diagnose«** mit eigenem Symbol, auf Wunsch auch eine Desktop-Verknüpfung
+- Eintrag unter *Einstellungen › Apps › Installierte Apps*, dort auch wieder deinstallierbar
 
-- **Links** stehen die Bereiche: Übersicht, Fehlersuche, Speicherfresser, Leistungsbremsen, Akku, Software-Updates, Windows & Treiber und Protokoll. Rote oder orange Zähler zeigen offene Probleme.
-- **Oben** startet »Komplett-Diagnose starten« alle Prüfungen. Mit »… prüfen« prüfst du nur den gerade gewählten Bereich. Die Kacheln zeigen den Gesundheitswert (0–100) und die Anzahl der Ergebnisse.
-- **Ergebniskarten** sind farbig nach Dringlichkeit markiert. »Details anzeigen« klappt Listen auf, z. B. die größten Programme oder verfügbare Updates. Behebbare Punkte haben ein Ankreuzfeld.
-- **Unten** markiert »Empfohlene auswählen« alle kritischen Punkte und Warnungen. »Ausgewählte beheben« zeigt zuerst eine Zusammenfassung zur Bestätigung und fragt nach einem Wiederherstellungspunkt. Bei Autostarts und Updates wählst du vorher in einer Liste einzelne Einträge aus.
-- **»Nur prüfen«** in der Seitenleiste sperrt alle Änderungen.
-- **»Bericht speichern & öffnen«** erstellt den HTML-Bericht und öffnet ihn im Browser.
+**Ohne Installation:** `Start-LaptopDiagnose.cmd` im Ordner doppelklicken.
 
-Während eine Prüfung läuft, bleibt das Fenster bedienbar. Was gerade passiert, steht unten in der Statuszeile und ausführlich unter »Protokoll«.
+Beim Start fragt Windows nach Administratorrechten. Diese Rechte braucht das Programm für Reparaturen, Updates und einige Prüfungen.
 
-### Konsolenversion
+## Programmfenster
 
-`Start-LaptopDiagnose-Konsole.cmd` startet die Textversion mit Menü. Sie kann dasselbe und lässt sich auch mit Parametern aufrufen:
+| Bereich | Inhalt |
+|---|---|
+| **Übersicht** | Systemdaten, Gesundheitswert (0–100) und alle Ergebnisse nach Dringlichkeit |
+| **Fehlersuche** | Bluescreens **mit Ursachenanalyse** (Stoppcode → wahrscheinliche Ursache und Empfehlung, optional Auswertung der Absturzabbilder mit dem Windows-Debugger), unerwartete Abschaltungen, Hardware- und Datenträgerfehler, Programmabstürze, Ereignisprotokoll, Problemgeräte, Dienste, Systemabbild, SMART, Dateisystem, Ergebnis des Arbeitsspeicher-Tests |
+| **Sicherheit** | Virenschutz, Firewall, Secure Boot, TPM, BitLocker/Geräteverschlüsselung, Kernisolierung, Benutzerkontensteuerung, SMB1, freigegebene Ordner, Remotedesktop, pausierte Updates, veraltete Browser und Mailprogramme |
+| **Speicherfresser** | RAM, größte Prozesse, freier Speicher, **Speicherbelegung als Balkendiagramm** (Laufwerk C: und Benutzerordner), Datenmüll, Windows.old, große Dateien |
+| **Leistungsbremsen** | CPU-Last, Autostarts, Startdauer (inkl. »langsamer als üblich«), Energiesparplan, Drosselung, SSD/TRIM, Auslagerungsdatei, Temperatur, **vorinstallierte Zusatz-Apps und Testversionen** |
+| **Akku** | Gesundheit, Ladezyklen, **Kapazitätsverlauf als Diagramm** mit Prognose, Ladezustand, Standby-Art, Akkuverbrauch nach Apps, ausführlicher Akkubericht |
+| **Netzwerk & WLAN** | Internet/DNS, WLAN-Signal, Band, Kanal, Verschlüsselung, **Geschwindigkeitstest und Latenz**, Proxy, Alter des WLAN-Treibers, WLAN-Bericht |
+| **Software-Updates** | Alle über WinGet verwalteten Programme, einzeln oder alle installieren |
+| **Windows & Treiber** | Windows- und Treiber-Updates, veraltete Treiber, Hersteller-Tools für BIOS und Firmware |
+| **Reparatur-Werkzeuge** | Windows Update reparieren, Systemdateien (SFC/DISM), Startmenü und Suche reparieren, Microsoft Store zurücksetzen, Druckerwarteschlange leeren, Audio- und Bluetooth-Dienste neu starten, Netzwerk zurücksetzen, **Arbeitsspeicher-Test**, **Belastungstest** (Lüfter, Temperatur, Drosselung), Energiebericht, Standby-Analyse, Komponentenspeicher bereinigen, Defender-Schnellscan, Wiederherstellungspunkt |
+| **Verlauf & Trends** | Diagramme der wichtigsten Kennzahlen über alle Komplett-Diagnosen, z. B. Akku-Gesundheit, Startdauer, freier Speicher, Abstürze und Internetgeschwindigkeit. Grün bedeutet verbessert, Orange verschlechtert. |
+| **Änderungen** | Jede Änderung mit Zeitpunkt und Ergebnis. Umkehrbare Änderungen haben eine Schaltfläche **»Rückgängig«** (deaktivierte Autostarts, Energieplan, Prozessorleistung, TRIM, Auslagerungsdatei, Remotedesktop, SMB1, geplante Wartung). |
+| **Einstellungen** | Design **System / Hell / Dunkel**, geplante Wartung, PDF-Berichte, Geräteübersicht, Programm-Updates, Signaturstatus |
+| **Protokoll** | Alle Ausgaben der Sitzung |
 
-```powershell
-.\LaptopDiagnose.ps1                        # Menü
-.\LaptopDiagnose.ps1 -Modus Komplett        # Komplett-Diagnose mit Reparaturangebot
-.\LaptopDiagnose.ps1 -Modus Komplett -NurPruefen   # nur prüfen, nichts verändern
-.\LaptopDiagnose.ps1 -Modus Akku            # einzelnes Modul (Fehler, Speicher, Leistung, Akku, Software, Windows)
-```
+Unten markiert **»Empfohlene auswählen«** alle kritischen Punkte und Warnungen. **»Ausgewählte beheben«** zeigt vorher eine Zusammenfassung zur Bestätigung und fragt nach einem Wiederherstellungspunkt. Bei Autostarts, Updates und Zusatz-Apps wählst du die einzelnen Einträge in einer Liste aus. **»Nur prüfen«** in der Seitenleiste sperrt alle Änderungen.
 
-## Was geprüft wird
+## Geplante Wartung
 
-| Bereich | Prüfungen | Automatische Behebung (nach Rückfrage) |
-|---|---|---|
-| **Fehlersuche** | Bluescreens, unerwartete Abschaltungen, WHEA-Hardwarefehler, Datenträgerfehler, Programmabstürze, Ereignisprotokoll (7 Tage), Problemgeräte im Geräte-Manager, gestoppte Dienste, Integrität des Windows-Abbilds, SMART/SSD-Verschleiß, Dateisystem, ausstehender Neustart, Virenschutz, Firewall, Internet/DNS, Supportstatus der Windows-Version | Dienste starten, Hardware neu erkennen, DISM + SFC, Dateisystemreparatur, Defender aktivieren/aktualisieren/Schnellscan, Firewall einschalten, Netzwerk zurücksetzen |
-| **Speicherfresser** | RAM-Auslastung, größte Prozesse, freier Speicherplatz, Datenmüll (Temp, Update-Cache, Absturzabbilder, Fehlerberichte, Miniaturansichten, Papierkorb), Windows.old, große Dateien, Downloads-Ordner | Datenmüll entfernen, Windows.old/Update-Reste bereinigen, Komponentenspeicher bereinigen, speicherhungrige Programme beenden |
-| **Leistungsbremsen** | CPU-Last und Verursacher, Autostart-Programme, Startdauer und bremsende Programme, Energiesparplan, gedrosselte Prozessorleistung, Laufzeit ohne Neustart, HDD/SSD und TRIM, Auslagerungsdatei, Temperatur | Autostarts gezielt deaktivieren (wie im Task-Manager, umkehrbar), Energiesparplan „Ausbalanciert“, Prozessor auf 100 %, TRIM aktivieren, defragmentieren, Auslagerungsdatei aktivieren |
-| **Akku** | Gesundheit (aktuelle vs. ursprüngliche Kapazität), Ladezyklen, Ladezustand, Restlaufzeit, Programme, die Energiesparen verhindern, ausführlicher Windows-Akkubericht | – |
-| **Software-Updates** | Alle über WinGet verwalteten Programme | Updates einzeln oder alle installieren |
-| **Windows & Treiber** | Windows-Updates (inkl. Sicherheitsstufe), Treiber-Updates über Windows Update, über 4 Jahre alte Treiber wichtiger Geräte, Hersteller-Tool für BIOS/Firmware (z. B. Dell Command \| Update, Lenovo System Update) | Updates einzeln oder alle installieren, Dell-Updates per `dcu-cli` installieren, Hersteller-Tool per WinGet installieren |
+Unter *Einstellungen › Geplante Wartung* richtest du eine wöchentliche oder tägliche Prüfung über die Windows-Aufgabenplanung ein (Aufgabe `\EderTom\LaptopDiagnose Wartung`). Sie arbeitet so:
+
+- Sie **ändert nichts**, sondern prüft nur und speichert Bericht und Verlauf.
+- Bei kritischen Problemen oder deutlich mehr Warnungen als beim letzten Mal erscheint eine **Windows-Benachrichtigung**. Ein Klick darauf öffnet den Bericht.
+- Hat der Laptop zur geplanten Zeit nicht gelaufen, wird die Prüfung nachgeholt.
+
+## Berichte
+
+Gespeichert wird in `Dokumente\LaptopDiagnose`:
+
+- `Diagnosebericht_<Datum>.html` und `.json`: Bericht mit Gesundheitswert, Trends, Diagrammen und Maßnahmen. Ein `.pdf` kommt hinzu, wenn PDF in den Einstellungen aktiviert ist (erzeugt über Microsoft Edge).
+- `Verlauf\`: ein Messpunkt pro Komplett-Diagnose
+- `Aenderungen.json`: das Änderungsprotokoll
+- `Einstellungen.json`: Design und PDF-Option
+- `Akkubericht_…`, `WLAN-Bericht_…`, `Energiebericht_…`, `Standby-Analyse_…`: ausführliche Windows-Berichte
+- `Protokoll_…txt`: Sitzungsprotokolle
+- **Geräteübersicht:** Lege die JSON-Berichte mehrerer Laptops in einen gemeinsamen Ordner (z. B. USB-Stick oder OneDrive) und klicke in den Einstellungen auf *Geräteübersicht erstellen*. Du bekommst eine Vergleichstabelle mit Gesundheitswert, kritischen Punkten, Akku, freiem Speicher und offenen Updates.
 
 ## Sicherheit
 
-- Alle Prüfungen lesen nur. Geändert wird erst, wenn du Punkte auswählst. Mit **A** werden nur die empfohlenen Punkte (Kritisch und Warnung) behoben, optionale Hinweise nur, wenn du ihre Nummer angibst.
-- Vor Reparaturen bietet das Tool an, einen **Systemwiederherstellungspunkt** zu erstellen.
-- Bevor ein Programm beendet wird, warnt das Tool vor ungespeicherten Daten. Systemprozesse werden nie zum Beenden angeboten.
-- Mit `-NurPruefen` wird nichts verändert.
+- Alle Prüfungen lesen nur. Geändert wird erst, wenn du Punkte auswählst und bestätigst.
+- Vor Reparaturen bietet das Programm einen **Systemwiederherstellungspunkt** an.
+- Jede Änderung landet im Änderungsprotokoll. Sicherheitsrelevante Verbesserungen werden bewusst nicht automatisch zurückgenommen, etwa eine eingeschaltete Firewall oder Benutzerkontensteuerung.
+- Systemprozesse werden nie zum Beenden angeboten, und vor dem Beenden eines Programms warnt das Tool vor ungespeicherten Daten.
+- Absturzabbilder werden erst nach 30 Tagen als Datenmüll angeboten, damit die Bluescreen-Analyse sie nutzen kann.
+- Programm-Updates werden vor der Installation per **SHA-256-Prüfsumme** kontrolliert. Ist die installierte Version signiert, muss auch das Update vom selben Herausgeber signiert sein.
 
 ## Virenscanner meldet das Tool
 
@@ -54,23 +70,54 @@ Diagnose- und Reparaturskripte nutzen dieselben Windows-Funktionen wie manche Sc
 
 Wenn trotzdem eine Meldung erscheint:
 
-1. Den Namen der Erkennung notieren (z. B. `Trojan:PowerShell/…`) und prüfen, welche Datei gemeldet wird.
-2. Die Datei als Fehlalarm beim Hersteller einreichen. Für Microsoft Defender geht das unter https://www.microsoft.com/wdsi/filesubmission.
-3. Die Skripte mit dem eigenen Code-Signing-Zertifikat signieren, mit dem auch die Desktop-Organizer-Setups signiert werden: `Set-AuthenticodeSignature -FilePath .\LaptopDiagnose.ps1 -Certificate $cert -TimestampServer http://timestamp.digicert.com`, ebenso für `LaptopDiagnoseGUI.ps1`. Signierte Skripte werden deutlich seltener gemeldet.
-4. Nur wenn klar ist, dass es ein Fehlalarm ist: eine Ausnahme nur für den Ordner `LaptopDiagnose` einrichten. Den Virenschutz nicht abschalten.
+1. Den Namen der Erkennung notieren und prüfen, welche Datei gemeldet wird.
+2. Den Fehlalarm beim Hersteller melden: Bitdefender unter https://www.bitdefender.com/submit/, Microsoft unter https://www.microsoft.com/wdsi/filesubmission.
+3. **Die Skripte signieren** (siehe unten). Signierte Skripte werden deutlich seltener gemeldet.
+4. Nur wenn klar ist, dass es ein Fehlalarm ist: eine Ausnahme nur für den Programmordner einrichten. Den Virenschutz nicht abschalten.
 
-## Berichte
+## Für Entwickler: Signieren und Updates veröffentlichen
 
-Gespeichert wird in `Dokumente\LaptopDiagnose`:
+Die Werkzeuge liegen im Ordner `Entwicklung` und werden nicht mit ausgeliefert:
 
-- `Diagnosebericht_<Datum>.html`: Bericht mit Gesundheitswert, allen Ergebnissen und den durchgeführten Maßnahmen
-- `Diagnosebericht_<Datum>.json`: dieselben Daten maschinenlesbar
-- `Akkubericht_<Datum>.html`: ausführlicher Windows-Akkubericht
-- `Protokoll_<Datum>.txt` bzw. `Protokoll_GUI_<Datum>.txt`: vollständiges Sitzungsprotokoll
+- **`Sign-LaptopDiagnose.ps1`** signiert alle Skripte mit dem Code-Signing-Zertifikat, also demselben, mit dem die Desktop-Organizer-Setups signiert werden. Das Zertifikat kommt aus dem Zertifikatspeicher (`-Thumbprint`) oder aus einer PFX-Datei (`-PfxPath`), dazu ein Zeitstempel.
+- **`New-LaptopDiagnoseRelease.ps1 -Signieren`** erzeugt `dist\LaptopDiagnose-<Version>.zip` und die zugehörige `.sha256`-Datei.
+- Auf GitHub ein Release mit dem Tag **`laptopdiagnose-v<Version>`** anlegen und beide Dateien anhängen. Installierte Programme finden das Update dann unter *Einstellungen › Programm-Updates*.
+
+Die Version steht in `LaptopDiagnose.ps1` (`$Script:ToolVersion`).
+
+## Konsolenversion
+
+`Start-LaptopDiagnose-Konsole.cmd` startet die Textversion mit demselben Funktionsumfang. Aufruf mit Parametern:
+
+```powershell
+.\LaptopDiagnose.ps1                                  # Menü
+.\LaptopDiagnose.ps1 -Modus Komplett                  # Komplett-Diagnose mit Reparaturangebot
+.\LaptopDiagnose.ps1 -Modus Komplett -NurPruefen -Pdf # nur prüfen, Bericht auch als PDF
+.\LaptopDiagnose.ps1 -Modus Sicherheit                # einzelner Bereich: Fehler, Sicherheit, Speicher, Leistung, Akku,
+                                                      # Netzwerk, Software, Windows, Werkzeuge
+.\LaptopDiagnose.ps1 -Modus Verlauf                   # Verlauf, Aenderungen, Wartung, Update
+.\LaptopDiagnose.ps1 -Modus Komplett -Unbeaufsichtigt # wie die geplante Wartung
+```
+
+## Aufbau
+
+| Datei | Inhalt |
+|---|---|
+| `LaptopDiagnose.ps1` | Kern: Fehlersuche, Speicher, Leistung, Akku, Software, Windows-Updates, Reparaturablauf, Bericht, Menü |
+| `LaptopDiagnoseGUI.ps1` | Programmfenster (WPF) |
+| `Module\Sicherheit.ps1` | Sicherheitsprüfungen |
+| `Module\Netzwerk.ps1` | Netzwerk, WLAN, Geschwindigkeit |
+| `Module\Analyse.ps1` | Bluescreen-Analyse, Speicherbelegung, Akkuverlauf, Speichertest |
+| `Module\Werkzeuge.ps1` | Reparatur-Werkzeuge, Belastungstest, Zusatz-Apps |
+| `Module\Verlauf.ps1` | Kennzahlen, Trends, Geräteübersicht |
+| `Module\Aenderungen.ps1` | Änderungsprotokoll und Rückgängig |
+| `Module\Wartung.ps1` | Geplante Wartung, Benachrichtigungen, Programm-Updates |
 
 ## Voraussetzungen
 
-- Windows 10 oder 11, Windows PowerShell 5.1 (vorinstalliert)
-- Für Software-Updates: WinGet (App-Installer aus dem Microsoft Store, bei Windows 11 vorinstalliert). Wenn das Modul `Microsoft.WinGet.Client` installiert ist, nutzt das Tool es automatisch.
+- Windows 10 oder 11 mit Windows PowerShell 5.1 (vorinstalliert)
+- Für Software-Updates: WinGet (App-Installer, bei Windows 11 vorinstalliert)
+- Für PDF-Berichte: Microsoft Edge (vorinstalliert)
+- Optional für die Debugger-Auswertung von Bluescreens: *Debugging Tools for Windows* (Teil des Windows SDK)
 
 Copyright 2026 by Eder Tom
