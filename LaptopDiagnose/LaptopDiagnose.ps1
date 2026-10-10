@@ -50,7 +50,7 @@ param(
 
 if ($Unbeaufsichtigt) { $NurPruefen = $true }
 
-$Script:ToolVersion = '2.5.2'
+$Script:ToolVersion = '2.6.0'
 $Script:InstallDir = $PSScriptRoot
 $Script:ChangeCounter = 0
 $Script:SoftwareUpdateCache = $null
@@ -594,6 +594,7 @@ function Invoke-ErrorScan {
         }
     }
 
+    Invoke-Check $cat 'Defekte Verknüpfungen (Desktop, Startmenü, Taskleiste, Autostart)' { Add-BrokenShortcutFindings -Category $cat }
 }
 
 function Repair-SystemFiles {
@@ -1666,7 +1667,7 @@ function ConvertTo-SafeHtml { param([string]$Text) [System.Net.WebUtility]::Html
 
 function Get-AppSettings {
     $path = Join-Path $BerichtOrdner 'Einstellungen.json'
-    $defaults = [ordered]@{ Design = 'System'; Pdf = $false; AutoUpdate = $true; BerichteBehalten = 30; SpeicherInKomplett = $false }
+    $defaults = [ordered]@{ Design = 'System'; Pdf = $false; AutoUpdate = $true; BerichteBehalten = 30; SpeicherInKomplett = $false; KomplettOhne = @() }
     if (Test-Path -LiteralPath $path) {
         try {
             $j = [IO.File]::ReadAllText($path, [Text.Encoding]::UTF8) | ConvertFrom-Json
@@ -1713,6 +1714,7 @@ function Export-Report {
     $counts = @{}
     foreach ($s in 'Kritisch', 'Warnung', 'Info', 'OK') { $counts[$s] = @($openFindings | Where-Object { $_.Severity -eq $s }).Count }
     $score = (Get-HealthScore).Score
+    $skippedTitles = @(Get-SkippedAreaTitles)
 
     $sb = New-Object System.Text.StringBuilder
     $null = $sb.Append(@"
@@ -1754,6 +1756,7 @@ footer{margin-top:40px;color:var(--muted);font-size:13px;text-align:center}
 <div class="tile"><b style="color:var(--info)">$($counts['Info'])</b>Hinweise</div>
 <div class="tile"><b style="color:var(--ok)">$($counts['OK'])</b>In Ordnung</div>
 </div>
+$(if ($skippedTitles) { "<div class=""card"" style=""border-left:4px solid var(--warn)""><b>Nicht geprüft</b> (in den Einstellungen abgewählt): $([System.Net.WebUtility]::HtmlEncode($skippedTitles -join ', ')). Gesundheitswert und Zählung beziehen sich nur auf die geprüften Bereiche.</div>" })
 <h2>Systemübersicht</h2><div class="card"><table class="kv">
 "@)
     foreach ($k in $Script:SystemInfo.Keys) {
@@ -1884,12 +1887,35 @@ function Show-Summary {
 $Script:FullScanOrder = @('Invoke-ErrorScan', 'Invoke-MemoryScan', 'Invoke-PerformanceScan', 'Invoke-ShutdownScan', 'Invoke-BatteryScan', 'Invoke-NetworkScan',
     'Invoke-SoftwareScan', 'Invoke-SecurityScan', 'Invoke-WindowsUpdateScan')
 
+# Prüfbereiche der Komplett-Diagnose (Schlüssel = Kategorie) in der Reihenfolge von $Script:FullScanOrder
+$Script:FullScanAreas = [ordered]@{
+    'Fehler' = 'Invoke-ErrorScan'; 'Speicher' = 'Invoke-MemoryScan'; 'Leistung' = 'Invoke-PerformanceScan'; 'Herunterfahren' = 'Invoke-ShutdownScan'
+    'Akku' = 'Invoke-BatteryScan'; 'Netzwerk' = 'Invoke-NetworkScan'; 'Software' = 'Invoke-SoftwareScan'; 'Sicherheit' = 'Invoke-SecurityScan'; 'Windows' = 'Invoke-WindowsUpdateScan'
+}
+$Script:LastFullScanSkipped = @()
+
 function Get-FullScanOrder {
-    <# Reihenfolge der Komplett-Diagnose; auf Wunsch (Einstellungen) mit Speicherbelegung samt Kachelgrafik. #>
-    $withStorage = $false
-    try { $withStorage = [bool](Get-AppSettings).SpeicherInKomplett } catch { }
-    if (-not $withStorage) { return $Script:FullScanOrder }
-    return @($Script:FullScanOrder | ForEach-Object { if ($_ -eq 'Invoke-MemoryScan') { 'Invoke-MemoryScanDetailed' } else { $_ } })
+    <#
+        Reihenfolge der Komplett-Diagnose laut Einstellungen: abgewählte Bereiche (KomplettOhne) entfallen, auf Wunsch
+        läuft die Speicherbelegung samt Kachelgrafik mit. Merkt sich die übersprungenen Bereiche für Bericht und Verlauf.
+    #>
+    $settings = $null
+    try { $settings = Get-AppSettings } catch { }
+    $off = @($settings.KomplettOhne | Where-Object { $_ -and $Script:FullScanAreas.Contains("$_") } | ForEach-Object { "$_" })
+    $order = @(foreach ($k in $Script:FullScanAreas.Keys) {
+            if ($off -contains $k) { continue }
+            if ($k -eq 'Speicher' -and $settings -and $settings.SpeicherInKomplett) { 'Invoke-MemoryScanDetailed' } else { $Script:FullScanAreas[$k] }
+        })
+    if (-not $order) { $order = @($Script:FullScanOrder); $off = @() }   # mindestens ein Bereich – sonst alles prüfen
+    # Akku auf Desktop-PCs ist nicht »übersprungen«, sondern gibt es nicht
+    $Script:LastFullScanSkipped = @($off | Where-Object { -not ($_ -eq 'Akku' -and (Get-DeviceKind) -eq 'Desktop') })
+    return $order
+}
+
+function Get-SkippedAreaTitles {
+    <# Abgewählte Bereiche der letzten Komplett-Diagnose, die auch nicht einzeln nachgeprüft wurden. #>
+    @($Script:LastFullScanSkipped | Where-Object { $k = $_; -not ($Script:Findings | Where-Object { $_.Category -eq $k } | Select-Object -First 1) } |
+            ForEach-Object { $Script:Categories[$_] })
 }
 
 function Invoke-FullDiagnosis {

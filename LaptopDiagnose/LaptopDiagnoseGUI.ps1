@@ -614,6 +614,18 @@ $Script:Xaml = @'
             <Border Style="{StaticResource Card}">
               <StackPanel>
                 <TextBlock Text="Komplett-Diagnose" Style="{StaticResource CardTitle}"/>
+                <TextBlock Style="{StaticResource Muted}" Margin="0,0,0,6" Text="Diese Bereiche prüft die Komplett-Diagnose – auch in der geplanten Wartung. Abgewählte Bereiche lassen sich jederzeit einzeln auf ihrer Seite mit »Prüfen« starten; der Bericht vermerkt, was nicht geprüft wurde."/>
+                <WrapPanel Margin="0,0,0,10">
+                  <CheckBox x:Name="ChkAreaFehler" Tag="Fehler" Width="210" Margin="0,3,0,3" Cursor="Hand"><TextBlock Text="Fehlersuche" Foreground="{DynamicResource TextPrimary}"/></CheckBox>
+                  <CheckBox x:Name="ChkAreaSpeicher" Tag="Speicher" Width="210" Margin="0,3,0,3" Cursor="Hand"><TextBlock Text="Speicherfresser" Foreground="{DynamicResource TextPrimary}"/></CheckBox>
+                  <CheckBox x:Name="ChkAreaLeistung" Tag="Leistung" Width="210" Margin="0,3,0,3" Cursor="Hand"><TextBlock Text="Leistungsbremsen" Foreground="{DynamicResource TextPrimary}"/></CheckBox>
+                  <CheckBox x:Name="ChkAreaHerunterfahren" Tag="Herunterfahren" Width="210" Margin="0,3,0,3" Cursor="Hand"><TextBlock Text="Herunterfahren" Foreground="{DynamicResource TextPrimary}"/></CheckBox>
+                  <CheckBox x:Name="ChkAreaAkku" Tag="Akku" Width="210" Margin="0,3,0,3" Cursor="Hand"><TextBlock Text="Akku" Foreground="{DynamicResource TextPrimary}"/></CheckBox>
+                  <CheckBox x:Name="ChkAreaNetzwerk" Tag="Netzwerk" Width="210" Margin="0,3,0,3" Cursor="Hand"><TextBlock Text="Netzwerk &amp; WLAN" Foreground="{DynamicResource TextPrimary}"/></CheckBox>
+                  <CheckBox x:Name="ChkAreaSoftware" Tag="Software" Width="210" Margin="0,3,0,3" Cursor="Hand"><TextBlock Text="Software-Updates" Foreground="{DynamicResource TextPrimary}"/></CheckBox>
+                  <CheckBox x:Name="ChkAreaSicherheit" Tag="Sicherheit" Width="210" Margin="0,3,0,3" Cursor="Hand"><TextBlock Text="Sicherheit" Foreground="{DynamicResource TextPrimary}"/></CheckBox>
+                  <CheckBox x:Name="ChkAreaWindows" Tag="Windows" Width="210" Margin="0,3,0,3" Cursor="Hand"><TextBlock Text="Windows &amp; Treiber" Foreground="{DynamicResource TextPrimary}"/></CheckBox>
+                </WrapPanel>
                 <CheckBox x:Name="ChkStorageFull" Margin="0,4,0,6" Cursor="Hand">
                   <TextBlock Text="Speicherbelegung (Kachelgrafik) in die Komplett-Diagnose aufnehmen" Foreground="{DynamicResource TextPrimary}"/>
                 </CheckBox>
@@ -909,7 +921,7 @@ function Complete-WorkerJob {
 
 $Script:Pages = [ordered]@{
     'Alle'          = @{ Kind = 'Findings'; Title = 'Übersicht'; Sub = 'Gesamtzustand des Geräts – alle Ergebnisse nach Dringlichkeit sortiert.' }
-    'Fehler'        = @{ Kind = 'Findings'; Title = 'Fehlersuche'; Sub = 'Bluescreens mit Ursachen, Abstürze, Problemgeräte, Dienste, Systemdateien, Datenträger und Speichertest.'; Scan = 'Invoke-ErrorScan' }
+    'Fehler'        = @{ Kind = 'Findings'; Title = 'Fehlersuche'; Sub = 'Bluescreens mit Ursachen, Abstürze, Problemgeräte, Dienste, Systemdateien, Datenträger, Speichertest und defekte Verknüpfungen.'; Scan = 'Invoke-ErrorScan' }
     'Sicherheit'    = @{ Kind = 'Findings'; Title = 'Sicherheit'; Sub = 'Virenschutz, Firewall, Secure Boot, TPM, Verschlüsselung, Kernisolierung, UAC, SMB1, Freigaben und veraltete Browser.'; Scan = 'Invoke-SecurityScan' }
     'Speicher'      = @{ Kind = 'Findings'; Title = 'Speicherfresser'; Sub = 'Arbeitsspeicher, größte Programme, freier Speicherplatz, Speicherbelegung als Grafik und Datenmüll.'; Scan = 'Invoke-MemoryScanDetailed' }
     'Leistung'      = @{ Kind = 'Findings'; Title = 'Leistungsbremsen'; Sub = 'Prozessorlast, Autostart, Startdauer, Bildwiederholrate, Arbeitsspeicher-Takt, Energie- und Standby-Einstellungen, Laufwerk, Temperatur und Zusatzsoftware.'; Scan = 'Invoke-PerformanceScan' }
@@ -924,6 +936,8 @@ $Script:Pages = [ordered]@{
     'Einstellungen' = @{ Kind = 'Settings'; Title = 'Einstellungen'; Sub = 'Design, Umfang der Komplett-Diagnose, geplante Wartung, Berichte und Programm-Updates.' }
     'Log'           = @{ Kind = 'Log'; Title = 'Protokoll'; Sub = 'Alle Ausgaben dieser Sitzung. Wird zusätzlich lokal unter %LOCALAPPDATA%\LaptopDiagnose\Protokolle gespeichert.' }
 }
+$Script:AreaKeys = @('Fehler', 'Speicher', 'Leistung', 'Herunterfahren', 'Akku', 'Netzwerk', 'Software', 'Sicherheit', 'Windows')
+$Script:DeviceKind = $null
 $Script:CategoryKeys = @('Fehler', 'Sicherheit', 'Speicher', 'Leistung', 'Herunterfahren', 'Akku', 'Netzwerk', 'Software', 'Windows', 'Werkzeuge')
 $Script:SeverityOrder = @{ 'Kritisch' = 0; 'Warnung' = 1; 'Info' = 2; 'OK' = 3 }
 $Script:Page = 'Alle'
@@ -1252,6 +1266,8 @@ function Invoke-SelectedFixes {
         if ($vm.SelectLabels.Count -gt 0) {
             $text = if ($vm.FixLabel -match 'Autostart') {
                 'Markieren Sie die Programme, die NICHT mehr automatisch starten sollen. Virenschutz sowie Touchpad-, Audio- und Grafiktreiber-Tools sollten aktiv bleiben. Rückgängig jederzeit unter »Änderungen«.'
+            } elseif ($vm.FixLabel -match 'Verknüpfungen') {
+                'Markieren Sie die defekten Verknüpfungen, die bereinigt werden sollen. Verknüpfungen kommen in den Papierkorb, Autostart-Einträge werden deaktiviert (rückgängig über »Änderungen«).'
             } elseif ($vm.FixLabel -match 'Downloads') {
                 'Markieren Sie die Dateien, die in den Papierkorb verschoben werden sollen. Von dort lassen sie sich bei Bedarf wiederherstellen.'
             } elseif ($vm.FixLabel -match 'Zusatz-Apps') {
@@ -1330,7 +1346,8 @@ function Open-Report {
 function Import-History {
     $code = @'
 $entries = @(Get-HistoryEntries)
-[pscustomobject]@{ IsHistory = $true; Count = $entries.Count; Series = @(Get-MetricSeries -Entries $entries) }
+$lastOhne = if ($entries) { @($entries[-1].Ohne | Where-Object { $_ }) } else { @() }
+[pscustomobject]@{ IsHistory = $true; Count = $entries.Count; Series = @(Get-MetricSeries -Entries $entries); LastOhne = [string[]]$lastOhne }
 '@
     if ($Script:Job) { $Script:PendingLoad = 'Import-History'; return }
     $null = Start-WorkerJob -Code $code -Status 'Verlauf wird geladen …' -Silent -OnDone {
@@ -1360,6 +1377,7 @@ $entries = @(Get-HistoryEntries)
         $Script:UI.HistoryHint.Text = if ($h.Count -eq 0) { 'Noch kein Verlauf vorhanden. Nach jeder Komplett-Diagnose (und jeder geplanten Wartung) wird ein Messpunkt gespeichert.' }
         elseif ($h.Count -eq 1) { 'Eine Messung gespeichert. Ab der zweiten Komplett-Diagnose werden Trends sichtbar.' }
         else { "$($h.Count) Messungen gespeichert. Grün = verbessert, Orange = verschlechtert seit der ersten Messung." }
+        if (@($h.LastOhne).Count) { $Script:UI.HistoryHint.Text += " Letzte Messung ohne: $(@($h.LastOhne) -join ', ') (in den Einstellungen abgewählt) – Zählungen sind daher nur bedingt vergleichbar." }
     }
 }
 
@@ -1407,6 +1425,9 @@ function Import-SettingsPage {
     $Script:UI.ChkPdf.IsChecked = [bool]$s.Pdf
     $Script:UI.ChkAutoUpdate.IsChecked = [bool]$s.AutoUpdate
     $Script:UI.ChkStorageFull.IsChecked = [bool]$s.SpeicherInKomplett
+    $off = @($s.KomplettOhne | Where-Object { $_ } | ForEach-Object { "$_" })
+    foreach ($k in $Script:AreaKeys) { $Script:UI["ChkArea$k"].IsChecked = ($off -notcontains $k) }
+    $Script:UI.ChkAreaAkku.Visibility = if ($Script:DeviceKind -eq 'Desktop') { 'Collapsed' } else { 'Visible' }
     $keep = 30
     try { $keep = [int]$s.BerichteBehalten } catch { }
     $keepButton = $Script:UI["Keep$keep"]
@@ -1588,7 +1609,7 @@ try {
         'BtnFixText', 'Busy', 'StatusText', 'HistoryPanel', 'HistoryHint', 'HistoryList', 'ChangesPanel', 'ChangesHint', 'ChangesList',
         'SettingsPanel', 'ThemeSystem', 'ThemeLight', 'ThemeDark', 'MaintStatus', 'IntWeekly', 'IntDaily', 'DayRow', 'MaintTime', 'BtnMaintSet',
         'BtnMaintRemove', 'ChkPdf', 'BtnFleet', 'UpdateStatus', 'BtnUpdateCheck', 'BtnUpdateInstall', 'SignatureText', 'ChkAutoUpdate', 'BadgeUpdate', 'AboutText', 'SidebarLogo', 'AboutLogo',
-        'ChkStorageFull', 'ReportFolderText', 'BtnReportFolderChange', 'BtnReportFolderOpen', 'Keep10', 'Keep30', 'Keep100', 'Keep0'
+        'ChkStorageFull', 'ChkAreaFehler', 'ChkAreaSpeicher', 'ChkAreaLeistung', 'ChkAreaHerunterfahren', 'ChkAreaAkku', 'ChkAreaNetzwerk', 'ChkAreaSoftware', 'ChkAreaSicherheit', 'ChkAreaWindows', 'ReportFolderText', 'BtnReportFolderChange', 'BtnReportFolderOpen', 'Keep10', 'Keep30', 'Keep100', 'Keep0'
     )
     $navNames = @('NavAlle') + @($Script:CategoryKeys | ForEach-Object { "Nav$_" }) + @('NavVerlauf', 'NavAenderungen', 'NavEinstellungen', 'NavLog')
     $names += $navNames
@@ -1665,6 +1686,20 @@ try {
     }
     $Script:UI.ChkPdf.Add_Click({ Write-UiSetting 'Pdf' ([bool]$Script:UI.ChkPdf.IsChecked) })
     $Script:UI.ChkStorageFull.Add_Click({ Write-UiSetting 'SpeicherInKomplett' ([bool]$Script:UI.ChkStorageFull.IsChecked) })
+    foreach ($k in $Script:AreaKeys) {
+        $Script:UI["ChkArea$k"].Add_Click({
+                param($s, $e)
+                # Akku zählt auf Desktop-PCs nicht mit (dort ausgeblendet)
+                $visible = @($Script:AreaKeys | Where-Object { -not ($_ -eq 'Akku' -and $Script:DeviceKind -eq 'Desktop') })
+                if (-not ($visible | Where-Object { $Script:UI["ChkArea$_"].IsChecked })) {
+                    $s.IsChecked = $true
+                    $null = Show-Message 'Mindestens ein Bereich muss für die Komplett-Diagnose ausgewählt bleiben.' 'Komplett-Diagnose'
+                    return
+                }
+                $off = @($Script:AreaKeys | Where-Object { -not $Script:UI["ChkArea$_"].IsChecked })
+                Write-UiSetting 'KomplettOhne' ([string[]]$off)
+            })
+    }
     foreach ($k in 'Keep10', 'Keep30', 'Keep100', 'Keep0') {
         $Script:UI[$k].Add_Checked({
                 param($s, $e)
@@ -1762,7 +1797,8 @@ try {
                 $first = @($out) | Where-Object { $_.IsSnapshot } | Select-Object -Last 1
                 Update-FromSnapshot $first
                 # Desktop-PC: Akku-Bereich ausblenden
-                if ($first -and $first.DeviceKind -eq 'Desktop') { $Script:UI.NavAkku.Visibility = 'Collapsed' }
+                if ($first) { $Script:DeviceKind = $first.DeviceKind }
+                if ($Script:DeviceKind -eq 'Desktop') { $Script:UI.NavAkku.Visibility = 'Collapsed' }
                 # Nach einem Programm-Update: Startmenü, Desktop-Verknüpfung und »Installierte Apps« angleichen
                 if ($ver) { try { $null = Update-AppRegistration -InstallDir $PSScriptRoot -Version $ver } catch { } }
                 if ($Script:FolderMigrationMessage) {
