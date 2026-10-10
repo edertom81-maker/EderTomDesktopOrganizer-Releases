@@ -495,8 +495,9 @@ function Invoke-ErrorScan {
         $activeAv = @($av | Where-Object { (([int]$_.productState -shr 12) -band 0xF) -eq 1 })
         if (-not $activeAv) {
             Add-Finding $cat Kritisch 'Kein aktiver Virenschutz gefunden' `
-                -FixLabel 'Microsoft Defender Echtzeitschutz aktivieren' `
-                -Fix { param($d) Set-MpPreference -DisableRealtimeMonitoring $false -ErrorAction Stop; 'Echtzeitschutz aktiviert.' }
+                -Detail 'Den Echtzeitschutz bitte in der Windows-Sicherheit einschalten oder ein anderes Virenschutzprogramm aktivieren.' `
+                -FixLabel 'Windows-Sicherheit (Viren- & Bedrohungsschutz) öffnen' `
+                -Fix { param($d) Start-Process 'windowsdefender://threatsettings'; 'Windows-Sicherheit geöffnet – bitte dort den Echtzeitschutz einschalten.' }
         } else {
             foreach ($p in $activeAv) {
                 $outdated = (([int]$p.productState -shr 4) -band 0xF) -ne 0

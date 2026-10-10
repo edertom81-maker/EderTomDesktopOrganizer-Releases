@@ -32,12 +32,12 @@ try {
 # Mit Administratorrechten und im STA-Modus (für WPF erforderlich) neu starten
 $isSta = [Threading.Thread]::CurrentThread.GetApartmentState() -eq [Threading.ApartmentState]::STA
 if (-not $Script:IsAdmin -or -not $isSta) {
-    $argList = @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-STA', '-WindowStyle', 'Hidden', '-File', "`"$PSCommandPath`"", '-BerichtOrdner', "`"$BerichtOrdner`"")
+    $argList = @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-STA', '-WindowStyle', 'Minimized', '-File', "`"$PSCommandPath`"", '-BerichtOrdner', "`"$BerichtOrdner`"")
     if ($NurPruefen) { $argList += '-NurPruefen' }
     $exe = (Get-Process -Id $PID).Path
     try {
-        if ($Script:IsAdmin) { Start-Process -FilePath $exe -ArgumentList $argList -WindowStyle Hidden }
-        else { Start-Process -FilePath $exe -ArgumentList $argList -Verb RunAs -WindowStyle Hidden }
+        if ($Script:IsAdmin) { Start-Process -FilePath $exe -ArgumentList $argList -WindowStyle Minimized }
+        else { Start-Process -FilePath $exe -ArgumentList $argList -Verb RunAs -WindowStyle Minimized }
         return
     } catch {
         # Rechteabfrage abgelehnt: eingeschränkt weiterarbeiten (nur möglich, wenn bereits STA)
@@ -47,55 +47,6 @@ if (-not $Script:IsAdmin -or -not $isSta) {
 
 Add-Type -AssemblyName PresentationFramework, PresentationCore, WindowsBase
 
-if (-not ('LaptopDiagnose.FindingItem' -as [type])) {
-    Add-Type -Language CSharp -TypeDefinition @'
-using System.ComponentModel;
-namespace LaptopDiagnose {
-    public class NotifyBase : INotifyPropertyChanged {
-        public event PropertyChangedEventHandler PropertyChanged;
-        protected void Raise(string name) {
-            PropertyChangedEventHandler h = PropertyChanged;
-            if (h != null) { h(this, new PropertyChangedEventArgs(name)); }
-        }
-    }
-    public class FindingItem : NotifyBase {
-        public int Index { get; set; }
-        public int Order { get; set; }
-        public string Key { get; set; }
-        public string Category { get; set; }
-        public string CategoryTitle { get; set; }
-        public string Severity { get; set; }
-        public string Title { get; set; }
-        public string Detail { get; set; }
-        public string ItemsText { get; set; }
-        public string FixLabel { get; set; }
-        public string FixText { get; set; }
-        public string Status { get; set; }
-        public bool HasDetail { get; set; }
-        public bool HasItems { get; set; }
-        public bool HasStatus { get; set; }
-        public bool CanFix { get; set; }
-        public bool IsFixed { get; set; }
-        public bool RequiresReboot { get; set; }
-        public bool SelectAll { get; set; }
-        public string[] SelectLabels { get; set; }
-        private bool showFix;
-        public bool ShowFix { get { return showFix; } set { showFix = value; Raise("ShowFix"); } }
-        private bool isSelected;
-        public bool IsSelected { get { return isSelected; } set { isSelected = value; Raise("IsSelected"); } }
-    }
-    public class SelectOption : NotifyBase {
-        public string Label { get; set; }
-        private bool isChecked;
-        public bool IsChecked { get { return isChecked; } set { isChecked = value; Raise("IsChecked"); } }
-    }
-    public class InfoRow {
-        public string Key { get; set; }
-        public string Value { get; set; }
-    }
-}
-'@
-}
 
 #region ---------- Oberfläche (XAML) ----------
 
@@ -621,6 +572,28 @@ $Script:Pages = [ordered]@{
 $Script:SeverityOrder = @{ 'Kritisch' = 0; 'Warnung' = 1; 'Info' = 2; 'OK' = 3 }
 $Script:Page = 'Alle'
 $Script:Items = New-Object System.Collections.Generic.List[object]
+
+function New-Table {
+    <# DataTable als Datenquelle: Zeilen melden Änderungen selbst an die Oberfläche (keine Laufzeit-Kompilierung nötig). #>
+    param([object[]]$Columns)
+    $t = New-Object System.Data.DataTable
+    foreach ($c in $Columns) {
+        $col = $t.Columns.Add($c[0], $c[1])
+        if ($c[1] -eq [bool]) { $col.DefaultValue = $false }
+        elseif ($c[1] -eq [string]) { $col.DefaultValue = '' }
+    }
+    return , $t
+}
+
+$Script:Table = New-Table @(
+    @('Index', [int]), @('Order', [int]), @('Key', [string]), @('Category', [string]), @('CategoryTitle', [string]),
+    @('Severity', [string]), @('Title', [string]), @('Detail', [string]), @('ItemsText', [string]), @('FixLabel', [string]),
+    @('FixText', [string]), @('Status', [string]), @('HasDetail', [bool]), @('HasItems', [bool]), @('HasStatus', [bool]),
+    @('CanFix', [bool]), @('IsFixed', [bool]), @('RequiresReboot', [bool]), @('SelectAll', [bool]), @('ShowFix', [bool]),
+    @('IsSelected', [bool]), @('SelectLabels', [object])
+)
+$Script:View = New-Object System.Data.DataView($Script:Table)
+$Script:View.Sort = 'Order ASC'
 $Script:SystemInfo = $null
 $Script:RebootPending = $false
 $Script:BrushConverter = New-Object System.Windows.Media.BrushConverter
@@ -666,9 +639,10 @@ function Update-FromSnapshot {
     $keep = @{}
     foreach ($it in $Script:Items) { if ($it.IsSelected) { $keep[$it.Key] = $true } }
     $Script:Items.Clear()
+    $Script:Table.Rows.Clear()
     $readOnly = [bool]$Script:UI.ChkNurPruefen.IsChecked
     foreach ($f in $Snapshot.Findings) {
-        $vm = New-Object LaptopDiagnose.FindingItem
+        $vm = $Script:Table.NewRow()
         $vm.Index = $f.Index
         $vm.Order = $Script:SeverityOrder[$f.Severity] * 10000 + $f.Index
         $vm.Key = "$($f.Category)|$($f.Title)"
@@ -676,11 +650,11 @@ function Update-FromSnapshot {
         $vm.CategoryTitle = $Script:Pages[$f.Category].Title
         $vm.Severity = $f.Severity
         $vm.Title = $f.Title
-        $vm.Detail = $f.Detail
+        $vm.Detail = "$($f.Detail)"
         $vm.HasDetail = [bool]$f.Detail
         $vm.ItemsText = (@($f.Items) -join [Environment]::NewLine)
         $vm.HasItems = @($f.Items).Count -gt 0
-        $vm.FixLabel = $f.FixLabel
+        $vm.FixLabel = "$($f.FixLabel)"
         $vm.CanFix = [bool]$f.CanFix
         $vm.IsFixed = [bool]$f.Fixed
         $vm.RequiresReboot = [bool]$f.RequiresReboot
@@ -695,6 +669,7 @@ function Update-FromSnapshot {
         $vm.HasStatus = [bool]$vm.Status
         $vm.ShowFix = $vm.CanFix -and -not $readOnly
         $vm.IsSelected = $vm.CanFix -and $keep.ContainsKey($vm.Key)
+        $Script:Table.Rows.Add($vm)
         $Script:Items.Add($vm)
     }
     Update-View
@@ -714,20 +689,17 @@ function Update-View {
 
     # Systemübersicht
     if ($page -eq 'Alle' -and $Script:SystemInfo) {
-        $rows = foreach ($k in $Script:SystemInfo.Keys) {
-            $r = New-Object LaptopDiagnose.InfoRow
-            $r.Key = $k; $r.Value = "$($Script:SystemInfo[$k])"
-            $r
-        }
-        $Script:UI.SystemList.ItemsSource = @($rows)
+        $info = New-Table @(@('Key', [string]), @('Value', [string]))
+        foreach ($k in $Script:SystemInfo.Keys) { $null = $info.Rows.Add($k, "$($Script:SystemInfo[$k])") }
+        $Script:UI.SystemList.ItemsSource = $info.DefaultView
         $Script:UI.SystemCard.Visibility = 'Visible'
     } else {
         $Script:UI.SystemCard.Visibility = 'Collapsed'
     }
 
-    $visible = @($Script:Items | Where-Object { $page -eq 'Alle' -or $_.Category -eq $page } | Sort-Object Order)
-    $Script:UI.FindingsList.ItemsSource = $visible
-    if (-not $visible.Count) {
+    $Script:View.RowFilter = if ($page -eq 'Alle' -or $page -eq 'Log') { '' } else { "Category = '$page'" }
+    if (-not [object]::ReferenceEquals($Script:UI.FindingsList.ItemsSource, $Script:View)) { $Script:UI.FindingsList.ItemsSource = $Script:View }
+    if (-not $Script:View.Count) {
         $Script:UI.EmptyHint.Visibility = 'Visible'
         $Script:UI.EmptyHintText.Text = if ($page -eq 'Alle') {
             "Noch keine Ergebnisse.`nKlicken Sie auf »Komplett-Diagnose starten«, um den Laptop vollständig zu prüfen."
@@ -774,19 +746,15 @@ function Show-SelectionDialog {
     $dlg.Title = $Title
     $dlg.FindName('DlgTitle').Text = $Title
     $dlg.FindName('DlgText').Text = $Text
-    $options = New-Object System.Collections.Generic.List[object]
-    foreach ($l in $Labels) {
-        $o = New-Object LaptopDiagnose.SelectOption
-        $o.Label = $l; $o.IsChecked = $AllChecked
-        $options.Add($o)
-    }
-    $dlg.FindName('DlgList').ItemsSource = $options
-    $dlg.FindName('DlgAll').Add_Click({ foreach ($o in $options) { $o.IsChecked = $true } }.GetNewClosure())
-    $dlg.FindName('DlgNone').Add_Click({ foreach ($o in $options) { $o.IsChecked = $false } }.GetNewClosure())
+    $options = New-Table @(@('Label', [string]), @('IsChecked', [bool]))
+    foreach ($l in $Labels) { $null = $options.Rows.Add($l, $AllChecked) }
+    $dlg.FindName('DlgList').ItemsSource = $options.DefaultView
+    $dlg.FindName('DlgAll').Add_Click({ foreach ($o in $options.Rows) { $o.IsChecked = $true } }.GetNewClosure())
+    $dlg.FindName('DlgNone').Add_Click({ foreach ($o in $options.Rows) { $o.IsChecked = $false } }.GetNewClosure())
     $dlg.FindName('DlgOk').Add_Click({ $dlg.DialogResult = $true }.GetNewClosure())
     if (-not $dlg.ShowDialog()) { return $null }
     $idx = New-Object System.Collections.Generic.List[int]
-    for ($i = 0; $i -lt $options.Count; $i++) { if ($options[$i].IsChecked) { $idx.Add($i) } }
+    for ($i = 0; $i -lt $options.Rows.Count; $i++) { if ($options.Rows[$i].IsChecked) { $idx.Add($i) } }
     return , $idx.ToArray()
 }
 

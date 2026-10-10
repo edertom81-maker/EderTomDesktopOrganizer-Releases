@@ -48,6 +48,17 @@ Während eine Prüfung läuft, bleibt das Fenster bedienbar. Was gerade passiert
 - Bevor ein Programm beendet wird, warnt das Tool vor ungespeicherten Daten. Systemprozesse werden nie zum Beenden angeboten.
 - Mit `-NurPruefen` wird nichts verändert.
 
+## Virenscanner meldet das Tool
+
+Diagnose- und Reparaturskripte nutzen dieselben Windows-Funktionen wie manche Schadsoftware: Adminrechte anfordern, Autostarts ändern, Dateien löschen, Dienste steuern. Manche Virenscanner schlagen deshalb vorsorglich an. Das Tool verzichtet bewusst auf versteckte Fenster, auf zur Laufzeit übersetzten Code und auf Änderungen an den Defender-Einstellungen.
+
+Wenn trotzdem eine Meldung erscheint:
+
+1. Den Namen der Erkennung notieren (z. B. `Trojan:PowerShell/…`) und prüfen, welche Datei gemeldet wird.
+2. Die Datei als Fehlalarm beim Hersteller einreichen. Für Microsoft Defender geht das unter https://www.microsoft.com/wdsi/filesubmission.
+3. Die Skripte mit dem eigenen Code-Signing-Zertifikat signieren, mit dem auch die Desktop-Organizer-Setups signiert werden: `Set-AuthenticodeSignature -FilePath .\LaptopDiagnose.ps1 -Certificate $cert -TimestampServer http://timestamp.digicert.com`, ebenso für `LaptopDiagnoseGUI.ps1`. Signierte Skripte werden deutlich seltener gemeldet.
+4. Nur wenn klar ist, dass es ein Fehlalarm ist: eine Ausnahme nur für den Ordner `LaptopDiagnose` einrichten. Den Virenschutz nicht abschalten.
+
 ## Berichte
 
 Gespeichert wird in `Dokumente\LaptopDiagnose`:
