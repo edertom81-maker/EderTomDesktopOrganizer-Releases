@@ -280,7 +280,7 @@ $Script:Xaml = @'
               </ItemsControl.ItemContainerStyle>
               <ItemsControl.ItemTemplate>
                 <DataTemplate>
-                  <Border Width="{Binding W}" Height="{Binding H}" Background="{Binding Fill}" BorderBrush="{DynamicResource BgCard}" BorderThickness="1" ToolTip="{Binding Tip}">
+                  <Border Width="{Binding W}" Height="{Binding H}" Background="{Binding Fill}" BorderBrush="{DynamicResource BgCard}" BorderThickness="1" ToolTip="{Binding Tip}" Cursor="{Binding Cursor}" Tag="TreemapTile">
                     <StackPanel Margin="6,4,4,2" Visibility="{Binding ShowText, Converter={StaticResource B2V}}">
                       <TextBlock Text="{Binding Label}" Foreground="White" FontWeight="SemiBold" FontSize="12" TextTrimming="CharacterEllipsis"/>
                       <TextBlock Text="{Binding Text}" Foreground="White" FontSize="11" Opacity="0.85"/>
@@ -316,6 +316,9 @@ $Script:Xaml = @'
           <Setter TargetName="SevBadge" Property="Background" Value="#1570EF"/>
         </DataTrigger>
         <DataTrigger Binding="{Binding IsFixed}" Value="True">
+          <Setter TargetName="StatusText" Property="Foreground" Value="#079455"/>
+        </DataTrigger>
+        <DataTrigger Binding="{Binding RunOk}" Value="True">
           <Setter TargetName="StatusText" Property="Foreground" Value="#079455"/>
         </DataTrigger>
       </DataTemplate.Triggers>
@@ -841,9 +844,13 @@ function global:Get-GuiSnapshot {
                 Detail         = $f.Detail
                 Items          = [string[]]@($f.Items | Where-Object { $_ })
                 Chart          = @($f.Chart | Where-Object { $_ } | ForEach-Object {
-                        [pscustomobject]@{ Label = "$($_.Label)"; Value = [double]$_.Value; Text = "$($_.Text)"; X = [double]$_.X; Y = [double]$_.Y; W = [double]$_.W; H = [double]$_.H; Anteil = [double]$_.Anteil }
+                        [pscustomobject]@{ Label = "$($_.Label)"; Value = [double]$_.Value; Text = "$($_.Text)"; X = [double]$_.X; Y = [double]$_.Y; W = [double]$_.W; H = [double]$_.H; Anteil = [double]$_.Anteil; Path = "$($_.Path)" }
                     })
                 ChartStyle     = "$($f.ChartStyle)"
+                SelectDefault  = [bool[]]@($f.SelectDefault)
+                Repeatable     = [bool]$f.Repeatable
+                AskFolder      = [bool]$f.AskFolder
+                RunOk          = [bool]$f.RunOk
                 FixLabel       = $f.FixLabel
                 CanFix         = ([bool]$f.Fix -and -not $f.Fixed)
                 Fixed          = [bool]$f.Fixed
@@ -967,7 +974,8 @@ $Script:Table = New-Table @(
     @('Severity', [string]), @('Title', [string]), @('Detail', [string]), @('ItemsText', [string]), @('FixLabel', [string]),
     @('FixText', [string]), @('Status', [string]), @('HasDetail', [bool]), @('HasItems', [bool]), @('HasStatus', [bool]),
     @('CanFix', [bool]), @('IsFixed', [bool]), @('RequiresReboot', [bool]), @('SelectAll', [bool]), @('ShowFix', [bool]),
-    @('IsSelected', [bool]), @('SelectLabels', [object]), @('Chart', [object]), @('HasChart', [bool]), @('Tiles', [object]), @('HasTiles', [bool])
+    @('IsSelected', [bool]), @('SelectLabels', [object]), @('Chart', [object]), @('HasChart', [bool]), @('Tiles', [object]), @('HasTiles', [bool]),
+    @('RunOk', [bool]), @('AskFolder', [bool]), @('Repeatable', [bool]), @('SelectDefault', [object])
 )
 $Script:View = New-Object System.Data.DataView($Script:Table)
 $Script:View.Sort = 'Order ASC'
@@ -1071,15 +1079,17 @@ function New-TreemapView {
     param($Chart)
     $points = @($Chart)
     if (-not $points) { return $null }
-    $t = New-Table @(@('X', [double]), @('Y', [double]), @('W', [double]), @('H', [double]), @('Label', [string]), @('Text', [string]), @('Tip', [string]), @('Fill', [object]), @('ShowText', [bool]))
+    $t = New-Table @(@('X', [double]), @('Y', [double]), @('W', [double]), @('H', [double]), @('Label', [string]), @('Text', [string]), @('Tip', [string]), @('Fill', [object]), @('ShowText', [bool]), @('Path', [string]), @('Cursor', [object]))
     for ($i = 0; $i -lt $points.Count; $i++) {
         $p = $points[$i]
         $w = [math]::Max(1, $p.W * $Script:TreemapWidth)
         $h = [math]::Max(1, $p.H * $Script:TreemapHeight)
         $brush = Get-Brush $Script:TreemapColors[$i % $Script:TreemapColors.Count]
         $brush.Freeze()
+        $tip = '{0}: {1} ({2} %)' -f $p.Label, $p.Text, $p.Anteil
+        if ($p.Path) { $tip += "`nKlicken, um die Unterordner anzuzeigen" }
         $null = $t.Rows.Add($p.X * $Script:TreemapWidth, $p.Y * $Script:TreemapHeight, $w, $h, "$($p.Label)", "$($p.Text)",
-            ('{0}: {1} ({2} %)' -f $p.Label, $p.Text, $p.Anteil), $brush, ($w -ge 70 -and $h -ge 36))
+            $tip, $brush, ($w -ge 70 -and $h -ge 36), "$($p.Path)", $(if ($p.Path) { [System.Windows.Input.Cursors]::Hand } else { [System.Windows.Input.Cursors]::Arrow }))
     }
     return $t.DefaultView
 }
@@ -1120,11 +1130,16 @@ function Update-FromSnapshot {
         $vm.RequiresReboot = [bool]$f.RequiresReboot
         $vm.SelectLabels = [string[]]@($f.SelectLabels)
         $vm.SelectAll = [bool]$f.SelectAll
-        $fixText = if ($f.Category -eq 'Werkzeuge') { "Ausführen: $($f.FixLabel)" } else { "Beheben: $($f.FixLabel)" }
+        $vm.SelectDefault = [bool[]]@($f.SelectDefault)
+        $vm.RunOk = [bool]$f.RunOk
+        $vm.AskFolder = [bool]$f.AskFolder
+        $vm.Repeatable = [bool]$f.Repeatable
+        $fixText = if ($f.Category -eq 'Werkzeuge' -or $f.Repeatable) { "Ausführen: $($f.FixLabel)" } else { "Beheben: $($f.FixLabel)" }
         if ($f.RequiresReboot) { $fixText += '  (Neustart nötig)' }
         if ($vm.SelectLabels.Count -gt 0) { $fixText += '  – Auswahl im nächsten Schritt' }
         $vm.FixText = $fixText
         if ($f.Fixed) { $vm.Status = "✔ $(if ($f.Category -eq 'Werkzeuge') { 'Ausgeführt' } else { 'Behoben' }): $($f.FixResult)" }
+        elseif ($f.RunOk) { $vm.Status = "✔ Ausgeführt: $($f.FixResult)" }
         elseif ($f.FixResult) { $vm.Status = "✖ $($f.FixResult)" }
         $vm.HasStatus = [bool]$vm.Status
         $vm.ShowFix = $vm.CanFix -and -not $readOnly
@@ -1208,7 +1223,7 @@ function Update-View {
 }
 
 function Show-SelectionDialog {
-    param([string]$Title, [string]$Text, [string[]]$Labels, [bool]$AllChecked)
+    param([string]$Title, [string]$Text, [string[]]$Labels, [bool]$AllChecked, [bool[]]$Defaults)
     $dlg = [Windows.Markup.XamlReader]::Parse($Script:SelectXaml)
     foreach ($k in $Script:CurrentPalette.Keys) { $dlg.Resources[$k] = Get-Brush $Script:CurrentPalette[$k] }
     $dlg.Owner = $Script:Window
@@ -1216,7 +1231,10 @@ function Show-SelectionDialog {
     $dlg.FindName('DlgTitle').Text = $Title
     $dlg.FindName('DlgText').Text = $Text
     $options = New-Table @(@('Label', [string]), @('IsChecked', [bool]))
-    foreach ($l in $Labels) { $null = $options.Rows.Add($l, $AllChecked) }
+    for ($i = 0; $i -lt $Labels.Count; $i++) {
+        $checked = if ($Defaults -and $i -lt $Defaults.Count) { $Defaults[$i] } else { $AllChecked }
+        $null = $options.Rows.Add($Labels[$i], $checked)
+    }
     $dlg.FindName('DlgList').ItemsSource = $options.DefaultView
     $dlg.FindName('DlgAll').Add_Click({ foreach ($o in $options.Rows) { $o.IsChecked = $true } }.GetNewClosure())
     $dlg.FindName('DlgNone').Add_Click({ foreach ($o in $options.Rows) { $o.IsChecked = $false } }.GetNewClosure())
@@ -1268,18 +1286,39 @@ function Invoke-SelectedFixes {
                 'Markieren Sie die Programme, die NICHT mehr automatisch starten sollen. Virenschutz sowie Touchpad-, Audio- und Grafiktreiber-Tools sollten aktiv bleiben. Rückgängig jederzeit unter »Änderungen«.'
             } elseif ($vm.FixLabel -match 'Verknüpfungen') {
                 'Markieren Sie die defekten Verknüpfungen, die bereinigt werden sollen. Verknüpfungen kommen in den Papierkorb, Autostart-Einträge werden deaktiviert (rückgängig über »Änderungen«).'
+            } elseif ($vm.FixLabel -match 'doppelte Dateien') {
+                'Vorausgewählt sind alle Kopien außer jeweils der ältesten Datei einer Gruppe (»Vorschlag: behalten«). Passen Sie die Auswahl bei Bedarf an – von jeder Gruppe bleibt zur Sicherheit immer mindestens eine Datei erhalten. Gelöscht wird in den Papierkorb.'
+            } elseif ($vm.FixLabel -match 'leere Ordner') {
+                'Markieren Sie die leeren Ordner, die in den Papierkorb verschoben werden sollen.'
+            } elseif ($vm.FixLabel -match 'ENDGÜLTIG') {
+                'ACHTUNG: Diese Einträge passen nicht in den Papierkorb. Was Sie hier markieren, wird ENDGÜLTIG gelöscht und lässt sich nicht wiederherstellen.'
+            } elseif ($vm.FixLabel -match 'Ordner komplett') {
+                'Markieren Sie die Ordner, die KOMPLETT mit allen Unterordnern und Dateien gelöscht werden sollen. Sie landen im Papierkorb; was nicht hineinpasst, wird nur nach einer weiteren ausdrücklichen Bestätigung endgültig gelöscht.'
             } elseif ($vm.FixLabel -match 'Downloads') {
                 'Markieren Sie die Dateien, die in den Papierkorb verschoben werden sollen. Von dort lassen sie sich bei Bedarf wiederherstellen.'
             } elseif ($vm.FixLabel -match 'Zusatz-Apps') {
                 'Markieren Sie die Apps, die entfernt werden sollen. Sie lassen sich bei Bedarf über den Microsoft Store neu installieren.'
             } else { 'Markieren Sie die Updates, die installiert werden sollen.' }
-            $selection = Show-SelectionDialog -Title $vm.FixLabel -Text $text -Labels $vm.SelectLabels -AllChecked $vm.SelectAll
+            $selection = Show-SelectionDialog -Title $vm.FixLabel -Text $text -Labels $vm.SelectLabels -AllChecked $vm.SelectAll -Defaults ([bool[]]@($vm.SelectDefault))
             if ($null -eq $selection -or $selection.Count -eq 0) { continue }
             $labels.Add("• $($vm.FixLabel) ($($selection.Count) ausgewählt)")
         } else {
             $labels.Add("• $($vm.FixLabel)")
         }
-        $requests.Add(@{ Index = $vm.Index; Selection = $selection })
+        # Such-Werkzeuge: Standard-Orte oder eigener Ordner
+        $folder = $null
+        if ($vm.AskFolder) {
+            $q = Show-Message "$($vm.FixLabel)`n`nIn den Benutzerordnern suchen (Dokumente, Bilder, Videos, Musik, Desktop, Downloads)?`n`n»Nein« wählt einen anderen Ordner oder ein Laufwerk." 'Wo suchen?' 'Question' 'YesNoCancel'
+            if ("$q" -eq 'Cancel') { $labels.RemoveAt($labels.Count - 1); continue }
+            if ("$q" -eq 'No') {
+                $dlg = New-Object System.Windows.Forms.FolderBrowserDialog
+                $dlg.Description = "$($vm.FixLabel): Ordner oder Laufwerk wählen"
+                if ($dlg.ShowDialog() -ne [System.Windows.Forms.DialogResult]::OK) { $labels.RemoveAt($labels.Count - 1); continue }
+                $folder = $dlg.SelectedPath
+                $labels[$labels.Count - 1] = "• $($vm.FixLabel) in $folder"
+            }
+        }
+        $requests.Add(@{ Index = $vm.Index; Selection = $selection; Folder = $folder; AskFolder = [bool]$vm.AskFolder })
     }
     if (-not $requests.Count) { return }
 
@@ -1287,17 +1326,25 @@ function Invoke-SelectedFixes {
     if ($chosen | Where-Object { $_.FixLabel -match 'beenden' }) {
         $warn = "`n`nAchtung: Beim Beenden von Programmen gehen ungespeicherte Daten verloren."
     }
+    if ($chosen | Where-Object { $_.FixLabel -match 'ENDGÜLTIG' }) {
+        $warn += "`n`nACHTUNG: Ein Teil wird ENDGÜLTIG gelöscht und lässt sich nicht wiederherstellen."
+    }
     $answer = Show-Message ("Folgende Maßnahmen werden jetzt ausgeführt:`n`n" + ($labels -join "`n") + $warn + "`n`nFortfahren?") 'Ausführen' 'Question' 'YesNo'
     if ("$answer" -ne 'Yes') { return }
 
-    $rp = Show-Message "Vor den Änderungen einen Systemwiederherstellungspunkt erstellen?`n(Empfohlen – damit lässt sich der vorherige Zustand wiederherstellen.)" 'Wiederherstellungspunkt' 'Question' 'YesNoCancel'
-    if ("$rp" -eq 'Cancel') { return }
+    # Reine Such-Werkzeuge ändern nichts – dann ist kein Wiederherstellungspunkt nötig
+    $rp = 'No'
+    if ($chosen | Where-Object { -not $_.Repeatable }) {
+        $rp = Show-Message "Vor den Änderungen einen Systemwiederherstellungspunkt erstellen?`n(Empfohlen – damit lässt sich der vorherige Zustand wiederherstellen.)" 'Wiederherstellungspunkt' 'Question' 'YesNoCancel'
+        if ("$rp" -eq 'Cancel') { return }
+    }
 
     $code = @'
 param($requests, $restore)
 $list = foreach ($r in $requests) {
     $f = $Script:Findings[$r.Index]
     $f.Selection = $r.Selection
+    if ($r.AskFolder) { $f.FixData = @{ Folder = $r.Folder } }
     $f
 }
 Invoke-FixList -Findings @($list) -RestorePoint:$restore
@@ -1310,8 +1357,8 @@ Get-GuiSnapshot
         Update-FromSnapshot $snap
         foreach ($it in $Script:Items) { $it.IsSelected = $false }
         $done = @($Script:Items | Where-Object { $_.Key -in $before })
-        $ok = @($done | Where-Object { $_.IsFixed }).Count
-        $failed = @($done | Where-Object { -not $_.IsFixed -and $_.HasStatus }).Count
+        $ok = @($done | Where-Object { $_.IsFixed -or $_.RunOk }).Count
+        $failed = @($done | Where-Object { -not $_.IsFixed -and -not $_.RunOk -and $_.HasStatus }).Count
         Update-FixButtons
         $msg = "$ok Maßnahme(n) erfolgreich ausgeführt."
         if ($failed) { $msg += "`n$failed Maßnahme(n) fehlgeschlagen – Details in den Ergebniskarten und im Protokoll." }
@@ -1674,6 +1721,21 @@ try {
             while ($btn -and -not ($btn -is [System.Windows.Controls.Button])) { $btn = [System.Windows.Media.VisualTreeHelper]::GetParent($btn) }
             if ($btn -and $btn.Tag) { Undo-ChangeUi -Id ([string]$btn.Tag) -Text ([string]$btn.DataContext.Row['Beschreibung']) }
         })
+
+    # Kachelgrafik: Klick auf eine Kachel zeigt deren Unterordner
+    $Script:UI.FindingsList.AddHandler([System.Windows.UIElement]::MouseLeftButtonUpEvent, [System.Windows.Input.MouseButtonEventHandler]{
+            param($s, $e)
+            $el = $e.OriginalSource
+            while ($el -and -not ($el -is [System.Windows.FrameworkElement] -and "$($el.Tag)" -eq 'TreemapTile')) { $el = [System.Windows.Media.VisualTreeHelper]::GetParent($el) }
+            if (-not $el) { return }
+            $path = "$($el.DataContext.Row['Path'])"
+            if (-not $path -or $Script:Job) { return }
+            $null = Start-WorkerJob -Code 'param($p) Invoke-StorageDrillDown -Path $p; Get-GuiSnapshot' -Arguments @($path) -Status "Speicherbelegung von $path wird ermittelt …" -OnDone {
+                param($out)
+                Update-FromSnapshot (@($out) | Where-Object { $_.IsSnapshot } | Select-Object -Last 1)
+                $Script:UI.StatusText.Text = 'Unterordner angezeigt – siehe Karte »Speicherbelegung: …«.'
+            }
+        }, $true)
 
     # Einstellungen
     foreach ($t in 'ThemeSystem', 'ThemeLight', 'ThemeDark') {

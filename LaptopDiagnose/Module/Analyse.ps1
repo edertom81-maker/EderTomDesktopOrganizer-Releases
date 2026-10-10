@@ -210,7 +210,7 @@ function Get-StorageBreakdown {
     $entries = New-Object System.Collections.Generic.List[object]
     foreach ($d in Get-ChildItem -LiteralPath $Path -Directory -Force -ErrorAction SilentlyContinue) {
         if ([int]$d.Attributes -band [int][IO.FileAttributes]::ReparsePoint) { continue }
-        $entries.Add([pscustomobject]@{ Label = $d.Name; Value = [double](Get-DirectorySizeFast $d.FullName) })
+        $entries.Add([pscustomobject]@{ Label = $d.Name; Value = [double](Get-DirectorySizeFast $d.FullName); Path = $d.FullName })
     }
     if ($IncludeSystemFiles) {
         foreach ($f in 'pagefile.sys', 'hiberfil.sys', 'swapfile.sys') {
@@ -224,7 +224,7 @@ function Get-StorageBreakdown {
         } catch { }
     }
     return @($entries | Where-Object { $_.Value -gt 0 } | Sort-Object Value -Descending | Select-Object -First $Top |
-            ForEach-Object { [pscustomobject]@{ Label = $_.Label; Value = $_.Value; Text = Format-Bytes $_.Value } })
+            ForEach-Object { [pscustomobject]@{ Label = $_.Label; Value = $_.Value; Text = Format-Bytes $_.Value; Path = "$($_.Path)" } })
 }
 
 function Add-StorageBreakdownFindings {
@@ -233,12 +233,12 @@ function Add-StorageBreakdownFindings {
     $chart = @(Get-StorageBreakdown -Path $sys -IncludeSystemFiles)
     if ($chart) {
         Add-Finding $Category Info "Speicherbelegung von $env:SystemDrive – größte Bereiche" -Chart $chart -ChartStyle Kacheln `
-            -Detail 'Hinweis: Windows nutzt Hardlinks (WinSxS), daher kann die Summe größer erscheinen als der belegte Platz.'
+            -Detail 'Auf eine Kachel klicken, um deren größte Unterordner zu sehen. Hinweis: Windows nutzt Hardlinks (WinSxS), daher kann die Summe größer erscheinen als der belegte Platz.'
     }
     $user = @(Get-StorageBreakdown -Path $env:USERPROFILE)
     if ($user) {
         Add-Finding $Category Info 'Benutzerordner – größte Bereiche' -Chart $user -ChartStyle Kacheln `
-            -Detail 'Nur lokal gespeicherte Dateien (reine OneDrive-Cloud-Dateien werden nicht mitgezählt).' `
+            -Detail 'Auf eine Kachel klicken, um deren größte Unterordner zu sehen. Nur lokal gespeicherte Dateien (reine OneDrive-Cloud-Dateien werden nicht mitgezählt). Ganze Ordner löschen: Werkzeug »Große Ordner anzeigen«.' `
             -FixLabel 'Speicher-Einstellungen von Windows öffnen' -Fix { param($d) Start-Process 'ms-settings:storagesense'; 'Speicher-Einstellungen geöffnet.' }
     }
 }

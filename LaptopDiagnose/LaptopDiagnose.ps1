@@ -50,7 +50,7 @@ param(
 
 if ($Unbeaufsichtigt) { $NurPruefen = $true }
 
-$Script:ToolVersion = '2.6.0'
+$Script:ToolVersion = '2.7.0'
 $Script:InstallDir = $PSScriptRoot
 $Script:ChangeCounter = 0
 $Script:SoftwareUpdateCache = $null
@@ -191,6 +191,10 @@ function Add-Finding {
         [switch]$SelectAllByDefault,
         [object[]]$Chart,
         [ValidateSet('Balken', 'Kacheln')][string]$ChartStyle = 'Balken',
+        [bool[]]$SelectDefault,
+        [string]$Key,
+        [switch]$Repeatable,
+        [switch]$AskFolder,
         [switch]$Silent
     )
     $chartPoints = @($Chart | Where-Object { $_ })
@@ -213,6 +217,11 @@ function Add-Finding {
         SelectAll      = [bool]$SelectAllByDefault
         Chart          = $chartPoints
         ChartStyle     = $ChartStyle
+        SelectDefault  = $SelectDefault
+        Key            = $Key
+        Repeatable     = [bool]$Repeatable
+        AskFolder      = [bool]$AskFolder
+        RunOk          = $false
         Selection      = $null
         Fixed          = $false
         FixResult      = $null
@@ -276,8 +285,16 @@ function Get-TreemapLayout {
             Label = "$($o[0].Label)"; Value = [double]$o[0].Value; Text = "$($o[0].Text)"
             X = $o[1] / $areaW; Y = $o[2] / $areaH; W = $o[3] / $areaW; H = $o[4] / $areaH
             Anteil = [math]::Round([double]$o[0].Value / $total * 100)
+            Path = "$($o[0].Path)"
         }
     }
+}
+
+function Remove-FindingByKey {
+    <# Entfernt eine frühere Ergebniskarte (z. B. von einem erneut ausgeführten Werkzeug). #>
+    param([string]$Key)
+    if (-not $Key) { return }
+    for ($i = $Script:Findings.Count - 1; $i -ge 0; $i--) { if ($Script:Findings[$i].Key -eq $Key) { $Script:Findings.RemoveAt($i) } }
 }
 
 function Clear-CategoryFindings {
@@ -804,6 +821,7 @@ function Invoke-MemoryScan {
     }
 
     Invoke-Check $cat 'Downloads-Ordner (alte Installationsdateien, Duplikate, große Dateien)' { Add-DownloadCleanupFindings -Category $cat }
+    Add-FileToolFindings -Category $cat
 }
 
 function Invoke-CleanMgr {
@@ -1585,12 +1603,14 @@ function Invoke-FixList {
             $res = (@($res) | Where-Object { $_ -is [string] }) -join ' '
             if (-not $res) { $res = 'Erledigt.' }
             if ($Script:ChangeCounter -eq $before) { Register-Change -Beschreibung $f.FixLabel -Typ 'Protokoll' -NichtUmkehrbar -Ergebnis $res }
-            $f.Fixed = $true
+            # Werkzeuge, die man mehrfach ausführen kann (z. B. Suchen), bleiben auswählbar
+            if ($f.Repeatable) { $f.RunOk = $true } else { $f.Fixed = $true }
             $f.FixResult = $res
             if ($f.RequiresReboot) { $Script:RebootNeeded = $true }
             Write-Host "     ✔ $res" -ForegroundColor Green
             Add-ActionLog $f.FixLabel $res $true
         } catch {
+            $f.RunOk = $false
             $f.FixResult = "Fehlgeschlagen: $($_.Exception.Message)"
             Write-Host "     ✖ $($f.FixResult)" -ForegroundColor Red
             Add-ActionLog $f.FixLabel $f.FixResult $false
@@ -1710,7 +1730,7 @@ function Export-Report {
     $htmlPath = Join-Path $BerichtOrdner "Diagnosebericht_$stamp.html"
     $jsonPath = Join-Path $BerichtOrdner "Diagnosebericht_$stamp.json"
 
-    $openFindings = @($Script:Findings | Where-Object { -not $_.Fixed })
+    $openFindings = @($Script:Findings | Where-Object { -not $_.Fixed -and -not $_.Repeatable })
     $counts = @{}
     foreach ($s in 'Kritisch', 'Warnung', 'Info', 'OK') { $counts[$s] = @($openFindings | Where-Object { $_.Severity -eq $s }).Count }
     $score = (Get-HealthScore).Score
@@ -1778,7 +1798,8 @@ $(if ($skippedTitles) { "<div class=""card"" style=""border-left:4px solid var(-
     }
 
     foreach ($catKey in $Script:Categories.Keys) {
-        $list = @($Script:Findings | Where-Object { $_.Category -eq $catKey } | Sort-Object { $Script:SeverityOrder[$_.Severity] })
+        # Werkzeug-Karten (z. B. »Doppelte Dateien suchen«) sind Bedienelemente, keine Ergebnisse – nicht in den Bericht
+        $list = @($Script:Findings | Where-Object { $_.Category -eq $catKey -and -not $_.Repeatable } | Sort-Object { $Script:SeverityOrder[$_.Severity] })
         if (-not $list) { continue }
         $null = $sb.Append("<h2>$([System.Net.WebUtility]::HtmlEncode("$($Script:Categories[$catKey])"))</h2>")
         foreach ($f in $list) {
@@ -1817,7 +1838,7 @@ $(if ($skippedTitles) { "<div class=""card"" style=""border-left:4px solid var(-
             } elseif ($f.FixResult) {
                 $null = $sb.Append("<div class=""fix"" style=""color:var(--crit)"">✖ $([System.Net.WebUtility]::HtmlEncode("$($f.FixLabel)")) – $([System.Net.WebUtility]::HtmlEncode("$($f.FixResult)"))</div>")
             } elseif ($f.FixLabel -and $f.Category -ne 'Werkzeuge') {
-                $null = $sb.Append("<div class=""fix open"">↳ Behebbar mit LaptopDiagnose: $([System.Net.WebUtility]::HtmlEncode("$($f.FixLabel)"))</div>")
+                $null = $sb.Append("<div class=""fix open"">↳ Behebbar mit PC Repair Pro: $([System.Net.WebUtility]::HtmlEncode("$($f.FixLabel)"))</div>")
             }
             $null = $sb.Append('</div>')
         }

@@ -4,6 +4,10 @@ Stand: 10.10.2026. Neue Wünsche hier ergänzen.
 
 ## Offen (noch nicht gebaut)
 
+– derzeit nichts –
+
+## Erledigt in Version 2.7.0
+
 16. **Doppelte Dateien finden und zum Löschen anzeigen** (bisher nur im Downloads-Ordner):
     - Neues Werkzeug »Doppelte Dateien suchen« (Bereich »Reparatur-Werkzeuge«, zusätzlich als Knopf im Bereich »Speicherfresser«). Läuft nicht in der Komplett-Diagnose mit, weil dafür viele Dateien gelesen werden müssen.
     - Durchsucht standardmäßig Dokumente, Bilder, Videos, Musik, Desktop und Downloads; auf Wunsch ein selbst gewählter Ordner bzw. Laufwerk (z. B. externe Platte).
