@@ -334,13 +334,13 @@ $Script:Xaml = @'
         <StackPanel DockPanel.Dock="Top" Margin="22,24,22,14">
           <StackPanel Orientation="Horizontal">
             <Image x:Name="SidebarLogo" Width="44" Height="44" Margin="0,0,12,0" VerticalAlignment="Center" RenderOptions.BitmapScalingMode="HighQuality"/>
-            <StackPanel VerticalAlignment="Center">
-              <TextBlock FontSize="19" FontWeight="Black">
-                <Run Text="PC REPAIR " Foreground="White"/><Run Text="PRO" Foreground="#2E9BFF"/>
-              </TextBlock>
-              <TextBlock x:Name="VersionText" Text="Diagnose • Repair • Keep it running" FontSize="11" Foreground="{DynamicResource SidebarMuted}" Margin="0,1,0,0"/>
-            </StackPanel>
+            <TextBlock FontSize="19" FontWeight="Black" VerticalAlignment="Center">
+              <Run Text="PC REPAIR " Foreground="White"/><Run Text="PRO" Foreground="#2E9BFF"/>
+            </TextBlock>
           </StackPanel>
+          <!-- Slogan über die volle Breite; bricht bei Platzmangel um, statt abgeschnitten zu werden -->
+          <TextBlock Text="Diagnose • Repair • Keep it running" FontSize="12" Foreground="{DynamicResource SidebarText}" TextWrapping="Wrap" Margin="2,10,0,0"/>
+          <TextBlock x:Name="VersionText" Text="" FontSize="11" Foreground="{DynamicResource SidebarMuted}" Margin="2,2,0,0"/>
         </StackPanel>
 
         <StackPanel DockPanel.Dock="Bottom" Margin="20,8,20,18">
@@ -1744,7 +1744,7 @@ try {
                 param($out)
                 $ver = @($out) | Where-Object { $_ -is [string] } | Select-Object -First 1
                 if ($ver) {
-                    $Script:UI.VersionText.Text = "Diagnose • Repair • Keep it running  ·  v$ver"
+                    $Script:UI.VersionText.Text = "Version $ver"
                     $Script:UI.AboutText.Text = "PC Repair Pro  ·  Version $ver  (früher »Laptop-Diagnose & Reparatur«)`n© 2026 Eder Tom – alle Rechte vorbehalten."
                 }
                 $first = @($out) | Where-Object { $_.IsSnapshot } | Select-Object -Last 1
