@@ -137,8 +137,9 @@ function Show-Notification {
 
 function Get-ManifestUpdate {
     <# Liest das Update-Manifest (update.json) aus dem Repository und prüft es auf plausible Werte. #>
+    param([int]$TimeoutSec = 20)
     $hdr = @{ 'User-Agent' = "LaptopDiagnose/$Script:ToolVersion"; 'Cache-Control' = 'no-cache' }
-    $raw = (Invoke-WebRequest -Uri "$($Script:UpdateManifestUrl)?t=$([DateTime]::UtcNow.Ticks)" -UseBasicParsing -Headers $hdr -TimeoutSec 20).Content
+    $raw = (Invoke-WebRequest -Uri "$($Script:UpdateManifestUrl)?t=$([DateTime]::UtcNow.Ticks)" -UseBasicParsing -Headers $hdr -TimeoutSec $TimeoutSec).Content
     if ($raw -is [byte[]]) { $raw = [Text.Encoding]::UTF8.GetString($raw) }
     $m = "$raw".TrimStart([char]0xFEFF) | ConvertFrom-Json
     if ("$($m.version)" -notmatch '^\d+\.\d+\.\d+$') { throw 'Update-Manifest enthält keine gültige Version.' }
@@ -156,15 +157,19 @@ function Get-ManifestUpdate {
 
 function Get-ToolUpdateInfo {
     <# Prüft den Update-Kanal (Manifest im Repository, ersatzweise GitHub-Releases mit Tag laptopdiagnose-vX.Y.Z). #>
+    param([int]$TimeoutSec = 20)
     try { [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12 } catch { }
     $candidates = @()
     $errors = @()
-    try { $candidates += Get-ManifestUpdate } catch { $errors += $_.Exception.Message }
+    try { $candidates += Get-ManifestUpdate -TimeoutSec $TimeoutSec } catch { $errors += $_.Exception.Message }
     $releases = @()
-    try {
-        $releases = Invoke-RestMethod -Uri "https://api.github.com/repos/$Script:UpdateRepo/releases?per_page=50" -TimeoutSec 20 -UseBasicParsing `
-            -Headers @{ 'User-Agent' = "LaptopDiagnose/$Script:ToolVersion"; 'Accept' = 'application/vnd.github+json' }
-    } catch { $errors += $_.Exception.Message }
+    if (-not $candidates) {
+        # Ausweichweg nur, wenn das Manifest nicht erreichbar war
+        try {
+            $releases = Invoke-RestMethod -Uri "https://api.github.com/repos/$Script:UpdateRepo/releases?per_page=50" -TimeoutSec $TimeoutSec -UseBasicParsing `
+                -Headers @{ 'User-Agent' = "LaptopDiagnose/$Script:ToolVersion"; 'Accept' = 'application/vnd.github+json' }
+        } catch { $errors += $_.Exception.Message }
+    }
     if (-not $candidates -and $errors.Count -ge 2) { throw "Update-Prüfung nicht möglich: $($errors[0])" }
     $candidates += foreach ($r in @($releases)) {
         if ($r.draft -or $r.prerelease) { continue }
@@ -303,7 +308,7 @@ function Show-ToolUpdateConsole {
     if ($u.Release.Notes) { Write-Host ("   " + ($u.Release.Notes -replace "`r?`n", "`n   ")) -ForegroundColor Gray }
     if ($NurPruefen) { return }
     if (Read-YesNo 'Jetzt herunterladen und installieren?' $true) {
-        try { Write-Host "   ✔ $(Install-ToolUpdate -Release $u.Release)" -ForegroundColor Green }
+        try { Write-Host "   ✔ $(Install-ToolUpdate -Release $u.Release)" -ForegroundColor Green; $Script:UpdateHint = $null }
         catch { Write-Host "   ✖ $($_.Exception.Message)" -ForegroundColor Red }
     }
 }

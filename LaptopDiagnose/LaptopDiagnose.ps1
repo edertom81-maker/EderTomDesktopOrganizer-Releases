@@ -49,7 +49,7 @@ param(
 
 if ($Unbeaufsichtigt) { $NurPruefen = $true }
 
-$Script:ToolVersion = '2.2.2'
+$Script:ToolVersion = '2.3.0'
 $Script:InstallDir = $PSScriptRoot
 $Script:ChangeCounter = 0
 $Script:SoftwareUpdateCache = $null
@@ -1515,7 +1515,7 @@ function ConvertTo-SafeHtml { param([string]$Text) [System.Net.WebUtility]::Html
 
 function Get-AppSettings {
     $path = Join-Path $BerichtOrdner 'Einstellungen.json'
-    $defaults = [ordered]@{ Design = 'System'; Pdf = $false }
+    $defaults = [ordered]@{ Design = 'System'; Pdf = $false; AutoUpdate = $true }
     if (Test-Path -LiteralPath $path) {
         try {
             $j = [IO.File]::ReadAllText($path, [Text.Encoding]::UTF8) | ConvertFrom-Json
@@ -1788,6 +1788,7 @@ function Show-Menu {
         Write-Host ("v{0,-20}║" -f $Script:ToolVersion) -ForegroundColor DarkCyan
         Write-Host '   ╚════════════════════════════════════════════════════════════╝' -ForegroundColor DarkCyan
         if ($NurPruefen) { Write-Host '   Modus: NUR PRÜFEN – es werden keine Änderungen vorgenommen.' -ForegroundColor Yellow }
+        if ($Script:UpdateHint) { Write-Host "   $($Script:UpdateHint)" -ForegroundColor Green }
         Write-Host ''
         Write-Host '    1) Komplett-Diagnose (alle Prüfungen + Reparaturangebot)' -ForegroundColor White
         Write-Host '    2) Fehlersuche                  3) Sicherheit'
@@ -1854,7 +1855,16 @@ function Start-LaptopDiagnose {
         if ($Unbeaufsichtigt) { Invoke-UnattendedDiagnosis }
         else {
             switch ($Modus) {
-                'Menue'    { Show-Menu }
+                'Menue'    {
+                    if ((Get-AppSettings).AutoUpdate) {
+                        Write-Host '   Suche nach Programm-Updates …' -ForegroundColor DarkGray
+                        try {
+                            $u = Get-ToolUpdateInfo -TimeoutSec 8
+                            if ($u.IstNeuer) { $Script:UpdateHint = "Neue Version $($u.Verfuegbar) verfügbar – zum Installieren U drücken." }
+                        } catch { }
+                    }
+                    Show-Menu
+                }
                 'Komplett' { Invoke-FullDiagnosis }
                 default    {
                     Invoke-SingleModule $Modus
