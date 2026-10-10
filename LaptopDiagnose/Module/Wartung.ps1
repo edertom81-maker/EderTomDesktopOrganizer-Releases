@@ -7,6 +7,8 @@ $Script:TaskPath = '\EderTom\'
 $Script:TaskName = 'LaptopDiagnose Wartung'
 $Script:UpdateRepo = 'edertom81-maker/EderTomDesktopOrganizer-Releases'
 $Script:UpdateTagPattern = '^laptopdiagnose-v(\d+\.\d+\.\d+)$'
+# Update-Kanal: Manifest im Hauptzweig des Repositorys (Paket liegt daneben). GitHub-Releases bleiben als Ausweichweg.
+$Script:UpdateManifestUrl = 'https://raw.githubusercontent.com/edertom81-maker/EderTomDesktopOrganizer-Releases/main/LaptopDiagnose/update/update.json'
 
 #region ---------- Geplante Wartung ----------
 
@@ -133,12 +135,38 @@ function Show-Notification {
 
 #region ---------- Programm-Updates ----------
 
+function Get-ManifestUpdate {
+    <# Liest das Update-Manifest (update.json) aus dem Repository und prüft es auf plausible Werte. #>
+    $hdr = @{ 'User-Agent' = "LaptopDiagnose/$Script:ToolVersion"; 'Cache-Control' = 'no-cache' }
+    $raw = (Invoke-WebRequest -Uri "$($Script:UpdateManifestUrl)?t=$([DateTime]::UtcNow.Ticks)" -UseBasicParsing -Headers $hdr -TimeoutSec 20).Content
+    if ($raw -is [byte[]]) { $raw = [Text.Encoding]::UTF8.GetString($raw) }
+    $m = "$raw".TrimStart([char]0xFEFF) | ConvertFrom-Json
+    if ("$($m.version)" -notmatch '^\d+\.\d+\.\d+$') { throw 'Update-Manifest enthält keine gültige Version.' }
+    if ("$($m.datei)" -notmatch '^LaptopDiagnose-[\d\.]+\.zip$') { throw 'Update-Manifest enthält keinen gültigen Dateinamen.' }
+    if ("$($m.sha256)" -notmatch '^[0-9a-fA-F]{64}$') { throw 'Update-Manifest enthält keine gültige Prüfsumme.' }
+    $base = $Script:UpdateManifestUrl.Substring(0, $Script:UpdateManifestUrl.LastIndexOf('/') + 1)
+    return [pscustomobject]@{
+        Version = [version]$m.version
+        Notes   = "$($m.notizen)"
+        ZipUrl  = $base + $m.datei
+        Sha256  = "$($m.sha256)"
+        Page    = 'https://github.com/edertom81-maker/EderTomDesktopOrganizer-Releases/tree/main/LaptopDiagnose'
+    }
+}
+
 function Get-ToolUpdateInfo {
-    <# Prüft den Release-Kanal auf eine neuere Version (GitHub-Release mit Tag laptopdiagnose-vX.Y.Z). #>
+    <# Prüft den Update-Kanal (Manifest im Repository, ersatzweise GitHub-Releases mit Tag laptopdiagnose-vX.Y.Z). #>
     try { [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12 } catch { }
-    $releases = Invoke-RestMethod -Uri "https://api.github.com/repos/$Script:UpdateRepo/releases?per_page=50" -TimeoutSec 20 -UseBasicParsing `
-        -Headers @{ 'User-Agent' = "LaptopDiagnose/$Script:ToolVersion"; 'Accept' = 'application/vnd.github+json' }
-    $candidates = foreach ($r in @($releases)) {
+    $candidates = @()
+    $errors = @()
+    try { $candidates += Get-ManifestUpdate } catch { $errors += $_.Exception.Message }
+    $releases = @()
+    try {
+        $releases = Invoke-RestMethod -Uri "https://api.github.com/repos/$Script:UpdateRepo/releases?per_page=50" -TimeoutSec 20 -UseBasicParsing `
+            -Headers @{ 'User-Agent' = "LaptopDiagnose/$Script:ToolVersion"; 'Accept' = 'application/vnd.github+json' }
+    } catch { $errors += $_.Exception.Message }
+    if (-not $candidates -and $errors.Count -ge 2) { throw "Update-Prüfung nicht möglich: $($errors[0])" }
+    $candidates += foreach ($r in @($releases)) {
         if ($r.draft -or $r.prerelease) { continue }
         if ($r.tag_name -match $Script:UpdateTagPattern) {
             $zip = @($r.assets) | Where-Object { $_.name -like 'LaptopDiagnose-*.zip' } | Select-Object -First 1
@@ -148,7 +176,7 @@ function Get-ToolUpdateInfo {
             }
         }
     }
-    $latest = $candidates | Sort-Object Version -Descending | Select-Object -First 1
+    $latest = $candidates | Where-Object { $_ } | Sort-Object Version -Descending | Select-Object -First 1
     $current = [version]$Script:ToolVersion
     return [pscustomobject]@{
         Aktuell     = $current
@@ -156,6 +184,15 @@ function Get-ToolUpdateInfo {
         IstNeuer    = [bool]($latest -and $latest.Version -gt $current)
         Release     = $latest
     }
+}
+
+function Test-SignatureIntact {
+    <#
+        Signatur vorhanden und Datei unverändert. »UnknownError«/»NotTrusted« bedeuten bei einem
+        selbst ausgestellten Zertifikat nur, dass Windows der Zertifikatskette nicht vertraut.
+    #>
+    param($Signature)
+    return [bool]($Signature -and $Signature.SignerCertificate -and "$($Signature.Status)" -in 'Valid', 'UnknownError', 'NotTrusted')
 }
 
 function Install-ToolUpdate {
@@ -168,7 +205,8 @@ function Install-ToolUpdate {
         $zipPath = Join-Path $work 'update.zip'
         $hdr = @{ 'User-Agent' = "LaptopDiagnose/$Script:ToolVersion" }
         Invoke-WebRequest -Uri $Release.ZipUrl -OutFile $zipPath -UseBasicParsing -Headers $hdr -TimeoutSec 120
-        $expected = ((Invoke-WebRequest -Uri $Release.ShaUrl -UseBasicParsing -Headers $hdr -TimeoutSec 30).Content -split '\s+')[0].Trim().ToUpperInvariant()
+        $expected = if ($Release.Sha256) { "$($Release.Sha256)".ToUpperInvariant() }
+        else { ((Invoke-WebRequest -Uri $Release.ShaUrl -UseBasicParsing -Headers $hdr -TimeoutSec 30).Content -split '\s+')[0].Trim().ToUpperInvariant() }
         $actual = (Get-FileHash -LiteralPath $zipPath -Algorithm SHA256).Hash.ToUpperInvariant()
         if ($expected -ne $actual) { throw 'Prüfsumme stimmt nicht überein – Update wurde verworfen.' }
 
@@ -183,15 +221,21 @@ function Install-ToolUpdate {
             if (-not (Test-Path (Join-Path $root $required))) { throw "Updatepaket unvollständig ($required fehlt)." }
         }
 
-        # Signaturprüfung: Ist die installierte Version signiert, muss das Update vom selben Herausgeber signiert sein.
+        # Signaturprüfung: Ist die installierte Version signiert, muss jede Datei des Updates mit demselben
+        # Zertifikat signiert sein (Zertifikat wird »angeheftet«). Selbst ausgestellte Zertifikate sind erlaubt,
+        # solange die Datei unverändert ist – eine manipulierte Datei (HashMismatch) wird immer abgelehnt.
         $currentSig = Get-AuthenticodeSignature -FilePath (Join-Path $installDir 'LaptopDiagnose.ps1')
+        $pinned = if (Test-SignatureIntact $currentSig) { $currentSig.SignerCertificate.Thumbprint }
         foreach ($ps1 in Get-ChildItem -LiteralPath $root -Filter '*.ps1' -Recurse) {
             $sig = Get-AuthenticodeSignature -FilePath $ps1.FullName
-            if ($currentSig.Status -eq 'Valid') {
-                if ($sig.Status -ne 'Valid' -or $sig.SignerCertificate.Thumbprint -ne $currentSig.SignerCertificate.Thumbprint) {
-                    throw "Signatur von $($ps1.Name) ist ungültig oder stammt von einem anderen Herausgeber – Update wurde verworfen."
+            if ("$($sig.Status)" -eq 'HashMismatch') {
+                throw "$($ps1.Name) wurde nach dem Signieren verändert – Update wurde verworfen."
+            }
+            if ($pinned) {
+                if (-not (Test-SignatureIntact $sig) -or $sig.SignerCertificate.Thumbprint -ne $pinned) {
+                    throw "$($ps1.Name) ist nicht mit demselben Zertifikat signiert wie die installierte Version – Update wurde verworfen."
                 }
-            } elseif ($sig.Status -notin 'Valid', 'NotSigned') {
+            } elseif ("$($sig.Status)" -notin 'Valid', 'NotSigned', 'UnknownError', 'NotTrusted') {
                 throw "Signatur von $($ps1.Name) ist ungültig ($($sig.Status)) – Update wurde verworfen."
             }
         }

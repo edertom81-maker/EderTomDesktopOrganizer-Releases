@@ -4,14 +4,14 @@
     Erstellt das Release-Paket von LaptopDiagnose für den Update-Kanal (GitHub-Release).
 
 .DESCRIPTION
-    Erzeugt dist\LaptopDiagnose-<Version>.zip und die zugehörige Prüfsumme LaptopDiagnose-<Version>.zip.sha256.
-    Optional werden die Skripte vorher signiert (-Signieren). Anschließend auf GitHub ein Release mit dem Tag
-    »laptopdiagnose-v<Version>« anlegen und beide Dateien anhängen – das Programm findet es dann über
-    »Einstellungen › Programm-Updates«.
+    Erzeugt dist\LaptopDiagnose-<Version>.zip samt Prüfsumme und legt das Paket mit dem Update-Manifest
+    update\update.json in den Update-Kanal. Optional werden die Skripte vorher signiert (-Signieren).
+    Anschließend die Änderungen committen und in den Hauptzweig (main) übernehmen – installierte Programme
+    finden das Update dann über »Einstellungen › Programm-Updates«.
 
 .EXAMPLE
     .\New-LaptopDiagnoseRelease.ps1
-    .\New-LaptopDiagnoseRelease.ps1 -Signieren -Thumbprint 0123ABCD...
+    .\New-LaptopDiagnoseRelease.ps1 -Signieren -Thumbprint 0123ABCD... -Notizen 'Neue Herunterfahren-Diagnose'
 
 .NOTES
     Copyright 2026 by Eder Tom
@@ -20,7 +20,8 @@
 param(
     [switch]$Signieren,
     [string]$Thumbprint,
-    [string]$PfxPath
+    [string]$PfxPath,
+    [string]$Notizen = ''
 )
 
 $ErrorActionPreference = 'Stop'
@@ -54,6 +55,20 @@ Remove-Item -LiteralPath $staging -Recurse -Force
 $hash = (Get-FileHash -LiteralPath $zip -Algorithm SHA256).Hash.ToLowerInvariant()
 [IO.File]::WriteAllText("$zip.sha256", "$hash  LaptopDiagnose-$version.zip`n")
 
+# Update-Kanal: nur das aktuelle Paket und das Manifest im Ordner »update«
+$channel = Join-Path $root 'update'
+if (-not (Test-Path -LiteralPath $channel)) { $null = New-Item -ItemType Directory -Path $channel -Force }
+Get-ChildItem -LiteralPath $channel -Filter 'LaptopDiagnose-*.zip' | Remove-Item -Force
+Copy-Item -LiteralPath $zip -Destination $channel
+$manifest = [ordered]@{
+    version         = $version
+    datei           = "LaptopDiagnose-$version.zip"
+    sha256          = $hash
+    notizen         = $Notizen
+    veroeffentlicht = (Get-Date).ToString('yyyy-MM-dd')
+}
+[IO.File]::WriteAllText((Join-Path $channel 'update.json'), ($manifest | ConvertTo-Json), (New-Object System.Text.UTF8Encoding $false))
+
 $unsigned = @(Get-ChildItem -LiteralPath $root -Recurse -Filter '*.ps1' | Where-Object { $_.FullName -notmatch '\\(dist|Entwicklung)\\' -and (Get-AuthenticodeSignature $_.FullName).Status -ne 'Valid' })
 Write-Host ''
 Write-Host "Release-Paket erstellt:" -ForegroundColor Cyan
@@ -62,6 +77,7 @@ Write-Host "  $zip.sha256  ($hash)"
 if ($unsigned) { Write-Host "Hinweis: $($unsigned.Count) Skript(e) sind nicht signiert. Für Updates mit Signaturprüfung -Signieren verwenden." -ForegroundColor Yellow }
 Write-Host ''
 Write-Host 'Nächste Schritte:' -ForegroundColor Cyan
-Write-Host "  1. Auf GitHub ein neues Release mit dem Tag  laptopdiagnose-v$version  anlegen."
-Write-Host '  2. Beide Dateien (ZIP und .sha256) als Assets anhängen und veröffentlichen.'
+Write-Host "  1. Den Ordner LaptopDiagnose\update (update.json + LaptopDiagnose-$version.zip) committen."
+Write-Host '  2. Die Änderungen in den Hauptzweig »main« übernehmen (Push bzw. Pull Request zusammenführen).'
 Write-Host '  3. Installierte Programme finden das Update unter »Einstellungen › Programm-Updates«.'
+Write-Host '  (Alternativ weiterhin möglich: GitHub-Release mit Tag laptopdiagnose-v<Version> und ZIP + .sha256 als Anhang.)'
