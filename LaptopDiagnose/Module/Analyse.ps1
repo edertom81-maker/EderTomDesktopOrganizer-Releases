@@ -206,7 +206,7 @@ function Get-DirectorySizeFast {
 }
 
 function Get-StorageBreakdown {
-    param([string]$Path, [int]$Top = 10, [switch]$IncludeSystemFiles)
+    param([string]$Path, [int]$Top = 12, [switch]$IncludeSystemFiles)
     $entries = New-Object System.Collections.Generic.List[object]
     foreach ($d in Get-ChildItem -LiteralPath $Path -Directory -Force -ErrorAction SilentlyContinue) {
         if ([int]$d.Attributes -band [int][IO.FileAttributes]::ReparsePoint) { continue }
@@ -232,12 +232,12 @@ function Add-StorageBreakdownFindings {
     $sys = $env:SystemDrive + '\'
     $chart = @(Get-StorageBreakdown -Path $sys -IncludeSystemFiles)
     if ($chart) {
-        Add-Finding $Category Info "Speicherbelegung von $env:SystemDrive – größte Bereiche" -Chart $chart `
+        Add-Finding $Category Info "Speicherbelegung von $env:SystemDrive – größte Bereiche" -Chart $chart -ChartStyle Kacheln `
             -Detail 'Hinweis: Windows nutzt Hardlinks (WinSxS), daher kann die Summe größer erscheinen als der belegte Platz.'
     }
     $user = @(Get-StorageBreakdown -Path $env:USERPROFILE)
     if ($user) {
-        Add-Finding $Category Info 'Benutzerordner – größte Bereiche' -Chart $user `
+        Add-Finding $Category Info 'Benutzerordner – größte Bereiche' -Chart $user -ChartStyle Kacheln `
             -Detail 'Nur lokal gespeicherte Dateien (reine OneDrive-Cloud-Dateien werden nicht mitgezählt).' `
             -FixLabel 'Speicher-Einstellungen von Windows öffnen' -Fix { param($d) Start-Process 'ms-settings:storagesense'; 'Speicher-Einstellungen geöffnet.' }
     }
@@ -277,6 +277,60 @@ function Add-BatteryHistoryFindings {
         }
     }
     Add-Finding $Category $sev 'Akku-Kapazitätsverlauf' -Detail $detail -Chart $chart
+}
+
+function Get-VendorBatteryTool {
+    <# Hersteller-App, in der sich die Ladegrenze einstellen lässt. #>
+    $vendor = "$((Get-CimInstance Win32_ComputerSystem -ErrorAction SilentlyContinue).Manufacturer)"
+    $apps = @(
+        @{ Match = 'ASUS'; Package = '*ASUSPCAssistant*'; Name = 'MyASUS'; Path = 'MyASUS › Gerätefunktionen › Energie & Leistung › Akkupflegemodus (Battery Health Charging) › »Ausgeglichen« (80 %)' }
+        @{ Match = 'LENOVO'; Package = '*LenovoCompanion*'; Name = 'Lenovo Vantage'; Path = 'Lenovo Vantage › Gerät › Stromversorgung › Ladeschwelle' }
+        @{ Match = 'HP|Hewlett'; Package = '*HPSupportAssistant*'; Name = 'HP Support Assistant'; Path = 'BIOS bzw. HP Support Assistant › Akku › Adaptive Battery Optimizer' }
+        @{ Match = 'Dell'; Package = '*DellPowerManager*'; Name = 'Dell Power Manager'; Path = 'Dell Power Manager › Akkueinstellungen › »Hauptsächlich Netzbetrieb«' }
+    )
+    foreach ($a in $apps) {
+        if ($vendor -notmatch $a.Match) { continue }
+        $pkg = Get-AppxPackage -Name $a.Package -ErrorAction SilentlyContinue | Select-Object -First 1
+        return [pscustomobject]@{ Vendor = $vendor; Name = $a.Name; Path = $a.Path; Family = $(if ($pkg) { $pkg.PackageFamilyName }) }
+    }
+    return [pscustomobject]@{ Vendor = $vendor; Name = $null; Path = 'Hersteller-App bzw. BIOS-Einstellungen des Laptops'; Family = $null }
+}
+
+function Add-ChargeLimitFindings {
+    <#
+        Erkennt, ob eine Ladegrenze (z. B. 80 %) aktiv ist: Am Netzteil, aber nicht ladend, bleibt der Akku dann
+        unter 100 % stehen. Die Hersteller speichern die Einstellung nicht einheitlich, daher wird das Verhalten ausgewertet.
+    #>
+    param([string]$Category, [double]$Health = 0)
+    $b = Get-CimInstance Win32_Battery -ErrorAction SilentlyContinue | Select-Object -First 1
+    if (-not $b) { return }
+    $charge = [int]$b.EstimatedChargeRemaining
+    $ws = Get-CimInstance -Namespace root/wmi -ClassName BatteryStatus -ErrorAction SilentlyContinue | Select-Object -First 1
+    if ($ws) { $online = [bool]$ws.PowerOnline; $charging = [bool]$ws.Charging }
+    else { $online = [int]$b.BatteryStatus -ne 1; $charging = [int]$b.BatteryStatus -in 6, 7, 8, 9 }
+    $tool = Get-VendorBatteryTool
+    $toolText = if ($tool.Name) { "Einstellen in: $($tool.Path)." } else { "Einstellen in der $($tool.Path) (Stichwort »Ladegrenze« bzw. »Battery Health Charging«)." }
+    $fixLabel = $null; $fix = $null
+    if ($tool.Family) {
+        $fixLabel = "$($tool.Name) öffnen (Ladegrenze einstellen)"
+        $fix = { param($d) Start-Process -FilePath 'explorer.exe' -ArgumentList "shell:AppsFolder\$($d.Family)!App"; "$($d.Name) geöffnet." }
+    } elseif ($tool.Name) {
+        $fixLabel = "$($tool.Name) im Microsoft Store suchen"
+        $fix = { param($d) Start-Process ("ms-windows-store://search/?query=$([uri]::EscapeDataString($d.Name))"); 'Microsoft Store geöffnet.' }
+    }
+    if ($online -and -not $charging -and $charge -ge 50 -and $charge -le 85) {
+        Add-Finding $Category OK "Ladegrenze aktiv: Der Akku wird nur bis ca. $charge % geladen" -Detail 'Das schont den Akku deutlich, vor allem wenn der Laptop meist am Netzteil hängt.'
+    } elseif ($online -and -not $charging -and $charge -ge 95) {
+        $sev = if ($Health -gt 0 -and $Health -lt 85) { 'Warnung' } else { 'Info' }
+        Add-Finding $Category $sev 'Keine Ladegrenze: Der Akku wird am Netzteil immer auf 100 % geladen' `
+            -Detail "Dauerhaft volle Ladung bei Wärme lässt den Akku schneller altern. Wer meist am Netzteil arbeitet, sollte die Ladegrenze auf 80 % stellen. $toolText" `
+            -FixLabel $fixLabel -FixData $tool -Fix $fix
+    } else {
+        $why = if (-not $online) { 'Der Laptop läuft gerade im Akkubetrieb.' } else { 'Der Akku lädt gerade noch.' }
+        Add-Finding $Category Info 'Ladegrenze: derzeit nicht feststellbar' `
+            -Detail "$why Zum Prüfen das Netzteil anschließen und warten, bis das Laden endet. Eine Ladegrenze von 80 % schont den Akku. $toolText" `
+            -FixLabel $fixLabel -FixData $tool -Fix $fix
+    }
 }
 
 function Add-StandbyFindings {

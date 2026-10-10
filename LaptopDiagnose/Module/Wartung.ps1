@@ -15,6 +15,7 @@ $Script:UpdateManifestUrl = 'https://raw.githubusercontent.com/edertom81-maker/E
 function Get-MaintenanceTask {
     $task = Get-ScheduledTask -TaskPath $Script:TaskPath -TaskName $Script:TaskName -ErrorAction SilentlyContinue
     if (-not $task) { return $null }
+    if (@($task.Actions)[0].Arguments -match '-BerichtOrdner') { Update-MaintenanceTaskFolder }
     $info = Get-ScheduledTaskInfo -InputObject $task -ErrorAction SilentlyContinue
     $trigger = @($task.Triggers)[0]
     $desc = 'Geplant'
@@ -44,7 +45,8 @@ function Register-MaintenanceTask {
         [string]$Uhrzeit = '10:00'
     )
     $engine = Join-Path $Script:InstallDir 'LaptopDiagnose.ps1'
-    $arg = "-NoProfile -ExecutionPolicy Bypass -WindowStyle Minimized -File `"$engine`" -Modus Komplett -Unbeaufsichtigt -BerichtOrdner `"$BerichtOrdner`""
+    # Ohne -BerichtOrdner: die Diagnose verwendet immer den in den Einstellungen gewählten Ordner
+    $arg = "-NoProfile -ExecutionPolicy Bypass -WindowStyle Minimized -File `"$engine`" -Modus Komplett -Unbeaufsichtigt"
     $action = New-ScheduledTaskAction -Execute 'powershell.exe' -Argument $arg -WorkingDirectory (Split-Path -Parent $engine)
     $time = [datetime]::ParseExact($Uhrzeit, 'HH:mm', $null)
     $trigger = if ($Intervall -eq 'Taeglich') { New-ScheduledTaskTrigger -Daily -At $time } else { New-ScheduledTaskTrigger -Weekly -DaysOfWeek $Tag -At $time }

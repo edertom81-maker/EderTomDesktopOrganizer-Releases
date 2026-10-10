@@ -2,7 +2,7 @@
 <#
 .SYNOPSIS
     Entfernt Laptop-Diagnose & Reparatur (Programmdateien, Verknüpfungen, geplante Wartung).
-    Berichte und Verlauf im Ordner Dokumente\LaptopDiagnose bleiben auf Wunsch erhalten.
+    Berichte und Verlauf (Standard: Dokumente\LaptopDiagnose) bleiben auf Wunsch erhalten.
 
 .NOTES
     Copyright 2026 by Eder Tom
@@ -13,7 +13,12 @@ param([switch]$Still, [switch]$BerichteLoeschen)
 Add-Type -AssemblyName PresentationFramework
 $installDir = $PSScriptRoot
 $uninstallKey = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\EderTom.LaptopDiagnose'
-$reports = Join-Path ([Environment]::GetFolderPath('MyDocuments')) 'LaptopDiagnose'
+$appData = Join-Path $env:LOCALAPPDATA 'LaptopDiagnose'
+$reports = Join-Path (Join-Path $env:USERPROFILE 'Documents') 'LaptopDiagnose'
+try {
+    $cfg = Join-Path $appData 'Berichtordner.json'
+    if (Test-Path -LiteralPath $cfg) { $j = Get-Content -LiteralPath $cfg -Raw -Encoding UTF8 | ConvertFrom-Json; if ($j.Ordner) { $reports = [string]$j.Ordner } }
+} catch { }
 
 if (-not $Still) {
     $r = [System.Windows.MessageBox]::Show("Laptop-Diagnose & Reparatur jetzt deinstallieren?`n`nOrdner: $installDir", 'Deinstallation', 'YesNo', 'Question')
@@ -35,7 +40,10 @@ foreach ($lnk in (Join-Path ([Environment]::GetFolderPath('Programs')) 'Laptop-D
     Remove-Item -LiteralPath $lnk -Force -ErrorAction SilentlyContinue
 }
 Remove-Item -Path $uninstallKey -Recurse -Force -ErrorAction SilentlyContinue
-if ($BerichteLoeschen) { Remove-Item -LiteralPath $reports -Recurse -Force -ErrorAction SilentlyContinue }
+if ($BerichteLoeschen) {
+    Remove-Item -LiteralPath $reports -Recurse -Force -ErrorAction SilentlyContinue
+    Remove-Item -LiteralPath $appData -Recurse -Force -ErrorAction SilentlyContinue
+}
 
 # Programmordner löschen (PowerShell hält das laufende Skript nicht gesperrt)
 Set-Location -Path $env:TEMP

@@ -12,7 +12,8 @@
     Startet mit aktivem Schalter »Nur prüfen« (Reparaturen sind gesperrt).
 
 .PARAMETER BerichtOrdner
-    Zielordner für Berichte und Protokolle (Standard: Dokumente\LaptopDiagnose).
+    Zielordner für Berichte, Verlauf und Einstellungen (Standard: der in den Einstellungen gewählte Ordner,
+    sonst der lokale Ordner Dokumente\LaptopDiagnose – bewusst nicht der nach OneDrive umgeleitete).
 
 .NOTES
     Copyright 2026 by Eder Tom
@@ -20,7 +21,7 @@
 [CmdletBinding()]
 param(
     [switch]$NurPruefen,
-    [string]$BerichtOrdner = (Join-Path ([Environment]::GetFolderPath('MyDocuments')) 'LaptopDiagnose')
+    [string]$BerichtOrdner
 )
 
 $Script:EnginePath = Join-Path $PSScriptRoot 'LaptopDiagnose.ps1'
@@ -32,7 +33,8 @@ try {
 # Mit Administratorrechten und im STA-Modus (für WPF erforderlich) neu starten
 $isSta = [Threading.Thread]::CurrentThread.GetApartmentState() -eq [Threading.ApartmentState]::STA
 if (-not $Script:IsAdmin -or -not $isSta) {
-    $argList = @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-STA', '-WindowStyle', 'Minimized', '-File', "`"$PSCommandPath`"", '-BerichtOrdner', "`"$BerichtOrdner`"")
+    $argList = @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-STA', '-WindowStyle', 'Minimized', '-File', "`"$PSCommandPath`"")
+    if ($BerichtOrdner) { $argList += @('-BerichtOrdner', "`"$BerichtOrdner`"") }
     if ($NurPruefen) { $argList += '-NurPruefen' }
     $exe = (Get-Process -Id $PID).Path
     try {
@@ -46,6 +48,13 @@ if (-not $Script:IsAdmin -or -not $isSta) {
 }
 
 Add-Type -AssemblyName PresentationFramework, PresentationCore, WindowsBase, System.Windows.Forms
+
+# Berichtordner festlegen (beim ersten Start ab 2.4 einmalig aus dem OneDrive-Dokumente-Ordner umziehen)
+. (Join-Path $PSScriptRoot 'Module\Berichtordner.ps1')
+$Script:FolderMigrationMessage = $null
+$folderInfo = Resolve-ReportFolder -Requested $BerichtOrdner
+$BerichtOrdner = $folderInfo.Folder
+$Script:FolderMigrationMessage = $folderInfo.Message
 
 #region ---------- Farbpaletten (Hell / Dunkel) ----------
 
@@ -80,7 +89,7 @@ $Script:Xaml = @'
 <Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="Laptop-Diagnose &amp; Reparatur  ·  © 2026 Eder Tom" Width="1240" Height="840" MinWidth="1020" MinHeight="640"
-        WindowStartupLocation="CenterScreen" Background="{DynamicResource BgWindow}" FontFamily="Segoe UI" FontSize="13"
+        WindowStartupLocation="CenterScreen" WindowState="Maximized" Background="{DynamicResource BgWindow}" FontFamily="Segoe UI" FontSize="13"
         TextOptions.TextFormattingMode="Display" UseLayoutRounding="True">
   <Window.Resources>
 %PALETTE%
@@ -254,6 +263,28 @@ $Script:Xaml = @'
                     </Border>
                     <TextBlock Grid.Column="2" Text="{Binding Text}" Foreground="{DynamicResource TextSecondary}" FontSize="12" HorizontalAlignment="Right"/>
                   </Grid>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+            <ItemsControl ItemsSource="{Binding Tiles}" Visibility="{Binding HasTiles, Converter={StaticResource B2V}}" Margin="0,10,0,0"
+                          Width="700" Height="280" HorizontalAlignment="Left" ClipToBounds="True">
+              <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate><Canvas/></ItemsPanelTemplate>
+              </ItemsControl.ItemsPanel>
+              <ItemsControl.ItemContainerStyle>
+                <Style TargetType="ContentPresenter">
+                  <Setter Property="Canvas.Left" Value="{Binding X}"/>
+                  <Setter Property="Canvas.Top" Value="{Binding Y}"/>
+                </Style>
+              </ItemsControl.ItemContainerStyle>
+              <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                  <Border Width="{Binding W}" Height="{Binding H}" Background="{Binding Fill}" BorderBrush="{DynamicResource BgCard}" BorderThickness="1" ToolTip="{Binding Tip}">
+                    <StackPanel Margin="6,4,4,2" Visibility="{Binding ShowText, Converter={StaticResource B2V}}">
+                      <TextBlock Text="{Binding Label}" Foreground="White" FontWeight="SemiBold" FontSize="12" TextTrimming="CharacterEllipsis"/>
+                      <TextBlock Text="{Binding Text}" Foreground="White" FontSize="11" Opacity="0.85"/>
+                    </StackPanel>
+                  </Border>
                 </DataTemplate>
               </ItemsControl.ItemTemplate>
             </ItemsControl>
@@ -609,6 +640,21 @@ $Script:Xaml = @'
             <Border Style="{StaticResource Card}">
               <StackPanel>
                 <TextBlock Text="Berichte" Style="{StaticResource CardTitle}"/>
+                <TextBlock Style="{StaticResource Muted}" Margin="0,0,0,8" Text="Speicherort für Berichte, Verlauf, Änderungsprotokoll und Einstellungen. Ein lokaler Ordner ist schneller als ein von OneDrive synchronisierter."/>
+                <DockPanel Margin="0,0,0,12">
+                  <Button x:Name="BtnReportFolderChange" DockPanel.Dock="Right" Style="{StaticResource Btn}" Content="Ändern …"/>
+                  <Button x:Name="BtnReportFolderOpen" DockPanel.Dock="Right" Style="{StaticResource Btn}" Content="Öffnen"/>
+                  <TextBox x:Name="ReportFolderText" IsReadOnly="True" Padding="8,6" VerticalContentAlignment="Center" Background="{DynamicResource InputBg}"
+                           Foreground="{DynamicResource TextPrimary}" BorderBrush="{DynamicResource ButtonBorder}"/>
+                </DockPanel>
+                <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+                  <TextBlock Text="Aufbewahren" Width="100" VerticalAlignment="Center" Foreground="{DynamicResource TextSecondary}"/>
+                  <RadioButton x:Name="Keep10" GroupName="Keep" Style="{StaticResource Seg}" Content="Neueste 10" Tag="10"/>
+                  <RadioButton x:Name="Keep30" GroupName="Keep" Style="{StaticResource Seg}" Content="Neueste 30" Tag="30"/>
+                  <RadioButton x:Name="Keep100" GroupName="Keep" Style="{StaticResource Seg}" Content="Neueste 100" Tag="100"/>
+                  <RadioButton x:Name="Keep0" GroupName="Keep" Style="{StaticResource Seg}" Content="Alle" Tag="0"/>
+                </StackPanel>
+                <TextBlock Style="{StaticResource Muted}" Margin="0,0,0,8" Text="Ältere Berichte werden beim Speichern eines neuen Berichts automatisch gelöscht (je Berichtsart). Verlauf und Änderungsprotokoll bleiben immer erhalten."/>
                 <CheckBox x:Name="ChkPdf" Margin="0,4,0,12" Cursor="Hand">
                   <TextBlock Text="Berichte zusätzlich als PDF speichern (über Microsoft Edge)" Foreground="{DynamicResource TextPrimary}"/>
                 </CheckBox>
@@ -758,7 +804,10 @@ function global:Get-GuiSnapshot {
                 Title          = $f.Title
                 Detail         = $f.Detail
                 Items          = [string[]]@($f.Items | Where-Object { $_ })
-                Chart          = @($f.Chart | Where-Object { $_ } | ForEach-Object { [pscustomobject]@{ Label = "$($_.Label)"; Value = [double]$_.Value; Text = "$($_.Text)" } })
+                Chart          = @($f.Chart | Where-Object { $_ } | ForEach-Object {
+                        [pscustomobject]@{ Label = "$($_.Label)"; Value = [double]$_.Value; Text = "$($_.Text)"; X = [double]$_.X; Y = [double]$_.Y; W = [double]$_.W; H = [double]$_.H; Anteil = [double]$_.Anteil }
+                    })
+                ChartStyle     = "$($f.ChartStyle)"
                 FixLabel       = $f.FixLabel
                 CanFix         = ([bool]$f.Fix -and -not $f.Fixed)
                 Fixed          = [bool]$f.Fixed
@@ -773,6 +822,7 @@ function global:Get-GuiSnapshot {
         Findings   = $list.ToArray()
         System     = $Script:SystemInfo
         Reboot     = [bool]$Script:RebootNeeded
+        Comparison = [string[]]@($Script:LastComparison)
     }
 }
 '@
@@ -847,7 +897,7 @@ $Script:Pages = [ordered]@{
     'Verlauf'       = @{ Kind = 'History'; Title = 'Verlauf & Trends'; Sub = 'Entwicklung der wichtigsten Kennzahlen über alle Komplett-Diagnosen.' }
     'Aenderungen'   = @{ Kind = 'Changes'; Title = 'Änderungen'; Sub = 'Protokoll aller Änderungen mit Rückgängig-Funktion.' }
     'Einstellungen' = @{ Kind = 'Settings'; Title = 'Einstellungen'; Sub = 'Design, geplante Wartung, Berichte und Programm-Updates.' }
-    'Log'           = @{ Kind = 'Log'; Title = 'Protokoll'; Sub = 'Alle Ausgaben dieser Sitzung. Wird zusätzlich im Berichtsordner gespeichert.' }
+    'Log'           = @{ Kind = 'Log'; Title = 'Protokoll'; Sub = 'Alle Ausgaben dieser Sitzung. Wird zusätzlich lokal unter %LOCALAPPDATA%\LaptopDiagnose\Protokolle gespeichert.' }
 }
 $Script:CategoryKeys = @('Fehler', 'Sicherheit', 'Speicher', 'Leistung', 'Herunterfahren', 'Akku', 'Netzwerk', 'Software', 'Windows', 'Werkzeuge')
 $Script:SeverityOrder = @{ 'Kritisch' = 0; 'Warnung' = 1; 'Info' = 2; 'OK' = 3 }
@@ -878,7 +928,7 @@ $Script:Table = New-Table @(
     @('Severity', [string]), @('Title', [string]), @('Detail', [string]), @('ItemsText', [string]), @('FixLabel', [string]),
     @('FixText', [string]), @('Status', [string]), @('HasDetail', [bool]), @('HasItems', [bool]), @('HasStatus', [bool]),
     @('CanFix', [bool]), @('IsFixed', [bool]), @('RequiresReboot', [bool]), @('SelectAll', [bool]), @('ShowFix', [bool]),
-    @('IsSelected', [bool]), @('SelectLabels', [object]), @('Chart', [object]), @('HasChart', [bool])
+    @('IsSelected', [bool]), @('SelectLabels', [object]), @('Chart', [object]), @('HasChart', [bool]), @('Tiles', [object]), @('HasTiles', [bool])
 )
 $Script:View = New-Object System.Data.DataView($Script:Table)
 $Script:View.Sort = 'Order ASC'
@@ -888,7 +938,7 @@ $Script:View.Sort = 'Order ASC'
 function Get-SettingsPath { Join-Path $BerichtOrdner 'Einstellungen.json' }
 
 function Read-UiSettings {
-    $s = [ordered]@{ Design = 'System'; Pdf = $false; AutoUpdate = $true }
+    $s = [ordered]@{ Design = 'System'; Pdf = $false; AutoUpdate = $true; BerichteBehalten = 30 }
     try {
         if (Test-Path -LiteralPath (Get-SettingsPath)) {
             $j = [IO.File]::ReadAllText((Get-SettingsPath), [Text.Encoding]::UTF8) | ConvertFrom-Json
@@ -973,6 +1023,28 @@ function New-ChartView {
     return $t.DefaultView
 }
 
+$Script:TreemapColors = @('#1570EF', '#0E9384', '#7A5AF8', '#DC6803', '#079455', '#C11574', '#3E4784', '#B54708', '#155EEF', '#667085')
+$Script:TreemapWidth = 700
+$Script:TreemapHeight = 280
+
+function New-TreemapView {
+    <# Kachelgrafik: Positionen kommen als Anteile (0–1) aus der Diagnose und werden hier auf Pixel umgerechnet. #>
+    param($Chart)
+    $points = @($Chart)
+    if (-not $points) { return $null }
+    $t = New-Table @(@('X', [double]), @('Y', [double]), @('W', [double]), @('H', [double]), @('Label', [string]), @('Text', [string]), @('Tip', [string]), @('Fill', [object]), @('ShowText', [bool]))
+    for ($i = 0; $i -lt $points.Count; $i++) {
+        $p = $points[$i]
+        $w = [math]::Max(1, $p.W * $Script:TreemapWidth)
+        $h = [math]::Max(1, $p.H * $Script:TreemapHeight)
+        $brush = Get-Brush $Script:TreemapColors[$i % $Script:TreemapColors.Count]
+        $brush.Freeze()
+        $null = $t.Rows.Add($p.X * $Script:TreemapWidth, $p.Y * $Script:TreemapHeight, $w, $h, "$($p.Label)", "$($p.Text)",
+            ('{0}: {1} ({2} %)' -f $p.Label, $p.Text, $p.Anteil), $brush, ($w -ge 70 -and $h -ge 36))
+    }
+    return $t.DefaultView
+}
+
 function Update-FromSnapshot {
     param($Snapshot)
     if (-not $Snapshot) { return }
@@ -996,8 +1068,13 @@ function Update-FromSnapshot {
         $vm.HasDetail = [bool]$f.Detail
         $vm.ItemsText = (@($f.Items) -join [Environment]::NewLine)
         $vm.HasItems = @($f.Items).Count -gt 0
-        $chartView = New-ChartView $f.Chart
-        if ($chartView) { $vm.Chart = $chartView; $vm.HasChart = $true }
+        if ($f.ChartStyle -eq 'Kacheln') {
+            $tileView = New-TreemapView $f.Chart
+            if ($tileView) { $vm.Tiles = $tileView; $vm.HasTiles = $true }
+        } else {
+            $chartView = New-ChartView $f.Chart
+            if ($chartView) { $vm.Chart = $chartView; $vm.HasChart = $true }
+        }
         $vm.FixLabel = "$($f.FixLabel)"
         $vm.CanFix = [bool]$f.CanFix
         $vm.IsFixed = [bool]$f.Fixed
@@ -1150,6 +1227,8 @@ function Invoke-SelectedFixes {
         if ($vm.SelectLabels.Count -gt 0) {
             $text = if ($vm.FixLabel -match 'Autostart') {
                 'Markieren Sie die Programme, die NICHT mehr automatisch starten sollen. Virenschutz sowie Touchpad-, Audio- und Grafiktreiber-Tools sollten aktiv bleiben. Rückgängig jederzeit unter »Änderungen«.'
+            } elseif ($vm.FixLabel -match 'Downloads') {
+                'Markieren Sie die Dateien, die in den Papierkorb verschoben werden sollen. Von dort lassen sie sich bei Bedarf wiederherstellen.'
             } elseif ($vm.FixLabel -match 'Zusatz-Apps') {
                 'Markieren Sie die Apps, die entfernt werden sollen. Sie lassen sich bei Bedarf über den Microsoft Store neu installieren.'
             } else { 'Markieren Sie die Updates, die installiert werden sollen.' }
@@ -1186,7 +1265,8 @@ Get-GuiSnapshot
     $null = Start-WorkerJob -Code $code -Arguments @($requests.ToArray(), ("$rp" -eq 'Yes')) -Status 'Maßnahmen werden ausgeführt …' -OnDone {
         param($out)
         $before = @($Script:Items | Where-Object { $_.IsSelected } | ForEach-Object { $_.Key })
-        Update-FromSnapshot (@($out) | Where-Object { $_.IsSnapshot } | Select-Object -Last 1)
+        $snap = @($out) | Where-Object { $_.IsSnapshot } | Select-Object -Last 1
+        Update-FromSnapshot $snap
         foreach ($it in $Script:Items) { $it.IsSelected = $false }
         $done = @($Script:Items | Where-Object { $_.Key -in $before })
         $ok = @($done | Where-Object { $_.IsFixed }).Count
@@ -1195,6 +1275,10 @@ Get-GuiSnapshot
         $msg = "$ok Maßnahme(n) erfolgreich ausgeführt."
         if ($failed) { $msg += "`n$failed Maßnahme(n) fehlgeschlagen – Details in den Ergebniskarten und im Protokoll." }
         $Script:UI.StatusText.Text = $msg -replace "`n", ' '
+        if ($snap -and @($snap.Comparison).Count) {
+            $msg += "`n`nVorher → Nachher:`n" + ((@($snap.Comparison) | ForEach-Object { '• ' + ($_ -replace '\s{2,}', ' ') }) -join "`n")
+            $msg += "`n`nStartzeit und Dauer des Herunterfahrens lassen sich erst nach dem nächsten Neustart vergleichen (Bereich »Verlauf«)."
+        }
         if ($Script:RebootPending) {
             $r = Show-Message "$msg`n`nEinige Änderungen werden erst nach einem Neustart wirksam.`nJetzt neu starten? (Vorher alle Dateien speichern!)" 'Neustart' 'Question' 'YesNo'
             if ("$r" -eq 'Yes') {
@@ -1297,6 +1381,12 @@ function Import-SettingsPage {
     switch ("$($s.Design)") { 'Hell' { $Script:UI.ThemeLight.IsChecked = $true } 'Dunkel' { $Script:UI.ThemeDark.IsChecked = $true } default { $Script:UI.ThemeSystem.IsChecked = $true } }
     $Script:UI.ChkPdf.IsChecked = [bool]$s.Pdf
     $Script:UI.ChkAutoUpdate.IsChecked = [bool]$s.AutoUpdate
+    $keep = 30
+    try { $keep = [int]$s.BerichteBehalten } catch { }
+    $keepButton = $Script:UI["Keep$keep"]
+    if (-not $keepButton) { $keepButton = $Script:UI.Keep30 }
+    $keepButton.IsChecked = $true
+    $Script:UI.ReportFolderText.Text = $BerichtOrdner
     $Script:LoadingSettings = $false
 
     $sig = @()
@@ -1331,6 +1421,52 @@ function Import-SettingsPage {
             $Script:UI.BtnMaintRemove.Visibility = 'Collapsed'
         }
         if (-not $Script:UpdateRelease) { $Script:UI.UpdateStatus.Text = "Installierte Version: $($m.Version). Updates werden erst nach Ihrer Bestätigung installiert; Prüfsumme und Signatur werden vorher kontrolliert." }
+    }
+}
+
+function Set-ReportFolderUi {
+    <# Neuen Berichtordner wählen und vorhandene Daten auf Wunsch mitnehmen. #>
+    if ($Script:Job) { $null = Show-Message 'Bitte warten, bis die laufende Aufgabe beendet ist.' 'Berichtordner'; return }
+    $dlg = New-Object System.Windows.Forms.FolderBrowserDialog
+    $dlg.Description = 'Ordner für Berichte, Verlauf und Einstellungen wählen (darin wird der Unterordner »LaptopDiagnose« verwendet)'
+    $dlg.ShowNewFolderButton = $true
+    $dlg.SelectedPath = Split-Path -Parent $BerichtOrdner
+    if ($dlg.ShowDialog() -ne [System.Windows.Forms.DialogResult]::OK) { return }
+    $new = $dlg.SelectedPath.TrimEnd('\')
+    if ((Split-Path -Leaf $new) -ne 'LaptopDiagnose') { $new = Join-Path $new 'LaptopDiagnose' }
+    if ($new.TrimEnd('\') -eq $BerichtOrdner.TrimEnd('\')) { return }
+    if (Test-OneDrivePath $new) {
+        $w = Show-Message "Der gewählte Ordner wird von OneDrive synchronisiert:`n$new`n`nDas Speichern von Berichten kann dort spürbar langsamer sein. Trotzdem verwenden?" 'Berichtordner' 'Warning' 'YesNo'
+        if ("$w" -ne 'Yes') { return }
+    }
+    $r = Show-Message "Neuer Speicherort:`n$new`n`nVorhandene Berichte, Verlauf, Änderungsprotokoll und Einstellungen dorthin verschieben?`n`n»Nein« lässt sie am alten Ort (Verlauf und Rückgängig-Liste beginnen dann neu)." 'Berichtordner' 'Question' 'YesNoCancel'
+    if ("$r" -eq 'Cancel') { return }
+    $code = @'
+param($from, $to, $move)
+if (-not (Test-Path -LiteralPath $to)) { $null = New-Item -ItemType Directory -Path $to -Force }
+$msg = "Berichtordner geändert: $to"
+if ($move) {
+    $res = Move-ReportFolderContent -From $from -To $to
+    $msg += " ($($res.Moved) Datei(en) verschoben"
+    if ($res.Failed) { $msg += ", $($res.Failed) nicht verschiebbar (bleiben am alten Ort)" }
+    $msg += ')'
+} else {
+    $settings = Join-Path $from 'Einstellungen.json'
+    if ((Test-Path -LiteralPath $settings) -and -not (Test-Path -LiteralPath (Join-Path $to 'Einstellungen.json'))) { Copy-Item -LiteralPath $settings -Destination $to }
+}
+Save-ReportFolderSetting -Path $to
+$global:BerichtOrdner = $to
+[pscustomobject]@{ IsFolder = $true; Folder = $to; Message = $msg }
+'@
+    $null = Start-WorkerJob -Code $code -Arguments @($BerichtOrdner, $new, ("$r" -eq 'Yes')) -Status 'Berichtordner wird geändert …' -OnDone {
+        param($out)
+        $f = @($out) | Where-Object { $_.IsFolder } | Select-Object -Last 1
+        if (-not $f) { return }
+        $Script:BerichtOrdner = $f.Folder
+        $Script:UI.ReportFolderText.Text = $f.Folder
+        Add-LogLine $f.Message
+        $Script:UI.StatusText.Text = $f.Message
+        Import-SettingsPage
     }
 }
 
@@ -1374,7 +1510,7 @@ function Install-ToolUpdateUi {
         $Script:UI.BtnUpdateInstall.Visibility = 'Collapsed'
         $r2 = Show-Message "$msg`n`nJetzt neu starten?" 'Programm-Update' 'Question' 'YesNo'
         if ("$r2" -eq 'Yes') {
-            Start-Process -FilePath (Get-Process -Id $PID).Path -ArgumentList @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-STA', '-WindowStyle', 'Minimized', '-File', "`"$PSCommandPath`"", '-BerichtOrdner', "`"$BerichtOrdner`"")
+            Start-Process -FilePath (Get-Process -Id $PID).Path -ArgumentList @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-STA', '-WindowStyle', 'Minimized', '-File', "`"$PSCommandPath`"")
             $Script:Window.Close()
         }
     }
@@ -1411,7 +1547,8 @@ try {
         'SystemList', 'EmptyHint', 'EmptyHintText', 'FindingsList', 'LogBox', 'FixButtons', 'BtnSelectRecommended', 'BtnClearSelection', 'BtnFix',
         'BtnFixText', 'Busy', 'StatusText', 'HistoryPanel', 'HistoryHint', 'HistoryList', 'ChangesPanel', 'ChangesHint', 'ChangesList',
         'SettingsPanel', 'ThemeSystem', 'ThemeLight', 'ThemeDark', 'MaintStatus', 'IntWeekly', 'IntDaily', 'DayRow', 'MaintTime', 'BtnMaintSet',
-        'BtnMaintRemove', 'ChkPdf', 'BtnFleet', 'UpdateStatus', 'BtnUpdateCheck', 'BtnUpdateInstall', 'SignatureText', 'ChkAutoUpdate', 'BadgeUpdate', 'AboutText'
+        'BtnMaintRemove', 'ChkPdf', 'BtnFleet', 'UpdateStatus', 'BtnUpdateCheck', 'BtnUpdateInstall', 'SignatureText', 'ChkAutoUpdate', 'BadgeUpdate', 'AboutText',
+        'ReportFolderText', 'BtnReportFolderChange', 'BtnReportFolderOpen', 'Keep10', 'Keep30', 'Keep100', 'Keep0'
     )
     $navNames = @('NavAlle') + @($Script:CategoryKeys | ForEach-Object { "Nav$_" }) + @('NavVerlauf', 'NavAenderungen', 'NavEinstellungen', 'NavLog')
     $names += $navNames
@@ -1486,6 +1623,15 @@ try {
             })
     }
     $Script:UI.ChkPdf.Add_Click({ Write-UiSetting 'Pdf' ([bool]$Script:UI.ChkPdf.IsChecked) })
+    foreach ($k in 'Keep10', 'Keep30', 'Keep100', 'Keep0') {
+        $Script:UI[$k].Add_Checked({
+                param($s, $e)
+                if ($Script:LoadingSettings) { return }
+                Write-UiSetting 'BerichteBehalten' ([int]$s.Tag)
+            })
+    }
+    $Script:UI.BtnReportFolderChange.Add_Click({ Set-ReportFolderUi })
+    $Script:UI.BtnReportFolderOpen.Add_Click({ Start-Process -FilePath explorer.exe -ArgumentList "`"$BerichtOrdner`"" })
     $Script:UI.IntDaily.Add_Checked({ $Script:UI.DayRow.IsEnabled = $false })
     $Script:UI.IntWeekly.Add_Checked({ $Script:UI.DayRow.IsEnabled = $true })
     $Script:UI.BtnMaintSet.Add_Click({
@@ -1552,6 +1698,15 @@ try {
             Save-LogBuffer
         })
 
+    # Immer maximiert und im Vordergrund öffnen – die Konsole wird minimiert gestartet, und Windows würde
+    # diesen Zustand sonst auf das erste Programmfenster übertragen
+    $Script:Window.Add_Loaded({
+            $Script:Window.WindowState = 'Maximized'
+            $Script:Window.Topmost = $true
+            $null = $Script:Window.Activate()
+            $Script:Window.Topmost = $false
+        })
+
     $Script:Runspace = New-Worker
     $Script:Window.Add_ContentRendered({
             $init = $Script:WorkerInit + "`n" + '$null = Get-SystemOverview; $Script:ToolVersion; Get-GuiSnapshot'
@@ -1563,6 +1718,10 @@ try {
                     $Script:UI.AboutText.Text = "Laptop-Diagnose & Reparatur  ·  Version $ver`n© 2026 Eder Tom – alle Rechte vorbehalten."
                 }
                 Update-FromSnapshot (@($out) | Where-Object { $_.IsSnapshot } | Select-Object -Last 1)
+                if ($Script:FolderMigrationMessage) {
+                    Add-LogLine $Script:FolderMigrationMessage
+                    $null = Show-Message ($Script:FolderMigrationMessage + ".`n`nDer Ordner lässt sich jederzeit unter »Einstellungen › Berichte« ändern.") 'Berichtordner'
+                }
                 if ((Read-UiSettings).AutoUpdate) { Find-ToolUpdate -BeimStart }
             }
         })
