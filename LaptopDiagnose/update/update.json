@@ -1,7 +1,7 @@
 {
-    "version": "2.5.2",
-    "datei": "LaptopDiagnose-2.5.2.zip",
-    "sha256": "e8c103de003c46259dee3770270db6f1a811827755e921cba8bb3b76661f3782",
-    "notizen": "Neue Einstellung »Speicherbelegung in die Komplett-Diagnose aufnehmen« (Einstellungen › Komplett-Diagnose): Dann enthält jede Komplett-Diagnose – auch die geplante Wartung – die Kachelgrafik der Speicherbelegung. Standardmäßig aus.",
+    "version": "2.6.0",
+    "datei": "LaptopDiagnose-2.6.0.zip",
+    "sha256": "505164d911a8b8f21eba68ce562d79b930b0d81e356bc232f84323f5215cb54a",
+    "notizen": "Neu: Suche nach defekten Verknüpfungen auf Desktop, im Startmenü, in der Taskleiste und im Autostart (bereinigen nach Auswahl – in den Papierkorb bzw. umkehrbar deaktiviert). Umfang der Komplett-Diagnose wählbar: unter Einstellungen › Komplett-Diagnose lässt sich jeder Prüfbereich einzeln an- und abwählen; der Bericht vermerkt nicht geprüfte Bereiche.",
     "veroeffentlicht": "2026-10-10"
 }

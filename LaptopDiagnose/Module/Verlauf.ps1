@@ -58,6 +58,8 @@ function Save-History {
         Modell      = $(if ($Script:SystemInfo) { "$($Script:SystemInfo['Hersteller']) $($Script:SystemInfo['Modell'])" })
         ToolVersion = $Script:ToolVersion
         Metriken    = $Script:Metrics
+        # In den Einstellungen abgewählte Bereiche dieser Komplett-Diagnose
+        Ohne        = @($Script:LastFullScanSkipped | ForEach-Object { $Script:Categories[$_] })
     }
     $file = Join-Path $folder ('{0}_{1:yyyyMMdd_HHmmss}.json' -f $env:COMPUTERNAME, (Get-Date))
     [IO.File]::WriteAllText($file, ($entry | ConvertTo-Json -Depth 4), (New-Object System.Text.UTF8Encoding $false))
