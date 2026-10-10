@@ -23,13 +23,14 @@ Beim Start fragt Windows nach Administratorrechten. Diese Rechte braucht das Pro
 | **Sicherheit** | Virenschutz, Firewall, Secure Boot, TPM, BitLocker/Geräteverschlüsselung, Kernisolierung, Benutzerkontensteuerung, SMB1, freigegebene Ordner, Remotedesktop, pausierte Updates, veraltete Browser und Mailprogramme |
 | **Speicherfresser** | RAM, größte Prozesse, freier Speicher, **Speicherbelegung als Balkendiagramm** (Laufwerk C: und Benutzerordner), Datenmüll, Windows.old, große Dateien |
 | **Leistungsbremsen** | CPU-Last, Autostarts, Startdauer (inkl. »langsamer als üblich«), Energiesparplan, Drosselung, SSD/TRIM, Auslagerungsdatei, Temperatur, **vorinstallierte Zusatz-Apps und Testversionen** |
+| **Herunterfahren** | **Gemessene Dauer** der letzten Herunterfahrvorgänge mit Diagramm und Verlauf, **bremsende Programme, Dienste und Treiber** laut Windows-Leistungsdiagnose, hängende Dienste, zu lange Wartezeiten (auf Standard zurücksetzbar), Löschen der Auslagerungsdatei beim Herunterfahren (abschaltbar), ausstehende Updates, nicht erreichbare Netzlaufwerke (entfernbar), Herunterfahr-Skripte, Schnellstart, optional automatisches Beenden hängender Programme |
 | **Akku** | Gesundheit, Ladezyklen, **Kapazitätsverlauf als Diagramm** mit Prognose, Ladezustand, Standby-Art, Akkuverbrauch nach Apps, ausführlicher Akkubericht |
 | **Netzwerk & WLAN** | Internet/DNS, WLAN-Signal, Band, Kanal, Verschlüsselung, **Geschwindigkeitstest und Latenz**, Proxy, Alter des WLAN-Treibers, WLAN-Bericht |
 | **Software-Updates** | Alle über WinGet verwalteten Programme, einzeln oder alle installieren |
 | **Windows & Treiber** | Windows- und Treiber-Updates, veraltete Treiber, Hersteller-Tools für BIOS und Firmware |
 | **Reparatur-Werkzeuge** | Windows Update reparieren, Systemdateien (SFC/DISM), Startmenü und Suche reparieren, Microsoft Store zurücksetzen, Druckerwarteschlange leeren, Audio- und Bluetooth-Dienste neu starten, Netzwerk zurücksetzen, **Arbeitsspeicher-Test**, **Belastungstest** (Lüfter, Temperatur, Drosselung), Energiebericht, Standby-Analyse, Komponentenspeicher bereinigen, Defender-Schnellscan, Wiederherstellungspunkt |
-| **Verlauf & Trends** | Diagramme der wichtigsten Kennzahlen über alle Komplett-Diagnosen, z. B. Akku-Gesundheit, Startdauer, freier Speicher, Abstürze und Internetgeschwindigkeit. Grün bedeutet verbessert, Orange verschlechtert. |
-| **Änderungen** | Jede Änderung mit Zeitpunkt und Ergebnis. Umkehrbare Änderungen haben eine Schaltfläche **»Rückgängig«** (deaktivierte Autostarts, Energieplan, Prozessorleistung, TRIM, Auslagerungsdatei, Remotedesktop, SMB1, geplante Wartung). |
+| **Verlauf & Trends** | Diagramme der wichtigsten Kennzahlen über alle Komplett-Diagnosen, z. B. Akku-Gesundheit, Start- und Herunterfahrdauer, freier Speicher, Abstürze und Internetgeschwindigkeit. Grün bedeutet verbessert, Orange verschlechtert. |
+| **Änderungen** | Jede Änderung mit Zeitpunkt und Ergebnis. Umkehrbare Änderungen haben eine Schaltfläche **»Rückgängig«** (deaktivierte Autostarts, Energieplan, Prozessorleistung, TRIM, Auslagerungsdatei, Remotedesktop, SMB1, Wartezeiten beim Herunterfahren, entfernte Netzlaufwerke, geplante Wartung). |
 | **Einstellungen** | Design **System / Hell / Dunkel**, geplante Wartung, PDF-Berichte, Geräteübersicht, Programm-Updates, Signaturstatus |
 | **Protokoll** | Alle Ausgaben der Sitzung |
 
@@ -94,7 +95,7 @@ Die Version steht in `LaptopDiagnose.ps1` (`$Script:ToolVersion`).
 .\LaptopDiagnose.ps1 -Modus Komplett                  # Komplett-Diagnose mit Reparaturangebot
 .\LaptopDiagnose.ps1 -Modus Komplett -NurPruefen -Pdf # nur prüfen, Bericht auch als PDF
 .\LaptopDiagnose.ps1 -Modus Sicherheit                # einzelner Bereich: Fehler, Sicherheit, Speicher, Leistung, Akku,
-                                                      # Netzwerk, Software, Windows, Werkzeuge
+                                                      # Netzwerk, Software, Windows, Werkzeuge, Herunterfahren
 .\LaptopDiagnose.ps1 -Modus Verlauf                   # Verlauf, Aenderungen, Wartung, Update
 .\LaptopDiagnose.ps1 -Modus Komplett -Unbeaufsichtigt # wie die geplante Wartung
 ```
@@ -108,6 +109,7 @@ Die Version steht in `LaptopDiagnose.ps1` (`$Script:ToolVersion`).
 | `Module\Sicherheit.ps1` | Sicherheitsprüfungen |
 | `Module\Netzwerk.ps1` | Netzwerk, WLAN, Geschwindigkeit |
 | `Module\Analyse.ps1` | Bluescreen-Analyse, Speicherbelegung, Akkuverlauf, Speichertest |
+| `Module\Herunterfahren.ps1` | Diagnose und Reparatur für langsames Herunterfahren |
 | `Module\Werkzeuge.ps1` | Reparatur-Werkzeuge, Belastungstest, Zusatz-Apps |
 | `Module\Verlauf.ps1` | Kennzahlen, Trends, Geräteübersicht |
 | `Module\Aenderungen.ps1` | Änderungsprotokoll und Rückgängig |

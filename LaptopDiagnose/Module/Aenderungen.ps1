@@ -29,7 +29,7 @@ function Save-ChangeLog {
 function Register-Change {
     <#
         Protokolliert eine Änderung. -Typ bestimmt, wie Undo-Change sie zurücknimmt.
-        Typen: Autostart, Energieplan, Prozessorleistung, TRIM, Auslagerungsdatei, Registry, Feature, Wartungsaufgabe, Protokoll
+        Typen: Autostart, Energieplan, Prozessorleistung, TRIM, Auslagerungsdatei, Registry, Feature, Wartungsaufgabe, Netzlaufwerk, Protokoll
     #>
     param(
         [Parameter(Mandatory)][string]$Beschreibung,
@@ -129,6 +129,7 @@ function Undo-Change {
             $Script:RebootNeeded = $true
         }
         'Wartungsaufgabe' { Unregister-MaintenanceTask -NoLog }
+        'Netzlaufwerk' { $null = New-SmbMapping -LocalPath $d.LocalPath -RemotePath $d.RemotePath -Persistent $true -ErrorAction Stop }
         default { throw "Unbekannter Änderungstyp: $($e.Typ)" }
     }
 

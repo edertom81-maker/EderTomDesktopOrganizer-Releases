@@ -11,7 +11,7 @@
     HTML-Bericht gespeichert werden.
 
 .PARAMETER Modus
-    Menue (Standard), Komplett, Fehler, Sicherheit, Speicher, Leistung, Akku, Netzwerk, Software, Windows,
+    Menue (Standard), Komplett, Fehler, Sicherheit, Speicher, Leistung, Herunterfahren, Akku, Netzwerk, Software, Windows,
     Werkzeuge, Verlauf, Aenderungen, Wartung, Update
 
 .PARAMETER NurPruefen
@@ -38,7 +38,7 @@
 #>
 [CmdletBinding()]
 param(
-    [ValidateSet('Menue', 'Komplett', 'Fehler', 'Sicherheit', 'Speicher', 'Leistung', 'Akku', 'Netzwerk', 'Software', 'Windows',
+    [ValidateSet('Menue', 'Komplett', 'Fehler', 'Sicherheit', 'Speicher', 'Leistung', 'Herunterfahren', 'Akku', 'Netzwerk', 'Software', 'Windows',
         'Werkzeuge', 'Verlauf', 'Aenderungen', 'Wartung', 'Update')]
     [string]$Modus = 'Menue',
     [switch]$NurPruefen,
@@ -49,7 +49,7 @@ param(
 
 if ($Unbeaufsichtigt) { $NurPruefen = $true }
 
-$Script:ToolVersion = '2.0.0'
+$Script:ToolVersion = '2.1.0'
 $Script:InstallDir = $PSScriptRoot
 $Script:ChangeCounter = 0
 $Script:SoftwareUpdateCache = $null
@@ -64,6 +64,7 @@ $Script:Categories = [ordered]@{
     'Sicherheit' = 'Sicherheit'
     'Speicher'   = 'Speicherfresser'
     'Leistung'   = 'Leistungsbremsen'
+    'Herunterfahren' = 'Herunterfahren & Neustart'
     'Akku'       = 'Akku'
     'Netzwerk'   = 'Netzwerk & WLAN'
     'Software'   = 'Software-Updates'
@@ -1689,7 +1690,7 @@ function Show-Summary {
 #region ---------- Ablauf / Menü ----------
 
 # Reihenfolge der Prüfungen der Komplett-Diagnose (Software vor Sicherheit, damit WinGet nur einmal läuft)
-$Script:FullScanOrder = @('Invoke-ErrorScan', 'Invoke-MemoryScan', 'Invoke-PerformanceScan', 'Invoke-BatteryScan', 'Invoke-NetworkScan',
+$Script:FullScanOrder = @('Invoke-ErrorScan', 'Invoke-MemoryScan', 'Invoke-PerformanceScan', 'Invoke-ShutdownScan', 'Invoke-BatteryScan', 'Invoke-NetworkScan',
     'Invoke-SoftwareScan', 'Invoke-SecurityScan', 'Invoke-WindowsUpdateScan')
 
 function Invoke-FullDiagnosis {
@@ -1729,6 +1730,7 @@ function Invoke-SingleModule {
         'Sicherheit'  { Invoke-SecurityScan; Invoke-Repairs -Category 'Sicherheit' }
         'Speicher'    { Invoke-MemoryScan; Invoke-Repairs -Category 'Speicher' }
         'Leistung'    { Invoke-PerformanceScan; Invoke-Repairs -Category 'Leistung' }
+        'Herunterfahren' { Invoke-ShutdownScan; Invoke-Repairs -Category 'Herunterfahren' }
         'Akku'        { Invoke-BatteryScan; Invoke-Repairs -Category 'Akku' }
         'Netzwerk'    { Invoke-NetworkScan; Invoke-Repairs -Category 'Netzwerk' }
         'Software'    { Invoke-SoftwareScan -Interactive }
@@ -1769,7 +1771,8 @@ function Show-Menu {
         Write-Host '    4) Speicherfresser              5) Leistungsbremsen'
         Write-Host '    6) Akku                         7) Netzwerk & WLAN'
         Write-Host '    8) Software-Updates             9) Windows & Treiber'
-        Write-Host '    W) Reparatur-Werkzeuge          B) Gefundene Probleme beheben'
+        Write-Host '    H) Herunterfahren & Neustart    W) Reparatur-Werkzeuge'
+        Write-Host '    B) Gefundene Probleme beheben'
         Write-Host '    V) Verlauf & Trends             R) Änderungen rückgängig machen'
         Write-Host '    P) Geplante Wartung             G) Geräteübersicht erstellen'
         Write-Host '    S) Bericht speichern & öffnen   U) Programm-Updates'
@@ -1788,6 +1791,7 @@ function Show-Menu {
             '7' { Invoke-SingleModule 'Netzwerk' }
             '8' { Invoke-SingleModule 'Software' }
             '9' { Invoke-SingleModule 'Windows' }
+            'H' { Invoke-SingleModule 'Herunterfahren' }
             'W' { Invoke-SingleModule 'Werkzeuge' }
             'B' { if ($found) { Invoke-Repairs } else { Write-Host '   Bitte zuerst eine Diagnose durchführen.' -ForegroundColor Yellow } }
             'V' { Invoke-SingleModule 'Verlauf' }

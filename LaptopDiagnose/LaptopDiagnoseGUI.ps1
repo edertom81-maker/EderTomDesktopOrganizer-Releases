@@ -347,6 +347,11 @@ $Script:Xaml = @'
                 <Border x:Name="BadgeLeistung" DockPanel.Dock="Right" Style="{StaticResource Badge}"><TextBlock x:Name="BadgeLeistungText" Style="{StaticResource BadgeText}"/></Border>
                 <TextBlock Text="Leistungsbremsen" VerticalAlignment="Center"/></DockPanel>
             </RadioButton>
+            <RadioButton x:Name="NavHerunterfahren" Tag="Herunterfahren" Style="{StaticResource Nav}">
+              <DockPanel><TextBlock Text="&#xE7E8;" Style="{StaticResource NavIcon}"/>
+                <Border x:Name="BadgeHerunterfahren" DockPanel.Dock="Right" Style="{StaticResource Badge}"><TextBlock x:Name="BadgeHerunterfahrenText" Style="{StaticResource BadgeText}"/></Border>
+                <TextBlock Text="Herunterfahren" VerticalAlignment="Center"/></DockPanel>
+            </RadioButton>
             <RadioButton x:Name="NavAkku" Tag="Akku" Style="{StaticResource Nav}">
               <DockPanel><TextBlock Text="&#xE83F;" Style="{StaticResource NavIcon}"/>
                 <Border x:Name="BadgeAkku" DockPanel.Dock="Right" Style="{StaticResource Badge}"><TextBlock x:Name="BadgeAkkuText" Style="{StaticResource BadgeText}"/></Border>
@@ -825,6 +830,7 @@ $Script:Pages = [ordered]@{
     'Sicherheit'    = @{ Kind = 'Findings'; Title = 'Sicherheit'; Sub = 'Virenschutz, Firewall, Secure Boot, TPM, Verschlüsselung, Kernisolierung, UAC, SMB1, Freigaben und veraltete Browser.'; Scan = 'Invoke-SecurityScan' }
     'Speicher'      = @{ Kind = 'Findings'; Title = 'Speicherfresser'; Sub = 'Arbeitsspeicher, größte Programme, freier Speicherplatz, Speicherbelegung als Grafik und Datenmüll.'; Scan = 'Invoke-MemoryScan' }
     'Leistung'      = @{ Kind = 'Findings'; Title = 'Leistungsbremsen'; Sub = 'Prozessorlast, Autostart, Startdauer, Energieeinstellungen, Laufwerk, Temperatur und Zusatzsoftware.'; Scan = 'Invoke-PerformanceScan' }
+    'Herunterfahren' = @{ Kind = 'Findings'; Title = 'Herunterfahren & Neustart'; Sub = 'Dauer der letzten Herunterfahrvorgänge, bremsende Programme, Dienste und Treiber, Wartezeiten, ausstehende Updates und Netzlaufwerke.'; Scan = 'Invoke-ShutdownScan'; ScanText = 'Herunterfahren prüfen' }
     'Akku'          = @{ Kind = 'Findings'; Title = 'Akku'; Sub = 'Gesundheit, Kapazitätsverlauf, Ladezyklen, Ladezustand, Standby und was das Energiesparen verhindert.'; Scan = 'Invoke-BatteryScan' }
     'Netzwerk'      = @{ Kind = 'Findings'; Title = 'Netzwerk & WLAN'; Sub = 'Internetverbindung, WLAN-Signal und -Sicherheit, Geschwindigkeit, Latenz, Proxy und WLAN-Treiber.'; Scan = 'Invoke-NetworkScan' }
     'Software'      = @{ Kind = 'Findings'; Title = 'Software-Updates'; Sub = 'Verfügbare Updates für installierte Programme (über WinGet).'; Scan = 'Invoke-SoftwareScan' }
@@ -835,7 +841,7 @@ $Script:Pages = [ordered]@{
     'Einstellungen' = @{ Kind = 'Settings'; Title = 'Einstellungen'; Sub = 'Design, geplante Wartung, Berichte und Programm-Updates.' }
     'Log'           = @{ Kind = 'Log'; Title = 'Protokoll'; Sub = 'Alle Ausgaben dieser Sitzung. Wird zusätzlich im Berichtsordner gespeichert.' }
 }
-$Script:CategoryKeys = @('Fehler', 'Sicherheit', 'Speicher', 'Leistung', 'Akku', 'Netzwerk', 'Software', 'Windows', 'Werkzeuge')
+$Script:CategoryKeys = @('Fehler', 'Sicherheit', 'Speicher', 'Leistung', 'Herunterfahren', 'Akku', 'Netzwerk', 'Software', 'Windows', 'Werkzeuge')
 $Script:SeverityOrder = @{ 'Kritisch' = 0; 'Warnung' = 1; 'Info' = 2; 'OK' = 3 }
 $Script:Page = 'Alle'
 $Script:Items = New-Object System.Collections.Generic.List[object]

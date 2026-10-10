@@ -10,6 +10,7 @@ $Script:MetricCatalog = [ordered]@{
     'AkkuGesundheit'    = @{ Label = 'Akku-Gesundheit'; Unit = '%'; Better = 'hoch' }
     'AkkuZyklen'        = @{ Label = 'Ladezyklen'; Unit = ''; Better = 'niedrig' }
     'Startdauer'        = @{ Label = 'Systemstart'; Unit = 's'; Better = 'niedrig' }
+    'Herunterfahren'    = @{ Label = 'Herunterfahren'; Unit = 's'; Better = 'niedrig' }
     'FreierSpeicher'    = @{ Label = 'Freier Speicher (Systemlaufwerk)'; Unit = 'GB'; Better = 'hoch' }
     'RAMAuslastung'     = @{ Label = 'RAM-Auslastung'; Unit = '%'; Better = 'niedrig' }
     'CPULast'           = @{ Label = 'Prozessorlast im Leerlauf'; Unit = '%'; Better = 'niedrig' }
