@@ -930,7 +930,17 @@ function Add-LogLine {
     param([string]$Line)
     $Script:UI.LogBox.AppendText($Line + [Environment]::NewLine)
     if ($Script:UI.LogBox.IsVisible) { $Script:UI.LogBox.ScrollToEnd() }
-    try { [IO.File]::AppendAllText($Script:LogFile, $Line + [Environment]::NewLine, [Text.Encoding]::UTF8) } catch { }
+    $null = $Script:LogBuffer.AppendLine($Line)
+}
+
+function Save-LogBuffer {
+    <# Schreibt gesammelte Protokollzeilen gebündelt (statt Zeile für Zeile) in die lokale Protokolldatei. #>
+    if (-not $Script:LogBuffer -or $Script:LogBuffer.Length -eq 0) { return }
+    try {
+        [IO.File]::AppendAllText($Script:LogFile, $Script:LogBuffer.ToString(), [Text.Encoding]::UTF8)
+        $null = $Script:LogBuffer.Clear()
+    } catch { }
+    $Script:LastLogFlush = [DateTime]::UtcNow
 }
 
 function Set-Busy {
@@ -1202,7 +1212,8 @@ function Open-Report {
         $path = @($out) | Where-Object { $_ -is [string] -and $_ -like '*.html' } | Select-Object -Last 1
         if ($path) {
             $Script:UI.StatusText.Text = "Bericht gespeichert: $path"
-            Start-Process -FilePath $path
+            # Über den Explorer öffnen: kehrt sofort zurück, das Programmfenster wird nicht blockiert
+            Start-Process -FilePath 'explorer.exe' -ArgumentList "`"$path`""
         }
     }
 }
@@ -1376,7 +1387,12 @@ function Install-ToolUpdateUi {
 try {
     if (-not (Test-Path -LiteralPath $Script:EnginePath)) { throw "Die Datei LaptopDiagnose.ps1 wurde nicht gefunden ($Script:EnginePath)." }
     if (-not (Test-Path -LiteralPath $BerichtOrdner)) { $null = New-Item -ItemType Directory -Path $BerichtOrdner -Force }
-    $Script:LogFile = Join-Path $BerichtOrdner ('Protokoll_GUI_{0:yyyyMMdd_HHmmss}.txt' -f (Get-Date))
+    # Protokolle lokal speichern (nicht im ggf. von OneDrive synchronisierten Berichtsordner)
+    $logDir = Join-Path $env:LOCALAPPDATA 'LaptopDiagnose\Protokolle'
+    if (-not (Test-Path -LiteralPath $logDir)) { $null = New-Item -ItemType Directory -Path $logDir -Force }
+    $Script:LogFile = Join-Path $logDir ('Protokoll_GUI_{0:yyyyMMdd_HHmmss}.txt' -f (Get-Date))
+    $Script:LogBuffer = New-Object System.Text.StringBuilder
+    $Script:LastLogFlush = [DateTime]::UtcNow
 
     $Script:Window = [Windows.Markup.XamlReader]::Parse($Script:Xaml)
     $icon = Join-Path $PSScriptRoot 'LaptopDiagnose.ico'
@@ -1499,7 +1515,7 @@ try {
             $null = Start-WorkerJob -Code 'param($o) Export-FleetOverview -Ordner $o' -Arguments @($dlg.SelectedPath) -Status 'Geräteübersicht wird erstellt …' -OnDone {
                 param($out)
                 $p = @($out) | Where-Object { $_ -is [string] -and $_ -like '*.html' } | Select-Object -Last 1
-                if ($p) { $Script:UI.StatusText.Text = "Geräteübersicht gespeichert: $p"; Start-Process -FilePath $p }
+                if ($p) { $Script:UI.StatusText.Text = "Geräteübersicht gespeichert: $p"; Start-Process -FilePath 'explorer.exe' -ArgumentList "`"$p`"" }
             }
         })
     $Script:UI.BtnUpdateCheck.Add_Click({ Find-ToolUpdate })
@@ -1518,6 +1534,7 @@ try {
                     if ($Script:Job -and $t -match '^(›|▶)') { $Script:UI.StatusText.Text = $t.TrimStart('›', '▶', ' ').TrimEnd('.', ' ') + ' …' }
                 }
                 if ($Script:Job -and $Script:Job.Handle.IsCompleted) { Complete-WorkerJob }
+                if (([DateTime]::UtcNow - $Script:LastLogFlush).TotalSeconds -ge 5) { Save-LogBuffer }
                 Update-FixButtons
             } catch {
                 Add-LogLine "FEHLER (Oberfläche): $($_.Exception.Message)"
@@ -1529,9 +1546,10 @@ try {
             if ($Script:Job) {
                 $r = Show-Message 'Es läuft noch eine Prüfung oder Reparatur. Trotzdem beenden?' 'Beenden' 'Warning' 'YesNo'
                 if ("$r" -ne 'Yes') { $e.Cancel = $true; return }
-                try { $Script:Job.PS.Stop() } catch { }
+                try { $null = $Script:Job.PS.BeginStop($null, $null) } catch { }
             }
             $Script:Timer.Stop()
+            Save-LogBuffer
         })
 
     $Script:Runspace = New-Worker

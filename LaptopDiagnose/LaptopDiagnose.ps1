@@ -49,7 +49,7 @@ param(
 
 if ($Unbeaufsichtigt) { $NurPruefen = $true }
 
-$Script:ToolVersion = '2.3.1'
+$Script:ToolVersion = '2.3.2'
 $Script:InstallDir = $PSScriptRoot
 $Script:ChangeCounter = 0
 $Script:SoftwareUpdateCache = $null
@@ -390,7 +390,7 @@ function Invoke-ErrorScan {
                 -Fix { param($d) Repair-SystemVolume } -RequiresReboot
         }
 
-        $crashes = @(Get-WinEvent -FilterHashtable @{ LogName = 'Application'; Id = 1000; StartTime = $since } -MaxEvents 500 -ErrorAction SilentlyContinue)
+        $crashes = @(Get-WinEvent -FilterHashtable @{ LogName = 'Application'; ProviderName = 'Application Error'; Id = 1000; StartTime = $since } -MaxEvents 500 -ErrorAction SilentlyContinue)
         Set-Metric 'Programmabstuerze' $crashes.Count
         if ($crashes) {
             $byApp = $crashes | Group-Object { $_.Properties[0].Value } | Sort-Object Count -Descending
@@ -1551,6 +1551,7 @@ function Convert-HtmlToPdf {
 
 function Export-Report {
     param([switch]$Quiet, [switch]$Open, [switch]$AsPdf)
+    $reportTimer = [Diagnostics.Stopwatch]::StartNew()
     if (-not $Script:SystemInfo) { $null = Get-SystemOverview }
     if (-not (Test-Path -LiteralPath $BerichtOrdner)) { $null = New-Item -ItemType Directory -Path $BerichtOrdner -Force }
     $stamp = '{0:yyyyMMdd_HHmm}' -f (Get-Date)
@@ -1567,7 +1568,7 @@ function Export-Report {
     $null = $sb.Append(@"
 <!DOCTYPE html>
 <html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Diagnosebericht $(& $e $Script:SystemInfo['Computer'])</title>
+<title>Diagnosebericht $([System.Net.WebUtility]::HtmlEncode("$($Script:SystemInfo['Computer'])"))</title>
 <style>
 :root{--bg:#f5f7fa;--card:#fff;--text:#1d2533;--muted:#5d6b80;--line:#e3e8ef;--crit:#d92d20;--warn:#dc8a00;--info:#1570ef;--ok:#079455;--accent:#0b4f8a;--track:#e9eef5}
 @media (prefers-color-scheme:dark){:root{--bg:#0f141b;--card:#18202b;--text:#e6ebf2;--muted:#94a3b8;--line:#2a3544;--accent:#5ba7ef;--track:#243041}}
@@ -1592,7 +1593,7 @@ table.kv{width:100%;border-collapse:collapse}table.kv td{padding:6px 8px;border-
 footer{margin-top:40px;color:var(--muted);font-size:13px;text-align:center}
 @media (max-width:600px){.bar{grid-template-columns:1fr 70px}.bar .bt{grid-column:1/3;grid-row:2}table.kv td:first-child{width:auto}}
 </style></head><body><div class="wrap">
-<header><div><h1>Laptop-Diagnosebericht</h1><div class="sub">$(& $e $Script:SystemInfo['Hersteller']) $(& $e $Script:SystemInfo['Modell']) · $(& $e $Script:SystemInfo['Diagnose am'])</div></div>
+<header><div><h1>Laptop-Diagnosebericht</h1><div class="sub">$([System.Net.WebUtility]::HtmlEncode("$($Script:SystemInfo['Hersteller'])")) $([System.Net.WebUtility]::HtmlEncode("$($Script:SystemInfo['Modell'])")) · $([System.Net.WebUtility]::HtmlEncode("$($Script:SystemInfo['Diagnose am'])"))</div></div>
 <div class="card" style="text-align:center;margin:0"><div class="sub">Gesundheitswert</div><div class="score" style="color:$(if ($score -ge 80) { 'var(--ok)' } elseif ($score -ge 50) { 'var(--warn)' } else { 'var(--crit)' })">$score</div></div></header>
 <div class="tiles">
 <div class="tile"><b style="color:var(--crit)">$($counts['Kritisch'])</b>Kritisch</div>
@@ -1603,7 +1604,7 @@ footer{margin-top:40px;color:var(--muted);font-size:13px;text-align:center}
 <h2>Systemübersicht</h2><div class="card"><table class="kv">
 "@)
     foreach ($k in $Script:SystemInfo.Keys) {
-        $null = $sb.Append("<tr><td>$(& $e $k)</td><td>$(& $e "$($Script:SystemInfo[$k])")</td></tr>")
+        $null = $sb.Append("<tr><td>$([System.Net.WebUtility]::HtmlEncode("$($k)"))</td><td>$([System.Net.WebUtility]::HtmlEncode("$($Script:SystemInfo[$k])"))</td></tr>")
     }
     $null = $sb.Append('</table></div>')
 
@@ -1615,7 +1616,7 @@ footer{margin-top:40px;color:var(--muted);font-size:13px;text-align:center}
             $cls = switch ($m.Trend) { 'besser' { 'better' } 'schlechter' { 'worse' } default { 'same' } }
             $color = switch ($m.Trend) { 'besser' { '#079455' } 'schlechter' { '#dc8a00' } default { '#1570ef' } }
             $svg = New-SparklineSvg -Values $m.Values -Color $color
-            $null = $sb.Append("<tr><td>$(& $e $m.Label)</td><td><b>$(& $e $m.ValueText)</b></td><td>$svg</td><td class=""$cls"">$(& $e $m.TrendText)</td></tr>")
+            $null = $sb.Append("<tr><td>$([System.Net.WebUtility]::HtmlEncode("$($m.Label)"))</td><td><b>$([System.Net.WebUtility]::HtmlEncode("$($m.ValueText)"))</b></td><td>$svg</td><td class=""$cls"">$([System.Net.WebUtility]::HtmlEncode("$($m.TrendText)"))</td></tr>")
         }
         $null = $sb.Append('</table></div>')
     }
@@ -1623,13 +1624,13 @@ footer{margin-top:40px;color:var(--muted);font-size:13px;text-align:center}
     foreach ($catKey in $Script:Categories.Keys) {
         $list = @($Script:Findings | Where-Object { $_.Category -eq $catKey } | Sort-Object { $Script:SeverityOrder[$_.Severity] })
         if (-not $list) { continue }
-        $null = $sb.Append("<h2>$(& $e $Script:Categories[$catKey])</h2>")
+        $null = $sb.Append("<h2>$([System.Net.WebUtility]::HtmlEncode("$($Script:Categories[$catKey])"))</h2>")
         foreach ($f in $list) {
-            $null = $sb.Append("<div class=""card f $($f.Severity)""><span class=""badge b-$($f.Severity)"">$($f.Severity)</span><h3>$(& $e $f.Title)</h3>")
-            if ($f.Detail) { $null = $sb.Append("<p>$(& $e $f.Detail)</p>") }
+            $null = $sb.Append("<div class=""card f $($f.Severity)""><span class=""badge b-$($f.Severity)"">$($f.Severity)</span><h3>$([System.Net.WebUtility]::HtmlEncode("$($f.Title)"))</h3>")
+            if ($f.Detail) { $null = $sb.Append("<p>$([System.Net.WebUtility]::HtmlEncode("$($f.Detail)"))</p>") }
             if ($f.Items) {
                 $null = $sb.Append('<ul>')
-                foreach ($it in $f.Items) { $null = $sb.Append("<li>$(& $e $it)</li>") }
+                foreach ($it in $f.Items) { $null = $sb.Append("<li>$([System.Net.WebUtility]::HtmlEncode("$($it)"))</li>") }
                 $null = $sb.Append('</ul>')
             }
             $chart = @($f.Chart)
@@ -1639,16 +1640,16 @@ footer{margin-top:40px;color:var(--muted);font-size:13px;text-align:center}
                 $null = $sb.Append('<div class="bars">')
                 foreach ($c in $chart) {
                     $w = [string]::Format([Globalization.CultureInfo]::InvariantCulture, '{0:0.#}', [math]::Max(1, [double]$c.Value / $max * 100))
-                    $null = $sb.Append("<div class=""bar""><span class=""bl"">$(& $e $c.Label)</span><span class=""bt""><i style=""width:$w%""></i></span><span class=""bv"">$(& $e $c.Text)</span></div>")
+                    $null = $sb.Append("<div class=""bar""><span class=""bl"">$([System.Net.WebUtility]::HtmlEncode("$($c.Label)"))</span><span class=""bt""><i style=""width:$w%""></i></span><span class=""bv"">$([System.Net.WebUtility]::HtmlEncode("$($c.Text)"))</span></div>")
                 }
                 $null = $sb.Append('</div>')
             }
             if ($f.Fixed) {
-                $null = $sb.Append("<div class=""fix done"">✔ Behoben: $(& $e $f.FixLabel) – $(& $e $f.FixResult)</div>")
+                $null = $sb.Append("<div class=""fix done"">✔ Behoben: $([System.Net.WebUtility]::HtmlEncode("$($f.FixLabel)")) – $([System.Net.WebUtility]::HtmlEncode("$($f.FixResult)"))</div>")
             } elseif ($f.FixResult) {
-                $null = $sb.Append("<div class=""fix"" style=""color:var(--crit)"">✖ $(& $e $f.FixLabel) – $(& $e $f.FixResult)</div>")
+                $null = $sb.Append("<div class=""fix"" style=""color:var(--crit)"">✖ $([System.Net.WebUtility]::HtmlEncode("$($f.FixLabel)")) – $([System.Net.WebUtility]::HtmlEncode("$($f.FixResult)"))</div>")
             } elseif ($f.FixLabel -and $f.Category -ne 'Werkzeuge') {
-                $null = $sb.Append("<div class=""fix open"">↳ Behebbar mit LaptopDiagnose: $(& $e $f.FixLabel)</div>")
+                $null = $sb.Append("<div class=""fix open"">↳ Behebbar mit LaptopDiagnose: $([System.Net.WebUtility]::HtmlEncode("$($f.FixLabel)"))</div>")
             }
             $null = $sb.Append('</div>')
         }
@@ -1658,7 +1659,7 @@ footer{margin-top:40px;color:var(--muted);font-size:13px;text-align:center}
         $null = $sb.Append('<h2>Durchgeführte Maßnahmen</h2><div class="card"><table class="kv">')
         foreach ($a in $Script:ActionLog) {
             $icon = if ($a.Success) { '✔' } else { '✖' }
-            $null = $sb.Append("<tr><td>$('{0:HH:mm:ss}' -f $a.Time) $icon</td><td><b>$(& $e $a.Action)</b><br>$(& $e $a.Result)</td></tr>")
+            $null = $sb.Append("<tr><td>$('{0:HH:mm:ss}' -f $a.Time) $icon</td><td><b>$([System.Net.WebUtility]::HtmlEncode("$($a.Action)"))</b><br>$([System.Net.WebUtility]::HtmlEncode("$($a.Result)"))</td></tr>")
         }
         $null = $sb.Append('</table></div>')
     }
@@ -1685,11 +1686,8 @@ footer{margin-top:40px;color:var(--muted);font-size:13px;text-align:center}
             if (-not $Quiet) { Write-Host "   PDF nicht möglich: $($_.Exception.Message)" -ForegroundColor Yellow }
         }
     }
-    if (-not $Quiet) {
-        Write-Host ''
-        Write-Host "   Bericht gespeichert: $htmlPath" -ForegroundColor Green
-    }
-    if ($Open) { Invoke-Item -LiteralPath $htmlPath }
+    Write-Host ('   Bericht erstellt in {0:N1} s: {1}' -f $reportTimer.Elapsed.TotalSeconds, $htmlPath) -ForegroundColor $(if ($Quiet) { 'DarkGray' } else { 'Green' })
+    if ($Open) { Start-Process -FilePath 'explorer.exe' -ArgumentList "`"$htmlPath`"" }
     return $htmlPath
 }
 
@@ -1850,7 +1848,9 @@ function Start-LaptopDiagnose {
     try { $Host.UI.RawUI.WindowTitle = $(if ($Unbeaufsichtigt) { 'Laptop-Diagnose – geplante Prüfung · © 2026 Eder Tom' } else { "Laptop-Diagnose & Reparatur $Script:ToolVersion · © 2026 Eder Tom" }) } catch { }
     try { [Console]::OutputEncoding = [Text.Encoding]::UTF8 } catch { }
     if (-not (Test-Path -LiteralPath $BerichtOrdner)) { $null = New-Item -ItemType Directory -Path $BerichtOrdner -Force }
-    $logPath = Join-Path $BerichtOrdner ('Protokoll_{0:yyyyMMdd_HHmmss}.txt' -f (Get-Date))
+    $logDir = Join-Path $env:LOCALAPPDATA 'LaptopDiagnose\Protokolle'
+    if (-not (Test-Path -LiteralPath $logDir)) { $null = New-Item -ItemType Directory -Path $logDir -Force }
+    $logPath = Join-Path $logDir ('Protokoll_{0:yyyyMMdd_HHmmss}.txt' -f (Get-Date))
     try { Start-Transcript -Path $logPath -ErrorAction Stop | Out-Null } catch { }
     try {
         if ($Unbeaufsichtigt) { Invoke-UnattendedDiagnosis }
