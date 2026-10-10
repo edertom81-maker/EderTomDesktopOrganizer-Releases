@@ -1,7 +1,7 @@
 {
-    "version": "2.5.1",
-    "datei": "LaptopDiagnose-2.5.1.zip",
-    "sha256": "544b04658e963a8e12b7b3eb9906c727df557a3b78c08a2aebed3ef270ec271e",
-    "notizen": "Seitenleiste: Der Slogan »Diagnose • Repair • Keep it running« steht jetzt in einer eigenen Zeile und ist vollständig lesbar, die Versionsnummer darunter.",
+    "version": "2.5.2",
+    "datei": "LaptopDiagnose-2.5.2.zip",
+    "sha256": "e8c103de003c46259dee3770270db6f1a811827755e921cba8bb3b76661f3782",
+    "notizen": "Neue Einstellung »Speicherbelegung in die Komplett-Diagnose aufnehmen« (Einstellungen › Komplett-Diagnose): Dann enthält jede Komplett-Diagnose – auch die geplante Wartung – die Kachelgrafik der Speicherbelegung. Standardmäßig aus.",
     "veroeffentlicht": "2026-10-10"
 }

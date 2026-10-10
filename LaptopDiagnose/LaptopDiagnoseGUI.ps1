@@ -613,6 +613,16 @@ $Script:Xaml = @'
 
             <Border Style="{StaticResource Card}">
               <StackPanel>
+                <TextBlock Text="Komplett-Diagnose" Style="{StaticResource CardTitle}"/>
+                <CheckBox x:Name="ChkStorageFull" Margin="0,4,0,6" Cursor="Hand">
+                  <TextBlock Text="Speicherbelegung (Kachelgrafik) in die Komplett-Diagnose aufnehmen" Foreground="{DynamicResource TextPrimary}"/>
+                </CheckBox>
+                <TextBlock Style="{StaticResource Muted}" Text="Liest dafür alle Dateien des Laufwerks ein – die Diagnose dauert ca. 1–2 Minuten länger. Gilt auch für die geplante Wartung. Ohne diese Option lässt sich die Grafik jederzeit im Bereich »Speicherfresser« mit »Prüfen« erstellen."/>
+              </StackPanel>
+            </Border>
+
+            <Border Style="{StaticResource Card}">
+              <StackPanel>
                 <TextBlock Text="Geplante Wartung" Style="{StaticResource CardTitle}"/>
                 <TextBlock Style="{StaticResource Muted}" Margin="0,0,0,8" Text="Prüft das Gerät regelmäßig im Hintergrund – ohne Änderungen. Bericht und Verlauf werden gespeichert, kritische Probleme erscheinen als Windows-Benachrichtigung."/>
                 <TextBlock x:Name="MaintStatus" Text="Status wird geladen …" Foreground="{DynamicResource TextPrimary}" FontWeight="SemiBold" Margin="0,0,0,10" TextWrapping="Wrap"/>
@@ -911,7 +921,7 @@ $Script:Pages = [ordered]@{
     'Werkzeuge'     = @{ Kind = 'Findings'; Title = 'Reparatur-Werkzeuge'; Sub = 'Gezielte Reparaturen und Tests – Werkzeug ankreuzen und »Ausgewählte beheben« klicken.'; Scan = 'Invoke-ToolsScan'; ScanText = 'Werkzeuge laden' }
     'Verlauf'       = @{ Kind = 'History'; Title = 'Verlauf & Trends'; Sub = 'Entwicklung der wichtigsten Kennzahlen über alle Komplett-Diagnosen.' }
     'Aenderungen'   = @{ Kind = 'Changes'; Title = 'Änderungen'; Sub = 'Protokoll aller Änderungen mit Rückgängig-Funktion.' }
-    'Einstellungen' = @{ Kind = 'Settings'; Title = 'Einstellungen'; Sub = 'Design, geplante Wartung, Berichte und Programm-Updates.' }
+    'Einstellungen' = @{ Kind = 'Settings'; Title = 'Einstellungen'; Sub = 'Design, Umfang der Komplett-Diagnose, geplante Wartung, Berichte und Programm-Updates.' }
     'Log'           = @{ Kind = 'Log'; Title = 'Protokoll'; Sub = 'Alle Ausgaben dieser Sitzung. Wird zusätzlich lokal unter %LOCALAPPDATA%\LaptopDiagnose\Protokolle gespeichert.' }
 }
 $Script:CategoryKeys = @('Fehler', 'Sicherheit', 'Speicher', 'Leistung', 'Herunterfahren', 'Akku', 'Netzwerk', 'Software', 'Windows', 'Werkzeuge')
@@ -953,7 +963,7 @@ $Script:View.Sort = 'Order ASC'
 function Get-SettingsPath { Join-Path $BerichtOrdner 'Einstellungen.json' }
 
 function Read-UiSettings {
-    $s = [ordered]@{ Design = 'System'; Pdf = $false; AutoUpdate = $true; BerichteBehalten = 30 }
+    $s = [ordered]@{ Design = 'System'; Pdf = $false; AutoUpdate = $true; BerichteBehalten = 30; SpeicherInKomplett = $false }
     try {
         if (Test-Path -LiteralPath (Get-SettingsPath)) {
             $j = [IO.File]::ReadAllText((Get-SettingsPath), [Text.Encoding]::UTF8) | ConvertFrom-Json
@@ -1212,7 +1222,7 @@ function Start-Scan {
     $code = @'
 param($cmds, $full)
 if (-not $Script:SystemInfo -or $full) { $null = Get-SystemOverview }
-if ($full) { $cmds = $Script:FullScanOrder }
+if ($full) { $cmds = Get-FullScanOrder }
 foreach ($c in $cmds) { & $c }
 if ($full) { $null = Save-History }
 Get-GuiSnapshot
@@ -1396,6 +1406,7 @@ function Import-SettingsPage {
     switch ("$($s.Design)") { 'Hell' { $Script:UI.ThemeLight.IsChecked = $true } 'Dunkel' { $Script:UI.ThemeDark.IsChecked = $true } default { $Script:UI.ThemeSystem.IsChecked = $true } }
     $Script:UI.ChkPdf.IsChecked = [bool]$s.Pdf
     $Script:UI.ChkAutoUpdate.IsChecked = [bool]$s.AutoUpdate
+    $Script:UI.ChkStorageFull.IsChecked = [bool]$s.SpeicherInKomplett
     $keep = 30
     try { $keep = [int]$s.BerichteBehalten } catch { }
     $keepButton = $Script:UI["Keep$keep"]
@@ -1577,7 +1588,7 @@ try {
         'BtnFixText', 'Busy', 'StatusText', 'HistoryPanel', 'HistoryHint', 'HistoryList', 'ChangesPanel', 'ChangesHint', 'ChangesList',
         'SettingsPanel', 'ThemeSystem', 'ThemeLight', 'ThemeDark', 'MaintStatus', 'IntWeekly', 'IntDaily', 'DayRow', 'MaintTime', 'BtnMaintSet',
         'BtnMaintRemove', 'ChkPdf', 'BtnFleet', 'UpdateStatus', 'BtnUpdateCheck', 'BtnUpdateInstall', 'SignatureText', 'ChkAutoUpdate', 'BadgeUpdate', 'AboutText', 'SidebarLogo', 'AboutLogo',
-        'ReportFolderText', 'BtnReportFolderChange', 'BtnReportFolderOpen', 'Keep10', 'Keep30', 'Keep100', 'Keep0'
+        'ChkStorageFull', 'ReportFolderText', 'BtnReportFolderChange', 'BtnReportFolderOpen', 'Keep10', 'Keep30', 'Keep100', 'Keep0'
     )
     $navNames = @('NavAlle') + @($Script:CategoryKeys | ForEach-Object { "Nav$_" }) + @('NavVerlauf', 'NavAenderungen', 'NavEinstellungen', 'NavLog')
     $names += $navNames
@@ -1653,6 +1664,7 @@ try {
             })
     }
     $Script:UI.ChkPdf.Add_Click({ Write-UiSetting 'Pdf' ([bool]$Script:UI.ChkPdf.IsChecked) })
+    $Script:UI.ChkStorageFull.Add_Click({ Write-UiSetting 'SpeicherInKomplett' ([bool]$Script:UI.ChkStorageFull.IsChecked) })
     foreach ($k in 'Keep10', 'Keep30', 'Keep100', 'Keep0') {
         $Script:UI[$k].Add_Checked({
                 param($s, $e)
