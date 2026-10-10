@@ -16,6 +16,12 @@ Stand: 10.10.2026. Neue Wünsche hier ergänzen.
     - Nie angeboten: die Benutzerordner selbst (Dokumente, Bilder …), AppData, Programm- und Systemordner, OneDrive-Ordner mit Cloud-Dateien sowie Ordner, die gerade ein Programm benutzt.
     - Anzeige als Ankreuz-Liste mit Pfad und Änderungsdatum, alle vorausgewählt. Löschen in den Papierkorb, Eintrag im Änderungsprotokoll.
     - Nach dem Löschen von Duplikaten (Punkt 16) bietet das Tool an, dabei leer gewordene Ordner gleich mit zu entfernen.
+18. **Große Ordner im Bereich »Speicherfresser« anzeigen und zum Löschen auswählen**:
+    - Liste der größten Ordner innerhalb der Benutzerordner (Dokumente, Bilder, Videos, Musik, Desktop, Downloads) – bis in zwei Ebenen Tiefe, z. B. »Downloads\Altes Projekt – 12 GB« – mit Größe, Anzahl Dateien und letzter Änderung; auf Wunsch eigener Ordner/Laufwerk.
+    - Auswahl per Ankreuz-Liste, nichts ist vorausgewählt. Vor dem Löschen eine Zusammenfassung mit Gesamtgröße zur Bestätigung.
+    - Löschen in den Papierkorb. Passt ein Ordner nicht mehr in den Papierkorb (Windows würde endgültig löschen), fragt das Tool dafür ausdrücklich nach bzw. überspringt ihn. Eintrag im Änderungsprotokoll.
+    - Programm-, Windows- und Systemordner sowie AppData werden nur angezeigt, nicht zum Löschen angeboten – dort mit Hinweis auf »Apps deinstallieren« bzw. die Datenträgerbereinigung. Die Benutzerordner selbst sind nie löschbar.
+    - Die Kachelgrafik der Speicherbelegung bekommt dazu eine Detailstufe: Klick auf eine Kachel zeigt deren größte Unterordner.
 
 ## Erledigt in Version 2.6.0
 
