@@ -113,7 +113,7 @@ function Show-Notification {
         $null = [Windows.UI.Notifications.ToastNotificationManager, Windows.UI.Notifications, ContentType = WindowsRuntime]
         $null = [Windows.Data.Xml.Dom.XmlDocument, Windows.Data.Xml.Dom.XmlDocument, ContentType = WindowsRuntime]
         $xml = New-Object Windows.Data.Xml.Dom.XmlDocument
-        $xml.LoadXml("<toast$launch><visual><binding template=""ToastGeneric""><text>$(& $esc $Title)</text><text>$(& $esc $Text)</text></binding></visual></toast>")
+        $xml.LoadXml("<toast$launch><visual><binding template=""ToastGeneric""><text>$(& $esc $Title)</text><text>$(& $esc $Text)</text><text placement=""attribution"">© 2026 Eder Tom</text></binding></visual></toast>")
         $appId = '{1AC14E77-02E7-4E5D-B744-2EB1AE5198B7}\WindowsPowerShell\v1.0\powershell.exe'
         [Windows.UI.Notifications.ToastNotificationManager]::CreateToastNotifier($appId).Show([Windows.UI.Notifications.ToastNotification]::new($xml))
         return $true

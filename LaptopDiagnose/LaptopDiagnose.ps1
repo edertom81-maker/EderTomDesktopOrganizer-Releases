@@ -49,7 +49,7 @@ param(
 
 if ($Unbeaufsichtigt) { $NurPruefen = $true }
 
-$Script:ToolVersion = '2.3.0'
+$Script:ToolVersion = '2.3.1'
 $Script:InstallDir = $PSScriptRoot
 $Script:ChangeCounter = 0
 $Script:SoftwareUpdateCache = $null
@@ -1662,7 +1662,7 @@ footer{margin-top:40px;color:var(--muted);font-size:13px;text-align:center}
         }
         $null = $sb.Append('</table></div>')
     }
-    $null = $sb.Append("<footer>Erstellt mit LaptopDiagnose $Script:ToolVersion · Copyright 2026 by Eder Tom</footer></div></body></html>")
+    $null = $sb.Append("<footer>Erstellt mit LaptopDiagnose $Script:ToolVersion · © 2026 Eder Tom</footer></div></body></html>")
 
     [IO.File]::WriteAllText($htmlPath, $sb.ToString(), (New-Object System.Text.UTF8Encoding $true))
 
@@ -1787,6 +1787,7 @@ function Show-Menu {
         Write-Host '   ║          LAPTOP-DIAGNOSE & REPARATUR  ' -ForegroundColor DarkCyan -NoNewline
         Write-Host ("v{0,-20}║" -f $Script:ToolVersion) -ForegroundColor DarkCyan
         Write-Host '   ╚════════════════════════════════════════════════════════════╝' -ForegroundColor DarkCyan
+        Write-Host '   © 2026 Eder Tom' -ForegroundColor DarkGray
         if ($NurPruefen) { Write-Host '   Modus: NUR PRÜFEN – es werden keine Änderungen vorgenommen.' -ForegroundColor Yellow }
         if ($Script:UpdateHint) { Write-Host "   $($Script:UpdateHint)" -ForegroundColor Green }
         Write-Host ''
@@ -1846,7 +1847,7 @@ function Start-LaptopDiagnose {
         }
     }
 
-    try { $Host.UI.RawUI.WindowTitle = $(if ($Unbeaufsichtigt) { 'Laptop-Diagnose – geplante Prüfung' } else { "Laptop-Diagnose & Reparatur $Script:ToolVersion" }) } catch { }
+    try { $Host.UI.RawUI.WindowTitle = $(if ($Unbeaufsichtigt) { 'Laptop-Diagnose – geplante Prüfung · © 2026 Eder Tom' } else { "Laptop-Diagnose & Reparatur $Script:ToolVersion · © 2026 Eder Tom" }) } catch { }
     try { [Console]::OutputEncoding = [Text.Encoding]::UTF8 } catch { }
     if (-not (Test-Path -LiteralPath $BerichtOrdner)) { $null = New-Item -ItemType Directory -Path $BerichtOrdner -Force }
     $logPath = Join-Path $BerichtOrdner ('Protokoll_{0:yyyyMMdd_HHmmss}.txt' -f (Get-Date))

@@ -206,7 +206,7 @@ td:nth-child(n+3){white-space:nowrap}.c{color:#d92d20;font-weight:700}.w{color:#
 </style></head><body><div class="wrap"><h1>Geräteübersicht</h1><div class="sub">$($latest.Count) Gerät(e) · jeweils letzter Bericht · erstellt am $((Get-Date).ToString('dd.MM.yyyy HH:mm'))</div>
 <div class="scroll"><table><tr><th>Gerät</th><th>Windows</th><th>Letzte Diagnose</th><th>Gesundheit</th><th>Kritisch / Warnungen</th><th>Akku</th><th>Frei (System)</th><th>Updates Prog. / Win / Treiber</th></tr>
 $($rows -join "`n")
-</table></div><p class="sub">Erstellt mit LaptopDiagnose $Script:ToolVersion · Copyright 2026 by Eder Tom</p></div></body></html>
+</table></div><p class="sub">Erstellt mit LaptopDiagnose $Script:ToolVersion · © 2026 Eder Tom</p></div></body></html>
 "@
     $out = Join-Path $Ordner ('Geraeteuebersicht_{0:yyyyMMdd_HHmm}.html' -f (Get-Date))
     [IO.File]::WriteAllText($out, $html, (New-Object System.Text.UTF8Encoding $true))

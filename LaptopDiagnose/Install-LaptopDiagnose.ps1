@@ -66,7 +66,7 @@ function New-AppShortcut {
     $lnk.Arguments = "-NoProfile -ExecutionPolicy Bypass -STA -WindowStyle Minimized -File `"$gui`""
     $lnk.WorkingDirectory = $target
     $lnk.IconLocation = "$icon,0"
-    $lnk.Description = 'Laptop-Diagnose & Reparatur – Fehler finden, Leistung verbessern, Updates installieren'
+    $lnk.Description = 'Laptop-Diagnose & Reparatur – Fehler finden, Leistung verbessern, Updates installieren · © 2026 Eder Tom'
     $lnk.WindowStyle = 7
     $lnk.Save()
 }
