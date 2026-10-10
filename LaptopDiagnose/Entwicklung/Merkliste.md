@@ -4,7 +4,12 @@ Stand: 10.10.2026. Neue Wünsche hier ergänzen.
 
 ## Offen (noch nicht gebaut)
 
-– derzeit nichts –
+16. **Doppelte Dateien finden und zum Löschen anzeigen** (bisher nur im Downloads-Ordner):
+    - Neues Werkzeug »Doppelte Dateien suchen« (Bereich »Reparatur-Werkzeuge«, zusätzlich als Knopf im Bereich »Speicherfresser«). Läuft nicht in der Komplett-Diagnose mit, weil dafür viele Dateien gelesen werden müssen.
+    - Durchsucht standardmäßig Dokumente, Bilder, Videos, Musik, Desktop und Downloads; auf Wunsch ein selbst gewählter Ordner bzw. Laufwerk (z. B. externe Platte).
+    - Gleich heißt gleicher Inhalt (Größe, dann Prüfsumme) – nicht nur gleicher Name. Standard ab 1 MB Dateigröße. Windows-, Programm- und Systemordner sowie reine OneDrive-Cloud-Dateien werden nicht angefasst.
+    - Anzeige gruppiert je Duplikat-Gruppe mit Pfad, Größe und Datum, sortiert nach freigebbarem Platz. Vorausgewählt sind alle Kopien außer einer (die älteste bzw. die im Dokumente-Ordner bleibt). Alles lässt sich vor dem Löschen ändern.
+    - Löschen nur in den Papierkorb, Eintrag im Änderungsprotokoll.
 
 ## Erledigt in Version 2.6.0
 
@@ -19,14 +24,14 @@ Stand: 10.10.2026. Neue Wünsche hier ergänzen.
 
 13. Einstellung **»Speicherbelegung in die Komplett-Diagnose aufnehmen«** (Standard: aus). Ist sie an, läuft in der Komplett-Diagnose die Ordner-Analyse mit Kachelgrafik mit (`Invoke-MemoryScan -Tiefenanalyse`, dauert 1–2 Minuten länger). Gilt für Fenster, Konsole und geplante Wartung.
 
-## Erledigt in Version 2.5.0 / 2.5.1
-
 ## Arbeitsweise
 
 - Vor dem Bauen immer fragen, ob gebaut werden soll oder ob noch etwas hinzukommt. Erst nach »bauen« umsetzen.
 - Neue Versionen kommen als Pull Request mit Update-Paket in `LaptopDiagnose/update/`. Nach dem Zusammenführen findet das Tool das Update über *Einstellungen › Nach Updates suchen*.
 
-## Umbenennung und Logo
+## Erledigt in Version 2.5.0 / 2.5.1
+
+### Umbenennung und Logo
 
 1. Neuer Name **»PC Repair Pro«** an allen sichtbaren Stellen: Fenstertitel, Startmenü, Desktop-Verknüpfung, »Installierte Apps«, Berichte, Benachrichtigungen und Konsole.
    - Die Oberfläche bleibt auf Deutsch. Englisch sind nur der Name und der Slogan »Diagnose • Repair • Keep it running«.
@@ -39,7 +44,7 @@ Stand: 10.10.2026. Neue Wünsche hier ergänzen.
    - Kopf des HTML-Berichts
    - Vorlagen: `Entwicklung/Grafik/PC-Repair-Pro-Logo.webp` (Logo mit Schriftzug) und `PC-Repair-Pro-Symbol.webp` (App-Symbol)
 
-## Desktop-PC-Unterstützung
+### Desktop-PC-Unterstützung
 
 4. Gerätetyp erkennen (Desktop oder Laptop, über die Gehäuseart). Auf einem Desktop wird der Bereich »Akku« ausgeblendet, und die Texte sagen »PC« statt »Laptop«.
 5. Energie- und Standby-Empfehlungen für Desktop-Rechner anpassen, ohne Akku-Hinweise.
