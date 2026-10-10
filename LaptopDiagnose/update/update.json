@@ -1,0 +1,7 @@
+{
+    "version": "2.2.0",
+    "datei": "LaptopDiagnose-2.2.0.zip",
+    "sha256": "826d247978b617eb528cd160dfad139d49a01b5818c4897b83ee8ef89f72c4f5",
+    "notizen": "Neu: Diagnose und Reparatur für langsames Herunterfahren. Updates kommen jetzt direkt aus dem Repository; Signaturen mit selbst ausgestelltem Zertifikat werden unterstützt.",
+    "veroeffentlicht": "2026-10-10"
+}

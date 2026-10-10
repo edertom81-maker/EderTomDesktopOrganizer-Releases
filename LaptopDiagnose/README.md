@@ -78,13 +78,15 @@ Wenn trotzdem eine Meldung erscheint:
 
 ## Für Entwickler: Signieren und Updates veröffentlichen
 
-Die Werkzeuge liegen im Ordner `Entwicklung` und werden nicht mit ausgeliefert:
+**Update-Kanal:** Das Programm liest `LaptopDiagnose/update/update.json` aus dem Hauptzweig `main` dieses Repositorys. Die Datei enthält Version, Paketname, SHA-256-Prüfsumme und Änderungsnotizen. Das Paket `LaptopDiagnose-<Version>.zip` liegt im selben Ordner. GitHub-Releases mit dem Tag `laptopdiagnose-v<Version>` werden als Ausweichweg weiterhin erkannt.
 
-- **`Sign-LaptopDiagnose.ps1`** signiert alle Skripte mit dem Code-Signing-Zertifikat, also demselben, mit dem die Desktop-Organizer-Setups signiert werden. Das Zertifikat kommt aus dem Zertifikatspeicher (`-Thumbprint`) oder aus einer PFX-Datei (`-PfxPath`), dazu ein Zeitstempel.
-- **`New-LaptopDiagnoseRelease.ps1 -Signieren`** erzeugt `dist\LaptopDiagnose-<Version>.zip` und die zugehörige `.sha256`-Datei.
-- Auf GitHub ein Release mit dem Tag **`laptopdiagnose-v<Version>`** anlegen und beide Dateien anhängen. Installierte Programme finden das Update dann unter *Einstellungen › Programm-Updates*.
+Ein neues Update veröffentlichst du so:
 
-Die Version steht in `LaptopDiagnose.ps1` (`$Script:ToolVersion`).
+1. Die Version in `LaptopDiagnose.ps1` erhöhen (`$Script:ToolVersion`).
+2. Unter Windows `Entwicklung\New-LaptopDiagnoseRelease.ps1 -Signieren -Notizen 'Was ist neu'` ausführen. Das Skript signiert alle Skripte, erzeugt das Paket und ersetzt Paket und `update.json` im Ordner `update`.
+3. Die Änderungen committen und nach `main` übernehmen. Ab dann finden installierte Programme das Update unter *Einstellungen › Programm-Updates*.
+
+`Entwicklung\Sign-LaptopDiagnose.ps1` signiert die Skripte einzeln, z. B. mit dem Zertifikat der Desktop-Organizer-Setups. Das Zertifikat kommt aus dem Zertifikatspeicher (`-Thumbprint`) oder aus einer PFX-Datei (`-PfxPath`). Auch selbst ausgestellte Zertifikate werden unterstützt.
 
 ## Konsolenversion
 
