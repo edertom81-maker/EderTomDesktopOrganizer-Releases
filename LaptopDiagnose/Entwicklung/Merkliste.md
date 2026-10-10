@@ -1,6 +1,12 @@
 # Merkliste
 
-Stand: 10.10.2026. Alle Punkte unten sind in **Version 2.5.0** umgesetzt. Neue Wünsche hier ergänzen.
+Stand: 10.10.2026. Neue Wünsche hier ergänzen.
+
+## Offen (noch nicht gebaut)
+
+13. Einstellung **»Speicherbelegung in die Komplett-Diagnose aufnehmen«** (Standard: aus). Ist sie an, läuft in der Komplett-Diagnose die Ordner-Analyse mit Kachelgrafik mit (`Invoke-MemoryScan -Tiefenanalyse`, dauert 1–2 Minuten länger). Gilt für Fenster, Konsole und geplante Wartung.
+
+## Erledigt in Version 2.5.0 / 2.5.1
 
 ## Arbeitsweise
 
