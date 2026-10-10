@@ -50,7 +50,7 @@ param(
 
 if ($Unbeaufsichtigt) { $NurPruefen = $true }
 
-$Script:ToolVersion = '2.5.1'
+$Script:ToolVersion = '2.5.2'
 $Script:InstallDir = $PSScriptRoot
 $Script:ChangeCounter = 0
 $Script:SoftwareUpdateCache = $null
@@ -783,7 +783,7 @@ function Invoke-MemoryScan {
         Invoke-Check $cat 'Speicherbelegung analysieren (kann 1–2 Minuten dauern)' { Add-StorageBreakdownFindings -Category $cat }
     } else {
         Add-Finding $cat Info 'Speicherbelegung als Grafik: im Bereich »Speicherfresser« einzeln prüfen' -Silent `
-            -Detail 'Die Ordner-Analyse liest alle Dateien des Laufwerks und läuft deshalb nicht in der Komplett-Diagnose mit.'
+            -Detail 'Die Ordner-Analyse liest alle Dateien des Laufwerks und läuft deshalb standardmäßig nicht in der Komplett-Diagnose mit. Unter »Einstellungen › Komplett-Diagnose« lässt sie sich dazuschalten.'
     }
 
     Invoke-Check $cat 'Große Dateien in den Benutzerordnern' {
@@ -1666,7 +1666,7 @@ function ConvertTo-SafeHtml { param([string]$Text) [System.Net.WebUtility]::Html
 
 function Get-AppSettings {
     $path = Join-Path $BerichtOrdner 'Einstellungen.json'
-    $defaults = [ordered]@{ Design = 'System'; Pdf = $false; AutoUpdate = $true; BerichteBehalten = 30 }
+    $defaults = [ordered]@{ Design = 'System'; Pdf = $false; AutoUpdate = $true; BerichteBehalten = 30; SpeicherInKomplett = $false }
     if (Test-Path -LiteralPath $path) {
         try {
             $j = [IO.File]::ReadAllText($path, [Text.Encoding]::UTF8) | ConvertFrom-Json
@@ -1884,9 +1884,17 @@ function Show-Summary {
 $Script:FullScanOrder = @('Invoke-ErrorScan', 'Invoke-MemoryScan', 'Invoke-PerformanceScan', 'Invoke-ShutdownScan', 'Invoke-BatteryScan', 'Invoke-NetworkScan',
     'Invoke-SoftwareScan', 'Invoke-SecurityScan', 'Invoke-WindowsUpdateScan')
 
+function Get-FullScanOrder {
+    <# Reihenfolge der Komplett-Diagnose; auf Wunsch (Einstellungen) mit Speicherbelegung samt Kachelgrafik. #>
+    $withStorage = $false
+    try { $withStorage = [bool](Get-AppSettings).SpeicherInKomplett } catch { }
+    if (-not $withStorage) { return $Script:FullScanOrder }
+    return @($Script:FullScanOrder | ForEach-Object { if ($_ -eq 'Invoke-MemoryScan') { 'Invoke-MemoryScanDetailed' } else { $_ } })
+}
+
 function Invoke-FullDiagnosis {
     Show-SystemOverview
-    foreach ($scan in $Script:FullScanOrder) { & $scan }
+    foreach ($scan in Get-FullScanOrder) { & $scan }
     $null = Save-History
     Show-Summary
     $path = Export-Report
@@ -1900,7 +1908,7 @@ function Invoke-UnattendedDiagnosis {
     $previous = @(Get-HistoryEntries) | Select-Object -Last 1
     try { $null = Get-SystemOverview }
     catch { $Script:SystemInfo = [ordered]@{ 'Computer' = $env:COMPUTERNAME; 'Diagnose am' = (Get-Date).ToString('dd.MM.yyyy HH:mm') } }
-    foreach ($scan in $Script:FullScanOrder) { & $scan }
+    foreach ($scan in Get-FullScanOrder) { & $scan }
     $null = Save-History
     $path = Export-Report -Quiet
     $h = Get-HealthScore
