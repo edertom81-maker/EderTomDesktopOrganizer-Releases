@@ -1,7 +1,7 @@
 {
-    "version": "2.2.2",
-    "datei": "LaptopDiagnose-2.2.2.zip",
-    "sha256": "11fe9cdc9f8f56c43c2c087ee365ada57e020cf60587beddd42e8b807cf1386c",
-    "notizen": "Behebt: Programm-Updates wurden nicht installiert, solange das Programmfenster geöffnet war (Programmsymbol gesperrt). Updates werden jetzt Datei für Datei mit Sicherung installiert. Enthält alle Verbesserungen aus 2.2.1: weniger Systemlast und Erkennung von Programm-Hängern.",
+    "version": "2.3.0",
+    "datei": "LaptopDiagnose-2.3.0.zip",
+    "sha256": "5e6b1ae74512aa6c90017528038be552a12e89bde2aa3d369ccca162cc9138ec",
+    "notizen": "Neu: Option »Beim Start automatisch nach Updates suchen« (Einstellungen › Programm-Updates). Gefundene Updates werden mit einem Hinweis in der Seitenleiste angezeigt und können direkt installiert werden.",
     "veroeffentlicht": "2026-10-10"
 }

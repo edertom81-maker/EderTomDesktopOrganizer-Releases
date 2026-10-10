@@ -385,7 +385,9 @@ $Script:Xaml = @'
               <DockPanel><TextBlock Text="&#xE7A7;" Style="{StaticResource NavIcon}"/><TextBlock Text="Änderungen" VerticalAlignment="Center"/></DockPanel>
             </RadioButton>
             <RadioButton x:Name="NavEinstellungen" Tag="Einstellungen" Style="{StaticResource Nav}">
-              <DockPanel><TextBlock Text="&#xE713;" Style="{StaticResource NavIcon}"/><TextBlock Text="Einstellungen" VerticalAlignment="Center"/></DockPanel>
+              <DockPanel><TextBlock Text="&#xE713;" Style="{StaticResource NavIcon}"/>
+                <Border x:Name="BadgeUpdate" DockPanel.Dock="Right" Style="{StaticResource Badge}" Background="#067A46"><TextBlock Text="Update" Style="{StaticResource BadgeText}"/></Border>
+                <TextBlock Text="Einstellungen" VerticalAlignment="Center"/></DockPanel>
             </RadioButton>
             <RadioButton x:Name="NavLog" Tag="Log" Style="{StaticResource Nav}">
               <DockPanel><TextBlock Text="&#xE9D9;" Style="{StaticResource NavIcon}"/><TextBlock Text="Protokoll" VerticalAlignment="Center"/></DockPanel>
@@ -620,6 +622,9 @@ $Script:Xaml = @'
               <StackPanel>
                 <TextBlock Text="Programm-Updates" Style="{StaticResource CardTitle}"/>
                 <TextBlock x:Name="UpdateStatus" Style="{StaticResource Muted}" Margin="0,0,0,10" Text="Updates werden erst nach Ihrer Bestätigung installiert. Prüfsumme und Signatur werden vorher kontrolliert."/>
+                <CheckBox x:Name="ChkAutoUpdate" Margin="0,0,0,12" Cursor="Hand">
+                  <TextBlock Text="Beim Start automatisch nach Updates suchen" Foreground="{DynamicResource TextPrimary}"/>
+                </CheckBox>
                 <StackPanel Orientation="Horizontal">
                   <Button x:Name="BtnUpdateCheck" Style="{StaticResource Btn}" Margin="0" Content="Nach Updates suchen"/>
                   <Button x:Name="BtnUpdateInstall" Style="{StaticResource BtnSuccess}" Content="Update installieren" Visibility="Collapsed"/>
@@ -880,7 +885,7 @@ $Script:View.Sort = 'Order ASC'
 function Get-SettingsPath { Join-Path $BerichtOrdner 'Einstellungen.json' }
 
 function Read-UiSettings {
-    $s = [ordered]@{ Design = 'System'; Pdf = $false }
+    $s = [ordered]@{ Design = 'System'; Pdf = $false; AutoUpdate = $true }
     try {
         if (Test-Path -LiteralPath (Get-SettingsPath)) {
             $j = [IO.File]::ReadAllText((Get-SettingsPath), [Text.Encoding]::UTF8) | ConvertFrom-Json
@@ -1277,6 +1282,7 @@ function Import-SettingsPage {
     $s = Read-UiSettings
     switch ("$($s.Design)") { 'Hell' { $Script:UI.ThemeLight.IsChecked = $true } 'Dunkel' { $Script:UI.ThemeDark.IsChecked = $true } default { $Script:UI.ThemeSystem.IsChecked = $true } }
     $Script:UI.ChkPdf.IsChecked = [bool]$s.Pdf
+    $Script:UI.ChkAutoUpdate.IsChecked = [bool]$s.AutoUpdate
     $Script:LoadingSettings = $false
 
     $sig = @()
@@ -1314,6 +1320,52 @@ function Import-SettingsPage {
     }
 }
 
+function Find-ToolUpdate {
+    <# Sucht nach einer neueren Programmversion. -BeimStart: still im Hintergrund, fragt nur bei einem Fund nach. #>
+    param([switch]$BeimStart)
+    $handler = {
+        param($out)
+        $u = @($out) | Where-Object { $_.PSObject.Properties['IstNeuer'] } | Select-Object -Last 1
+        if (-not $u) { return }
+        if ($u.IstNeuer) {
+            $Script:UpdateRelease = $u.Release
+            $Script:UI.UpdateStatus.Text = "Installierte Version: $($u.Aktuell)  ·  Neue Version verfügbar: $($u.Verfuegbar)`n$($u.Release.Notes)"
+            $Script:UI.BtnUpdateInstall.Visibility = 'Visible'
+            $Script:UI.BadgeUpdate.Visibility = 'Visible'
+            $Script:UI.StatusText.Text = "Neue Version $($u.Verfuegbar) verfügbar – unter »Einstellungen« installierbar."
+            if ($Script:UpdateCheckAtStart) { Install-ToolUpdateUi }
+        } else {
+            $Script:UI.UpdateStatus.Text = "Installierte Version: $($u.Aktuell)  ·  Das Programm ist auf dem neuesten Stand."
+            $Script:UI.BtnUpdateInstall.Visibility = 'Collapsed'
+            $Script:UI.BadgeUpdate.Visibility = 'Collapsed'
+            if ($Script:UpdateCheckAtStart) { $Script:UI.StatusText.Text = 'Bereit. Das Programm ist auf dem neuesten Stand.' }
+        }
+        $Script:UpdateCheckAtStart = $false
+    }
+    $Script:UpdateCheckAtStart = [bool]$BeimStart
+    $status = if ($BeimStart) { 'Suche im Hintergrund nach Programm-Updates …' } else { 'Suche nach Programm-Updates …' }
+    $code = if ($BeimStart) { 'Get-ToolUpdateInfo -TimeoutSec 8' } else { 'Get-ToolUpdateInfo' }
+    $null = Start-WorkerJob -Code $code -Status $status -Silent:$BeimStart -OnDone $handler
+}
+
+function Install-ToolUpdateUi {
+    if (-not $Script:UpdateRelease) { return }
+    $notes = if ($Script:UpdateRelease.Notes) { "`n`n$($Script:UpdateRelease.Notes)" } else { '' }
+    $r = Show-Message "Version $($Script:UpdateRelease.Version) ist verfügbar.$notes`n`nJetzt herunterladen und installieren?`nPrüfsumme und Signatur werden vorher kontrolliert." 'Programm-Update' 'Question' 'YesNo'
+    if ("$r" -ne 'Yes') { return }
+    $null = Start-WorkerJob -Code 'param($rel) Install-ToolUpdate -Release $rel' -Arguments @($Script:UpdateRelease) -Status 'Update wird installiert …' -OnDone {
+        param($out)
+        $msg = @($out) | Where-Object { $_ -is [string] } | Select-Object -Last 1
+        $Script:UI.BadgeUpdate.Visibility = 'Collapsed'
+        $Script:UI.BtnUpdateInstall.Visibility = 'Collapsed'
+        $r2 = Show-Message "$msg`n`nJetzt neu starten?" 'Programm-Update' 'Question' 'YesNo'
+        if ("$r2" -eq 'Yes') {
+            Start-Process -FilePath (Get-Process -Id $PID).Path -ArgumentList @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-STA', '-WindowStyle', 'Minimized', '-File', "`"$PSCommandPath`"", '-BerichtOrdner', "`"$BerichtOrdner`"")
+            $Script:Window.Close()
+        }
+    }
+}
+
 #endregion
 
 #region ---------- Start ----------
@@ -1340,7 +1392,7 @@ try {
         'SystemList', 'EmptyHint', 'EmptyHintText', 'FindingsList', 'LogBox', 'FixButtons', 'BtnSelectRecommended', 'BtnClearSelection', 'BtnFix',
         'BtnFixText', 'Busy', 'StatusText', 'HistoryPanel', 'HistoryHint', 'HistoryList', 'ChangesPanel', 'ChangesHint', 'ChangesList',
         'SettingsPanel', 'ThemeSystem', 'ThemeLight', 'ThemeDark', 'MaintStatus', 'IntWeekly', 'IntDaily', 'DayRow', 'MaintTime', 'BtnMaintSet',
-        'BtnMaintRemove', 'ChkPdf', 'BtnFleet', 'UpdateStatus', 'BtnUpdateCheck', 'BtnUpdateInstall', 'SignatureText'
+        'BtnMaintRemove', 'ChkPdf', 'BtnFleet', 'UpdateStatus', 'BtnUpdateCheck', 'BtnUpdateInstall', 'SignatureText', 'ChkAutoUpdate', 'BadgeUpdate'
     )
     $navNames = @('NavAlle') + @($Script:CategoryKeys | ForEach-Object { "Nav$_" }) + @('NavVerlauf', 'NavAenderungen', 'NavEinstellungen', 'NavLog')
     $names += $navNames
@@ -1447,35 +1499,9 @@ try {
                 if ($p) { $Script:UI.StatusText.Text = "Geräteübersicht gespeichert: $p"; Start-Process -FilePath $p }
             }
         })
-    $Script:UI.BtnUpdateCheck.Add_Click({
-            $null = Start-WorkerJob -Code 'Get-ToolUpdateInfo' -Status 'Suche nach Programm-Updates …' -OnDone {
-                param($out)
-                $u = @($out) | Where-Object { $_.PSObject.Properties['IstNeuer'] } | Select-Object -Last 1
-                if (-not $u) { return }
-                if ($u.IstNeuer) {
-                    $Script:UpdateRelease = $u.Release
-                    $Script:UI.UpdateStatus.Text = "Installierte Version: $($u.Aktuell)  ·  Neue Version verfügbar: $($u.Verfuegbar)`n$($u.Release.Notes)"
-                    $Script:UI.BtnUpdateInstall.Visibility = 'Visible'
-                } else {
-                    $Script:UI.UpdateStatus.Text = "Installierte Version: $($u.Aktuell)  ·  Das Programm ist auf dem neuesten Stand."
-                    $Script:UI.BtnUpdateInstall.Visibility = 'Collapsed'
-                }
-            }
-        })
-    $Script:UI.BtnUpdateInstall.Add_Click({
-            if (-not $Script:UpdateRelease) { return }
-            $r = Show-Message "Version $($Script:UpdateRelease.Version) jetzt herunterladen und installieren?`nPrüfsumme und Signatur werden vorher kontrolliert." 'Programm-Update' 'Question' 'YesNo'
-            if ("$r" -ne 'Yes') { return }
-            $null = Start-WorkerJob -Code 'param($rel) Install-ToolUpdate -Release $rel' -Arguments @($Script:UpdateRelease) -Status 'Update wird installiert …' -OnDone {
-                param($out)
-                $msg = @($out) | Where-Object { $_ -is [string] } | Select-Object -Last 1
-                $r2 = Show-Message "$msg`n`nJetzt neu starten?" 'Programm-Update' 'Question' 'YesNo'
-                if ("$r2" -eq 'Yes') {
-                    Start-Process -FilePath (Get-Process -Id $PID).Path -ArgumentList @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-STA', '-WindowStyle', 'Minimized', '-File', "`"$PSCommandPath`"", '-BerichtOrdner', "`"$BerichtOrdner`"")
-                    $Script:Window.Close()
-                }
-            }
-        })
+    $Script:UI.BtnUpdateCheck.Add_Click({ Find-ToolUpdate })
+    $Script:UI.BtnUpdateInstall.Add_Click({ Install-ToolUpdateUi })
+    $Script:UI.ChkAutoUpdate.Add_Click({ Write-UiSetting 'AutoUpdate' ([bool]$Script:UI.ChkAutoUpdate.IsChecked) })
 
     # Ausgaben des Hintergrund-Runspace übernehmen und fertige Aufträge abschließen
     $Script:Timer = New-Object System.Windows.Threading.DispatcherTimer
@@ -1513,6 +1539,7 @@ try {
                 $ver = @($out) | Where-Object { $_ -is [string] } | Select-Object -First 1
                 if ($ver) { $Script:UI.VersionText.Text = "& Reparatur  ·  v$ver" }
                 Update-FromSnapshot (@($out) | Where-Object { $_.IsSnapshot } | Select-Object -Last 1)
+                if ((Read-UiSettings).AutoUpdate) { Find-ToolUpdate -BeimStart }
             }
         })
 
