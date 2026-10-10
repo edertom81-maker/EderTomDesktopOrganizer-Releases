@@ -4,7 +4,11 @@ Stand: 10.10.2026. Neue Wünsche hier ergänzen.
 
 ## Offen (noch nicht gebaut)
 
-– derzeit nichts –
+14. **Defekte Verknüpfungen finden** (Bereich »Fehlersuche«, läuft in der Komplett-Diagnose mit):
+    - Geprüft werden Desktop (eigener und »Öffentlicher Desktop«), Startmenü (eigenes und für alle Benutzer), angeheftete Taskleisten-Programme, Autostart-Ordner und Autostart-Einträge in der Registry.
+    - Defekt heißt: Das Ziel (Datei oder Ordner) existiert nicht mehr, z. B. nach einer Deinstallation.
+    - Nicht melden: Ziele auf Netzlaufwerken, USB-Sticks oder externen Platten, die gerade nicht verbunden sind.
+    - Reparatur nach Auswahl in der Ankreuz-Liste: Verknüpfungen in den Papierkorb, defekte Autostart-Einträge deaktivieren (rückgängig über »Änderungen«).
 
 ## Erledigt in Version 2.5.2
 
