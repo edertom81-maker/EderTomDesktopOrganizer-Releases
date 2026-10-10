@@ -1,7 +1,7 @@
 {
-    "version": "2.4.0",
-    "datei": "LaptopDiagnose-2.4.0.zip",
-    "sha256": "385ab4e887b4f1c76163c4d1346a51d81dbdf24d5b747b968880832611871e25",
-    "notizen": "Berichte jetzt lokal statt in OneDrive (einmaliger Umzug, Ordner unter Einstellungen wählbar), alte Berichte werden automatisch aufgeräumt. Neu: Downloads aufräumen (alte Installationsdateien, Duplikate – in den Papierkorb), Prüfung der Akku-Ladegrenze mit Link zu MyASUS, Vorher/Nachher-Vergleich nach Reparaturen, Speicherbelegung als Kachelgrafik. Edge und andere Browser werden nicht mehr fälschlich als veraltet gemeldet. Das Fenster öffnet sich maximiert.",
+    "version": "2.5.0",
+    "datei": "LaptopDiagnose-2.5.0.zip",
+    "sha256": "3d2747dc6e4be93ee10078c32cc9f27adedf1adfb59b85cafece6ea61f9f0364",
+    "notizen": "Neuer Name: PC Repair Pro – mit neuem Logo und Programmsymbol (Startmenü und »Installierte Apps« werden automatisch angepasst). Jetzt auch für Desktop-PCs: Gerätetyp wird erkannt (Akku-Bereich nur bei Laptops). Neue Prüfungen: Bildwiederholrate des Monitors, Arbeitsspeicher-Takt und Single-Channel, Netzwerkkabel-Geschwindigkeit und -Abbrüche, Alter des Grafiktreibers, BIOS-Alter, Standby-Zeiten bei PCs und ein Staub-/Lüfterhinweis im Belastungstest.",
     "veroeffentlicht": "2026-10-10"
 }

@@ -100,7 +100,7 @@ function Invoke-SecurityScan {
         } else {
             $fixTarget = if ($isPro) { 'control.exe' } else { 'ms-settings:deviceencryption' }
             Add-Finding $cat Warnung "Systemlaufwerk $drive ist nicht verschlüsselt" `
-                -Detail 'Bei Verlust oder Diebstahl des Laptops sind alle Daten lesbar. Verschlüsselung (BitLocker/Geräteverschlüsselung) wird empfohlen – vorher den Wiederherstellungsschlüssel sichern.' `
+                -Detail "Bei Verlust oder Diebstahl des $(if ((Get-DeviceKind) -eq 'Laptop') { 'Laptops' } else { 'PCs bzw. der Festplatte' }) sind alle Daten lesbar. Verschlüsselung (BitLocker/Geräteverschlüsselung) wird empfohlen – vorher den Wiederherstellungsschlüssel sichern." `
                 -FixLabel 'Einstellungen zur Verschlüsselung öffnen' -FixData $fixTarget `
                 -Fix { param($d) if ($d -eq 'control.exe') { Start-Process control.exe -ArgumentList '/name Microsoft.BitLockerDriveEncryption' } else { Start-Process $d }; 'Einstellungen geöffnet – Verschlüsselung dort einschalten.' }
         }
@@ -174,7 +174,7 @@ function Invoke-SecurityScan {
         $ts = Get-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server' -ErrorAction Stop
         if ($ts.fDenyTSConnections -eq 0) {
             Add-Finding $cat Info 'Remotedesktop ist eingeschaltet' `
-                -Detail 'Andere können sich über das Netzwerk an diesem Laptop anmelden. Ausschalten, wenn das nicht benötigt wird.' `
+                -Detail "Andere können sich über das Netzwerk an diesem $(Get-DeviceWord) anmelden. Ausschalten, wenn das nicht benötigt wird." `
                 -FixLabel 'Remotedesktop ausschalten' `
                 -Fix { param($d) Set-RegistryValueTracked -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server' -Name fDenyTSConnections -Value 1 -Beschreibung 'Remotedesktop ausgeschaltet'; 'Remotedesktop ausgeschaltet.' }
         } else {

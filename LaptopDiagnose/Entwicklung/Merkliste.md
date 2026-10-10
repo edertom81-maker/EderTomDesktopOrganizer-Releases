@@ -1,6 +1,6 @@
-# Merkliste – geplante Version (nach 2.4.0)
+# Merkliste
 
-Stand: 10.10.2026. Noch nicht gebaut.
+Stand: 10.10.2026. Alle Punkte unten sind in **Version 2.5.0** umgesetzt. Neue Wünsche hier ergänzen.
 
 ## Arbeitsweise
 

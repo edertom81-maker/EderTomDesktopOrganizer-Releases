@@ -169,6 +169,8 @@ function Invoke-NetworkScan {
         }
     }
 
+    Invoke-Check $cat 'Netzwerkkabel (LAN)' { Add-LanFindings -Category $cat }
+
     Invoke-Check $cat 'WLAN-Treiber' {
         # Nur echte WLAN-Hardware: virtuelle Adapter und Windows-eigene Treiber (Datum 2006) ausklammern, doppelte Einträge zusammenfassen
         $drv = @(Get-CimInstance Win32_PnPSignedDriver -Filter "DeviceClass='NET'" -ErrorAction Stop |

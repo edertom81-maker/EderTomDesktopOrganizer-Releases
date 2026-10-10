@@ -1,13 +1,15 @@
-﻿# Laptop-Diagnose & Reparatur
+﻿# PC Repair Pro
 
-Diagnose- und Wartungsprogramm für Windows-10/11-Laptops. Es findet Fehler, Sicherheitslücken, Speicherfresser und Leistungsbremsen, prüft Akku und WLAN, hält Programme, Windows und Treiber aktuell und verfolgt die Entwicklung über die Zeit. Gefundene Probleme werden **erst nach Rückfrage** behoben, und jede Änderung wird protokolliert. Umkehrbare Änderungen lassen sich mit einem Klick zurücknehmen.
+*Diagnose • Repair • Keep it running* – bis Version 2.4 hieß das Programm »Laptop-Diagnose & Reparatur«.
+
+Diagnose- und Wartungsprogramm für Windows-10/11-Laptops und -Desktop-PCs. Das Programm erkennt den Gerätetyp selbst: Auf Desktop-PCs ist der Bereich *Akku* ausgeblendet, dafür kommen PC-typische Prüfungen hinzu. Es findet Fehler, Sicherheitslücken, Speicherfresser und Leistungsbremsen, prüft Akku und WLAN, hält Programme, Windows und Treiber aktuell und verfolgt die Entwicklung über die Zeit. Gefundene Probleme werden **erst nach Rückfrage** behoben, und jede Änderung wird protokolliert. Umkehrbare Änderungen lassen sich mit einem Klick zurücknehmen.
 
 ## Installation und Start
 
 **Empfohlen:** `Install-LaptopDiagnose.cmd` doppelklicken. Das Programm wird für den aktuellen Benutzer installiert, ohne dass Administratorrechte nötig sind:
 
 - Programmordner: `%LOCALAPPDATA%\Programs\LaptopDiagnose`
-- Startmenü-Eintrag **»Laptop-Diagnose«** mit eigenem Symbol, auf Wunsch auch eine Desktop-Verknüpfung
+- Startmenü-Eintrag **»PC Repair Pro«** mit eigenem Symbol, auf Wunsch auch eine Desktop-Verknüpfung (nach einem Programm-Update passt das Programm Name, Symbol und Version dieser Einträge selbst an)
 - Eintrag unter *Einstellungen › Apps › Installierte Apps*, dort auch wieder deinstallierbar
 
 **Ohne Installation:** `Start-LaptopDiagnose.cmd` im Ordner doppelklicken.
@@ -22,12 +24,12 @@ Beim Start fragt Windows nach Administratorrechten. Diese Rechte braucht das Pro
 | **Fehlersuche** | Bluescreens **mit Ursachenanalyse** (Stoppcode → wahrscheinliche Ursache und Empfehlung, optional Auswertung der Absturzabbilder mit dem Windows-Debugger), unerwartete Abschaltungen, Hardware- und Datenträgerfehler, Programmabstürze, Ereignisprotokoll, Problemgeräte, Dienste, Systemabbild, SMART, Dateisystem, Ergebnis des Arbeitsspeicher-Tests |
 | **Sicherheit** | Virenschutz, Firewall, Secure Boot, TPM, BitLocker/Geräteverschlüsselung, Kernisolierung, Benutzerkontensteuerung, SMB1, freigegebene Ordner, Remotedesktop, pausierte Updates, veraltete Browser und Mailprogramme |
 | **Speicherfresser** | RAM, größte Prozesse, freier Speicher, **Speicherbelegung als Kachelgrafik** (Laufwerk C: und Benutzerordner, je größer die Kachel, desto mehr Platz), Datenmüll, Windows.old, große Dateien, **Downloads aufräumen** (alte Installationsdateien und Archive, doppelte Dateien, große alte Dateien – nur Angekreuztes, und zwar in den Papierkorb) |
-| **Leistungsbremsen** | CPU-Last, Autostarts, Startdauer (inkl. »langsamer als üblich«), Energiesparplan, Drosselung, SSD/TRIM, Auslagerungsdatei, Temperatur, **vorinstallierte Zusatz-Apps und Testversionen** |
+| **Leistungsbremsen** | CPU-Last, Autostarts, Startdauer (inkl. »langsamer als üblich«), Energiesparplan, Drosselung, **Bildwiederholrate** (z. B. 144-Hz-Monitor läuft nur mit 60 Hz), **Arbeitsspeicher** (Takt unter Nenntakt bzw. XMP/EXPO aus, Single-Channel mit nur einem Modul), Bildschirm- und Standby-Zeiten (Desktop-PC), SSD/TRIM, Auslagerungsdatei, Temperatur, **vorinstallierte Zusatz-Apps und Testversionen** |
 | **Herunterfahren** | **Gemessene Dauer** der letzten Herunterfahrvorgänge mit Diagramm und Verlauf, **bremsende Programme, Dienste und Treiber** laut Windows-Leistungsdiagnose, hängende Dienste, zu lange Wartezeiten (auf Standard zurücksetzbar), Löschen der Auslagerungsdatei beim Herunterfahren (abschaltbar), ausstehende Updates, nicht erreichbare Netzlaufwerke (entfernbar), Herunterfahr-Skripte, Schnellstart, optional automatisches Beenden hängender Programme |
 | **Akku** | Gesundheit, Ladezyklen, **Kapazitätsverlauf als Diagramm** mit Prognose, **Ladegrenze** (erkennt, ob der Akku am Netzteil nur bis ca. 80 % geladen wird, und öffnet sonst MyASUS bzw. die Hersteller-App), Ladezustand, Standby-Art, Akkuverbrauch nach Apps, ausführlicher Akkubericht |
-| **Netzwerk & WLAN** | Internet/DNS, WLAN-Signal, Band, Kanal, Verschlüsselung, **Geschwindigkeitstest und Latenz**, Proxy, Alter des WLAN-Treibers, WLAN-Bericht |
+| **Netzwerk & WLAN** | Internet/DNS, **Netzwerkkabel** (nur 100 Mbit/s statt 1 Gbit/s, Verbindungsabbrüche), WLAN-Signal, Band, Kanal, Verschlüsselung, **Geschwindigkeitstest und Latenz**, Proxy, Alter des WLAN-Treibers, WLAN-Bericht |
 | **Software-Updates** | Alle über WinGet verwalteten Programme, einzeln oder alle installieren. Bei Browsern, die sich selbst aktualisieren (Edge, Chrome, Firefox, Brave), wird die tatsächlich installierte Version gegengeprüft – so gibt es keine falschen »veraltet«-Meldungen. |
-| **Windows & Treiber** | Windows- und Treiber-Updates, veraltete Treiber, Hersteller-Tools für BIOS und Firmware |
+| **Windows & Treiber** | Windows- und Treiber-Updates, veraltete Treiber, **Grafiktreiber** (Alter, fehlender Treiber; Link zu NVIDIA App, AMD Adrenalin bzw. Intel-Assistent), **BIOS-Alter** mit Link zur Support-Seite des Geräte- bzw. Mainboard-Herstellers, Hersteller-Tools für BIOS und Firmware |
 | **Reparatur-Werkzeuge** | Windows Update reparieren, Systemdateien (SFC/DISM), Startmenü und Suche reparieren, Microsoft Store zurücksetzen, Druckerwarteschlange leeren, Audio- und Bluetooth-Dienste neu starten, Netzwerk zurücksetzen, **Arbeitsspeicher-Test**, **Belastungstest** (Lüfter, Temperatur, Drosselung), Energiebericht, Standby-Analyse, Komponentenspeicher bereinigen, Defender-Schnellscan, Wiederherstellungspunkt |
 | **Verlauf & Trends** | Diagramme der wichtigsten Kennzahlen über alle Komplett-Diagnosen, z. B. Akku-Gesundheit, Start- und Herunterfahrdauer, freier Speicher, Abstürze und Internetgeschwindigkeit. Grün bedeutet verbessert, Orange verschlechtert. |
 | **Änderungen** | Jede Änderung mit Zeitpunkt und Ergebnis. Umkehrbare Änderungen haben eine Schaltfläche **»Rückgängig«** (deaktivierte Autostarts, Energieplan, Prozessorleistung, TRIM, Auslagerungsdatei, Remotedesktop, SMB1, Wartezeiten beim Herunterfahren, entfernte Netzlaufwerke, geplante Wartung). |
@@ -122,6 +124,11 @@ Ein neues Update veröffentlichst du so:
 | `Module\Verlauf.ps1` | Kennzahlen, Trends, Geräteübersicht |
 | `Module\Aenderungen.ps1` | Änderungsprotokoll und Rückgängig |
 | `Module\Wartung.ps1` | Geplante Wartung, Benachrichtigungen, Programm-Updates |
+| `Module\Berichtordner.ps1` | Speicherort der Berichte, einmaliger Umzug, Aufräumen alter Berichte |
+| `Module\Aufraeumen.ps1` | Downloads aufräumen, Vorher/Nachher-Vergleich |
+| `Module\Hardware.ps1` | Bildwiederholrate, Arbeitsspeicher, Netzwerkkabel, Grafiktreiber, BIOS, Energie (Desktop) |
+| `Module\Programm.ps1` | Programmname, Gerätetyp (PC/Laptop), Anpassung von Verknüpfungen nach Updates |
+| `Logo.png`, `LaptopDiagnose.ico` | Logo und Programmsymbol (Vorlagen in `Entwicklung\Grafik`) |
 
 ## Voraussetzungen
 

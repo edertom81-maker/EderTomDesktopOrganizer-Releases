@@ -77,7 +77,7 @@ function New-PowerReport {
         $out = Join-Path $BerichtOrdner ('Standby-Analyse_{0:yyyyMMdd_HHmm}.html' -f (Get-Date))
         $null = & powercfg.exe /sleepstudy /output $out 2>&1
     } else {
-        Write-Host '     Energiebericht: 60 Sekunden Messung, bitte Laptop nicht benutzen …' -ForegroundColor Gray
+        Write-Host "     Energiebericht: 60 Sekunden Messung, bitte den $(Get-DeviceWord) nicht benutzen …" -ForegroundColor Gray
         $out = Join-Path $BerichtOrdner ('Energiebericht_{0:yyyyMMdd_HHmm}.html' -f (Get-Date))
         $null = & powercfg.exe /energy /output $out /duration 60 2>&1
     }
@@ -91,7 +91,7 @@ function New-PowerReport {
 #region ---------- Belastungstest ----------
 
 function Invoke-StressTest {
-    <# Lastet alle Prozessorkerne für kurze Zeit aus und prüft, ob der Laptop thermisch drosselt. #>
+    <# Lastet alle Prozessorkerne für kurze Zeit aus und prüft, ob der Prozessor thermisch drosselt. #>
     param([int]$Seconds = 30)
     $readPerf = {
         $p = Get-CimInstance Win32_PerfFormattedData_Counters_ProcessorInformation -Filter "Name='_Total'" -ErrorAction SilentlyContinue
@@ -131,14 +131,21 @@ function Invoke-StressTest {
     $perf = [math]::Round(($late | Measure-Object Perf -Average).Average)
     $load = [math]::Round(($late | Measure-Object Load -Average).Average)
     $temps = @($samples | Where-Object { $null -ne $_.Temp } | ForEach-Object { $_.Temp })
+    # Viele Desktop-Mainboards melden über ACPI nur einen festen Platzhalterwert (z. B. 28 °C) – dann nicht auswerten
+    if ($temps -and $null -ne $idle.Temp -and -not ($temps | Where-Object { $_ -ne $idle.Temp })) { $temps = @() }
     $maxTemp = if ($temps) { ($temps | Measure-Object -Maximum).Maximum }
+    $rise = if ($maxTemp -and $null -ne $idle.Temp) { $maxTemp - $idle.Temp } else { 0 }
+    $isLaptop = (Get-DeviceKind) -eq 'Laptop'
+    $dust = if ($isLaptop) { 'Lüfter und Lüftungsschlitze reinigen (lassen), Laptop auf harter Unterlage betreiben.' } else { 'Gehäuse, CPU-Kühler und Lüfter entstauben, Lüfter auf Funktion prüfen; bei älteren PCs ggf. Wärmeleitpaste erneuern.' }
 
     $parts = @("Auslastung $load %, Leistung unter Last $perf % der Nennleistung")
     if ($null -ne $idle.Temp -and $maxTemp) { $parts += "Temperatur $($idle.Temp) → $maxTemp °C" }
-    $verdict = if ($maxTemp -ge 95) { 'Kritisch heiß – Lüfter und Lüftungsschlitze reinigen lassen.' }
+    elseif (-not $temps) { $parts += 'Temperatur: kein auswertbarer Sensor (z. B. mit HWiNFO oder dem Hersteller-Tool prüfen)' }
+    $verdict = if ($maxTemp -ge 95) { "Kritisch heiß – $dust" }
     elseif (-not $onAc) { 'Akkubetrieb: Drosselung ist hier normal. Für einen aussagekräftigen Test das Netzteil anschließen.' }
-    elseif ($perf -lt 60) { 'Starke Drosselung – Kühlung prüfen (Staub, Lüfter, Wärmeleitpaste) und Energiesparplan kontrollieren.' }
-    elseif ($perf -lt 90) { 'Leichte Drosselung unter Dauerlast – für Laptops häufig normal.' }
+    elseif ($perf -lt 60) { "Starke Drosselung – Kühlung prüfen: $dust Energiesparplan kontrollieren." }
+    elseif ($rise -ge 45 -or ($maxTemp -ge 88 -and -not $isLaptop)) { "Temperatur steigt unter Last stark an (+$rise °C) – Hinweis auf Staub oder schwache Kühlung: $dust" }
+    elseif ($perf -lt 90) { if ($isLaptop) { 'Leichte Drosselung unter Dauerlast – für Laptops häufig normal.' } else { "Leichte Drosselung unter Dauerlast – bei Desktop-PCs ungewöhnlich: $dust" } }
     else { 'Volle Leistung unter Last – Kühlung arbeitet einwandfrei.' }
     Register-Change -Beschreibung 'Belastungstest durchgeführt' -Typ 'Protokoll' -NichtUmkehrbar -Ergebnis "$($parts -join ', '). $verdict"
     "$($parts -join ', '). $verdict"

@@ -1,8 +1,8 @@
 ﻿#Requires -Version 5.1
 <#
 .SYNOPSIS
-    Laptop-Diagnose & Reparatur – findet Fehler, Speicherfresser und Leistungsbremsen, prüft den Akku
-    und hält Software, Windows und Treiber aktuell.
+    PC Repair Pro (bisher »Laptop-Diagnose & Reparatur«) – findet Fehler, Speicherfresser und Leistungsbremsen,
+    prüft Akku bzw. PC-Hardware und hält Software, Windows und Treiber aktuell.
 
 .DESCRIPTION
     Alle Prüfungen sind rein lesend. Änderungen am System (Reparaturen, Updates, Bereinigungen)
@@ -50,7 +50,7 @@ param(
 
 if ($Unbeaufsichtigt) { $NurPruefen = $true }
 
-$Script:ToolVersion = '2.4.0'
+$Script:ToolVersion = '2.5.0'
 $Script:InstallDir = $PSScriptRoot
 $Script:ChangeCounter = 0
 $Script:SoftwareUpdateCache = $null
@@ -1031,10 +1031,14 @@ function Invoke-PerformanceScan {
         }
     }
 
+    Invoke-Check $cat 'Bildwiederholrate der Bildschirme' { Add-RefreshRateFindings -Category $cat }
+    Invoke-Check $cat 'Arbeitsspeicher: Takt und Bestückung' { Add-MemoryConfigFindings -Category $cat }
+    Invoke-Check $cat 'Bildschirm- und Standby-Zeiten' { Add-DesktopPowerFindings -Category $cat }
+
     Invoke-Check $cat 'Laufzeit seit dem letzten Neustart' {
         $uptime = (Get-Date) - (Get-CimInstance Win32_OperatingSystem).LastBootUpTime
         if ($uptime.TotalDays -ge 7) {
-            Add-Finding $cat Warnung "Laptop läuft seit $([math]::Floor($uptime.TotalDays)) Tagen ohne Neustart" `
+            Add-Finding $cat Warnung "$(Get-DeviceWord) läuft seit $([math]::Floor($uptime.TotalDays)) Tagen ohne Neustart" `
                 -Detail 'Durch »Schnellstart« wird beim Herunterfahren nicht neu gestartet. Ein echter Neustart gibt Ressourcen frei.'
         } else {
             Add-Finding $cat OK "Letzter Neustart vor $([math]::Round($uptime.TotalHours)) Stunden"
@@ -1047,7 +1051,7 @@ function Invoke-PerformanceScan {
         $pd = Get-PhysicalDisk | Where-Object { $_.DeviceId -eq "$($part.DiskNumber)" } | Select-Object -First 1
         if ($pd.MediaType -eq 'HDD') {
             Add-Finding $cat Warnung 'Windows läuft auf einer herkömmlichen Festplatte (HDD)' `
-                -Detail 'Der Umstieg auf eine SSD ist die wirksamste Beschleunigung für ältere Laptops.' `
+                -Detail "Der Umstieg auf eine SSD ist die wirksamste Beschleunigung für ältere $(if ((Get-DeviceKind) -eq 'Laptop') { 'Laptops' } else { 'PCs' }) – Start und Programme laden um ein Vielfaches schneller." `
                 -FixLabel 'Festplatte defragmentieren (kann lange dauern)' `
                 -Fix { param($d) Optimize-Volume -DriveLetter $env:SystemDrive.TrimEnd(':') -Defrag -ErrorAction Stop; 'Defragmentierung abgeschlossen.' }
         } else {
@@ -1096,7 +1100,7 @@ function Invoke-PerformanceScan {
             $max = ($temps | Measure-Object -Maximum).Maximum
             Set-Metric 'Temperatur' $max
             if ($max -ge 90) {
-                Add-Finding $cat Kritisch "Sehr hohe Temperatur gemessen ($max °C)" -Detail 'Überhitzung drosselt die Leistung. Lüfter reinigen, Laptop auf harter Unterlage betreiben.'
+                Add-Finding $cat Kritisch "Sehr hohe Temperatur gemessen ($max °C)" -Detail $(if ((Get-DeviceKind) -eq 'Laptop') { 'Überhitzung drosselt die Leistung. Lüfter reinigen, Laptop auf harter Unterlage betreiben.' } else { 'Überhitzung drosselt die Leistung. Gehäuse, Lüfter und Kühlkörper entstauben und auf freie Luftzufuhr achten.' })
             } elseif ($max -ge 80) {
                 Add-Finding $cat Warnung "Erhöhte Temperatur ($max °C)" -Detail 'Lüftungsschlitze prüfen und reinigen.'
             } else {
@@ -1115,6 +1119,7 @@ function Invoke-PerformanceScan {
 function Invoke-BatteryScan {
     $cat = 'Akku'
     Clear-CategoryFindings $cat
+    if ((Get-DeviceKind) -eq 'Desktop') { return }   # Desktop-PC: kein Akku, Bereich ist ausgeblendet
     Write-Title 'Akku-Diagnose'
 
     $battery = @(Get-CimInstance Win32_Battery -ErrorAction SilentlyContinue)
@@ -1492,14 +1497,17 @@ function Invoke-WindowsUpdateScan {
         }
     }
 
-    Invoke-Check $cat 'Treiber- und BIOS-Updates des Laptop-Herstellers' {
+    Invoke-Check $cat 'Grafiktreiber' { Add-GpuDriverFindings -Category $cat }
+    Invoke-Check $cat 'Alter des BIOS' { Add-BiosAgeFindings -Category $cat }
+
+    Invoke-Check $cat 'Treiber- und BIOS-Updates des Geräteherstellers' {
         $tool = Get-VendorDriverTool
         if ($tool.Cli) {
             Add-Finding $cat Info "$($tool.Tool) ist installiert – prüft auch BIOS, Firmware und Herstellertreiber" `
                 -FixLabel "Hersteller-Updates mit $($tool.Tool) suchen und installieren" -FixData $tool.Cli `
                 -Fix { param($d) $c = Invoke-Native $d '/applyUpdates -reboot=disable'; $Script:RebootNeeded = $true; "Dell Command | Update beendet (Exitcode $c)." }
         } elseif ($tool.WingetId -and (Get-Command winget.exe -ErrorAction SilentlyContinue)) {
-            Add-Finding $cat Info "Für $($tool.Vendor)-Laptops empfiehlt sich $($tool.Tool) für BIOS- und Firmware-Updates" `
+            Add-Finding $cat Info "Für $($tool.Vendor)-Geräte empfiehlt sich $($tool.Tool) für BIOS- und Firmware-Updates" `
                 -FixLabel "$($tool.Tool) über WinGet installieren" -FixData $tool.WingetId `
                 -Fix { param($d) $c = Invoke-Native 'winget.exe' "install --id $d --exact --silent --accept-package-agreements --accept-source-agreements"; "Installation beendet (Exitcode $c). Danach das Tool starten und Updates suchen." }
         } elseif ($tool.Tool) {
@@ -1644,6 +1652,16 @@ function Invoke-Repairs {
 
 #region ---------- Bericht ----------
 
+function Get-LogoImgTag {
+    <# Programmlogo als eingebettetes Bild, damit der Bericht auch ohne Programmordner vollständig ist. #>
+    if ($null -eq $Script:LogoDataUri) {
+        $Script:LogoDataUri = ''
+        $png = Join-Path $Script:InstallDir 'Logo.png'
+        if (Test-Path -LiteralPath $png) { $Script:LogoDataUri = 'data:image/png;base64,' + [Convert]::ToBase64String([IO.File]::ReadAllBytes($png)) }
+    }
+    if ($Script:LogoDataUri) { "<img src=""$Script:LogoDataUri"" alt=""PC Repair Pro"">" } else { '' }
+}
+
 function ConvertTo-SafeHtml { param([string]$Text) [System.Net.WebUtility]::HtmlEncode($Text) }
 
 function Get-AppSettings {
@@ -1708,6 +1726,7 @@ function Export-Report {
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:15px/1.5 "Segoe UI",system-ui,sans-serif;-webkit-print-color-adjust:exact;print-color-adjust:exact}
 .wrap{max-width:1100px;margin:0 auto;padding:24px 16px 60px}
 header{display:flex;flex-wrap:wrap;gap:16px;align-items:center;justify-content:space-between;margin-bottom:20px}
+.brand{display:flex;gap:16px;align-items:center}.brand img{width:72px;height:72px}.prod{font-weight:800;letter-spacing:.08em;font-size:13px;color:var(--muted);margin:2px 0 4px}.prod b{color:#1e90ff}
 h1{margin:0;font-size:26px}h2{font-size:19px;margin:32px 0 12px;color:var(--accent)}
 .sub{color:var(--muted)}.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px 20px;margin-bottom:12px}
 .score{font-size:42px;font-weight:700}.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px}
@@ -1727,7 +1746,7 @@ table.kv{width:100%;border-collapse:collapse}table.kv td{padding:6px 8px;border-
 footer{margin-top:40px;color:var(--muted);font-size:13px;text-align:center}
 @media (max-width:600px){.bar{grid-template-columns:1fr 70px}.bar .bt{grid-column:1/3;grid-row:2}table.kv td:first-child{width:auto}}
 </style></head><body><div class="wrap">
-<header><div><h1>Laptop-Diagnosebericht</h1><div class="sub">$([System.Net.WebUtility]::HtmlEncode("$($Script:SystemInfo['Hersteller'])")) $([System.Net.WebUtility]::HtmlEncode("$($Script:SystemInfo['Modell'])")) · $([System.Net.WebUtility]::HtmlEncode("$($Script:SystemInfo['Diagnose am'])"))</div></div>
+<header><div class="brand">$(Get-LogoImgTag)<div><h1>Diagnosebericht</h1><div class="prod">PC REPAIR <b>PRO</b></div><div class="sub">$([System.Net.WebUtility]::HtmlEncode("$($Script:SystemInfo['Hersteller'])")) $([System.Net.WebUtility]::HtmlEncode("$($Script:SystemInfo['Modell'])")) · $([System.Net.WebUtility]::HtmlEncode("$($Script:SystemInfo['Diagnose am'])"))</div></div></div>
 <div class="card" style="text-align:center;margin:0"><div class="sub">Gesundheitswert</div><div class="score" style="color:$(if ($score -ge 80) { 'var(--ok)' } elseif ($score -ge 50) { 'var(--warn)' } else { 'var(--crit)' })">$score</div></div></header>
 <div class="tiles">
 <div class="tile"><b style="color:var(--crit)">$($counts['Kritisch'])</b>Kritisch</div>
@@ -1809,7 +1828,7 @@ footer{margin-top:40px;color:var(--muted);font-size:13px;text-align:center}
         }
         $null = $sb.Append('</table></div>')
     }
-    $null = $sb.Append("<footer>Erstellt mit LaptopDiagnose $Script:ToolVersion · © 2026 Eder Tom</footer></div></body></html>")
+    $null = $sb.Append("<footer>Erstellt mit PC Repair Pro $Script:ToolVersion · Diagnose • Repair • Keep it running · © 2026 Eder Tom</footer></div></body></html>")
 
     [IO.File]::WriteAllText($htmlPath, $sb.ToString(), (New-Object System.Text.UTF8Encoding $true))
 
@@ -1888,9 +1907,9 @@ function Invoke-UnattendedDiagnosis {
     $crit = @($Script:Findings | Where-Object { $_.Severity -eq 'Kritisch' -and -not $_.Fixed })
     if ($crit) {
         $titles = ($crit | Select-Object -First 2 | ForEach-Object { $_.Title }) -join ' · '
-        $null = Show-Notification -Title "Laptop-Diagnose: $($crit.Count) kritische(s) Problem(e)" -Text "$titles – Klicken, um den Bericht zu öffnen." -OpenPath $path
+        $null = Show-Notification -Title "PC Repair Pro: $($crit.Count) kritische(s) Problem(e)" -Text "$titles – Klicken, um den Bericht zu öffnen." -OpenPath $path
     } elseif ($previous -and $previous.Metriken.Warnungen -ne $null -and $h.Warnungen -ge [int]$previous.Metriken.Warnungen + 2) {
-        $null = Show-Notification -Title 'Laptop-Diagnose: neue Warnungen' -Text "Gesundheitswert $($h.Score) – $($h.Warnungen) Warnungen (zuletzt $($previous.Metriken.Warnungen))." -OpenPath $path
+        $null = Show-Notification -Title 'PC Repair Pro: neue Warnungen' -Text "Gesundheitswert $($h.Score) – $($h.Warnungen) Warnungen (zuletzt $($previous.Metriken.Warnungen))." -OpenPath $path
     }
 }
 
@@ -1933,10 +1952,10 @@ function Show-Menu {
         Clear-Host
         Write-Host ''
         Write-Host '   ╔════════════════════════════════════════════════════════════╗' -ForegroundColor DarkCyan
-        Write-Host '   ║          LAPTOP-DIAGNOSE & REPARATUR  ' -ForegroundColor DarkCyan -NoNewline
-        Write-Host ("v{0,-20}║" -f $Script:ToolVersion) -ForegroundColor DarkCyan
+        Write-Host '   ║          PC REPAIR PRO  ' -ForegroundColor DarkCyan -NoNewline
+        Write-Host ("v{0,-34}║" -f $Script:ToolVersion) -ForegroundColor DarkCyan
         Write-Host '   ╚════════════════════════════════════════════════════════════╝' -ForegroundColor DarkCyan
-        Write-Host '   © 2026 Eder Tom' -ForegroundColor DarkGray
+        Write-Host '   Diagnose • Repair • Keep it running  ·  © 2026 Eder Tom' -ForegroundColor DarkGray
         if ($NurPruefen) { Write-Host '   Modus: NUR PRÜFEN – es werden keine Änderungen vorgenommen.' -ForegroundColor Yellow }
         if ($Script:UpdateHint) { Write-Host "   $($Script:UpdateHint)" -ForegroundColor Green }
         Write-Host ''
@@ -1996,7 +2015,7 @@ function Start-LaptopDiagnose {
         }
     }
 
-    try { $Host.UI.RawUI.WindowTitle = $(if ($Unbeaufsichtigt) { 'Laptop-Diagnose – geplante Prüfung · © 2026 Eder Tom' } else { "Laptop-Diagnose & Reparatur $Script:ToolVersion · © 2026 Eder Tom" }) } catch { }
+    try { $Host.UI.RawUI.WindowTitle = $(if ($Unbeaufsichtigt) { 'PC Repair Pro – geplante Prüfung · © 2026 Eder Tom' } else { "PC Repair Pro $Script:ToolVersion · © 2026 Eder Tom" }) } catch { }
     try { [Console]::OutputEncoding = [Text.Encoding]::UTF8 } catch { }
     if (-not (Test-Path -LiteralPath $BerichtOrdner)) { $null = New-Item -ItemType Directory -Path $BerichtOrdner -Force }
     $logDir = Join-Path $env:LOCALAPPDATA 'LaptopDiagnose\Protokolle'
