@@ -1,7 +1,7 @@
 {
-    "version": "2.6.0",
-    "datei": "LaptopDiagnose-2.6.0.zip",
-    "sha256": "505164d911a8b8f21eba68ce562d79b930b0d81e356bc232f84323f5215cb54a",
-    "notizen": "Neu: Suche nach defekten Verknüpfungen auf Desktop, im Startmenü, in der Taskleiste und im Autostart (bereinigen nach Auswahl – in den Papierkorb bzw. umkehrbar deaktiviert). Umfang der Komplett-Diagnose wählbar: unter Einstellungen › Komplett-Diagnose lässt sich jeder Prüfbereich einzeln an- und abwählen; der Bericht vermerkt nicht geprüfte Bereiche.",
+    "version": "2.7.0",
+    "datei": "LaptopDiagnose-2.7.0.zip",
+    "sha256": "975eafb52065aafeb3ed7cad50e2dbef0c65fd07cc40efa84ab1d5ee4264db39",
+    "notizen": "Neu im Bereich Speicherfresser (und unter Reparatur-Werkzeuge): »Doppelte Dateien suchen« (gleicher Inhalt, gruppiert, älteste Kopie bleibt), »Leere Ordner suchen« und »Große Ordner anzeigen und löschen« – jeweils in den Benutzerordnern oder einem selbst gewählten Ordner/Laufwerk. Gelöscht wird nur Angekreuztes, in den Papierkorb; was dort nicht hineinpasst, nur nach ausdrücklicher Bestätigung. Klick auf eine Kachel der Speicherbelegung zeigt deren Unterordner.",
     "veroeffentlicht": "2026-10-10"
 }
