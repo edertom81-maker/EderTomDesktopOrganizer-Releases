@@ -41,7 +41,12 @@ $files = @('LaptopDiagnose.ps1', 'LaptopDiagnoseGUI.ps1', 'Start-LaptopDiagnose.
     'Uninstall-LaptopDiagnose.ps1', 'LaptopDiagnose.ico', 'README.md')
 foreach ($f in $files) {
     $p = Join-Path $source $f
-    if (Test-Path -LiteralPath $p) { Copy-Item -LiteralPath $p -Destination $target -Force }
+    if (-not (Test-Path -LiteralPath $p)) { continue }
+    try { Copy-Item -LiteralPath $p -Destination $target -Force -ErrorAction Stop }
+    catch {
+        if ($f -like '*.ps1') { throw "$f konnte nicht kopiert werden. Bitte die Laptop-Diagnose schließen und die Installation erneut starten." }
+        Write-Host "   ! $f ist in Benutzung und wurde nicht ersetzt." -ForegroundColor Yellow
+    }
 }
 $moduleTarget = Join-Path $target 'Module'
 if (Test-Path -LiteralPath $moduleTarget) { Remove-Item -LiteralPath $moduleTarget -Recurse -Force }

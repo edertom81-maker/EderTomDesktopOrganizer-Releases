@@ -1325,7 +1325,13 @@ try {
 
     $Script:Window = [Windows.Markup.XamlReader]::Parse($Script:Xaml)
     $icon = Join-Path $PSScriptRoot 'LaptopDiagnose.ico'
-    if (Test-Path -LiteralPath $icon) { try { $Script:Window.Icon = [System.Windows.Media.Imaging.BitmapFrame]::Create([Uri]$icon) } catch { } }
+    if (Test-Path -LiteralPath $icon) {
+        # Symbol in den Speicher laden – sonst bleibt die Datei gesperrt und Programm-Updates können sie nicht ersetzen
+        try {
+            $iconStream = New-Object System.IO.MemoryStream(, [IO.File]::ReadAllBytes($icon))
+            $Script:Window.Icon = [System.Windows.Media.Imaging.BitmapFrame]::Create($iconStream, [System.Windows.Media.Imaging.BitmapCreateOptions]::None, [System.Windows.Media.Imaging.BitmapCacheOption]::OnLoad)
+        } catch { }
+    }
 
     $Script:UI = @{}
     $names = @(

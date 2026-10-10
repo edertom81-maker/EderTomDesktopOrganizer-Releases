@@ -240,12 +240,50 @@ function Install-ToolUpdate {
             }
         }
 
-        Copy-Item -Path (Join-Path $root '*') -Destination $installDir -Recurse -Force -ErrorAction Stop
+        # Datei für Datei kopieren (mit Wiederholung): erst Begleitdateien, dann die Skripte, LaptopDiagnose.ps1 zuletzt.
+        # Gesperrte Begleitdateien (z. B. ein geöffnetes Symbol) verhindern das Update nicht. Scheitert ein Skript,
+        # werden die bisherigen Skripte aus einer Sicherung wiederhergestellt.
+        $rank = { if ($_.Name -eq 'LaptopDiagnose.ps1') { 2 } elseif ($_.Extension -eq '.ps1') { 1 } else { 0 } }
+        $files = @(Get-ChildItem -LiteralPath $root -Recurse -File | Sort-Object $rank, FullName)
+        $backup = Join-Path $work 'backup'
+        $oldScripts = @(Get-ChildItem -LiteralPath $installDir -Recurse -File -Filter '*.ps1' -ErrorAction SilentlyContinue)
+        foreach ($o in $oldScripts) {
+            $b = Join-Path $backup $o.FullName.Substring($installDir.Length).TrimStart('\', '/')
+            $null = New-Item -ItemType Directory -Path (Split-Path -Parent $b) -Force
+            Copy-Item -LiteralPath $o.FullName -Destination $b -Force
+        }
+        $skipped = @()
+        try {
+            foreach ($src in $files) {
+                $rel = $src.FullName.Substring($root.Length).TrimStart('\', '/')
+                $dst = Join-Path $installDir $rel
+                $dstDir = Split-Path -Parent $dst
+                if (-not (Test-Path -LiteralPath $dstDir)) { $null = New-Item -ItemType Directory -Path $dstDir -Force }
+                $copied = $false
+                for ($try = 0; $try -lt 5 -and -not $copied; $try++) {
+                    try { Copy-Item -LiteralPath $src.FullName -Destination $dst -Force -ErrorAction Stop; $copied = $true }
+                    catch { Start-Sleep -Milliseconds 400 }
+                }
+                if (-not $copied) {
+                    if ($src.Extension -eq '.ps1') { throw "$rel konnte nicht ersetzt werden (Datei gesperrt). Bitte das Programm schließen und das Update über die Konsolenversion oder das Setup installieren." }
+                    $skipped += $rel
+                }
+            }
+        } catch {
+            foreach ($o in Get-ChildItem -LiteralPath $backup -Recurse -File -ErrorAction SilentlyContinue) {
+                $orig = Join-Path $installDir $o.FullName.Substring($backup.Length).TrimStart('\', '/')
+                try { Copy-Item -LiteralPath $o.FullName -Destination $orig -Force -ErrorAction Stop } catch { }
+            }
+            throw "$($_.Exception.Message) Die bisherige Version wurde wiederhergestellt."
+        }
+        $installed = if ((Get-Content -LiteralPath (Join-Path $installDir 'LaptopDiagnose.ps1') -Raw) -match "ToolVersion = '([\d\.]+)'") { $Matches[1] }
+        if ("$installed" -ne "$($Release.Version)") { throw "Das Update wurde nicht vollständig installiert (installiert: $installed, erwartet: $($Release.Version))." }
         Get-ChildItem -LiteralPath $installDir -Recurse -File | Unblock-File -ErrorAction SilentlyContinue
         if (Get-Command Register-Change -ErrorAction SilentlyContinue) {
             Register-Change -Beschreibung "LaptopDiagnose auf Version $($Release.Version) aktualisiert" -Typ 'Protokoll' -NichtUmkehrbar
         }
-        return "Version $($Release.Version) wurde installiert. Bitte das Programm neu starten."
+        $note = if ($skipped) { " Nicht ersetzt (in Benutzung): $($skipped -join ', ')." } else { '' }
+        return "Version $($Release.Version) wurde installiert.$note Bitte das Programm neu starten."
     } finally {
         Remove-Item -LiteralPath $work -Recurse -Force -ErrorAction SilentlyContinue
     }

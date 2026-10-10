@@ -1,7 +1,7 @@
 {
-    "version": "2.2.1",
-    "datei": "LaptopDiagnose-2.2.1.zip",
-    "sha256": "6ec052bfe0f9cf89d3cf2e06fe0f2eddab32befaf7c875b61c87c7c7e539e80d",
-    "notizen": "Weniger Systemlast: CPU-Messung ohne WMI-Leistungszähler, Ordner-Analyse nur noch auf Wunsch, Miniaturansichten werden nicht mehr gelöscht, das Programm beendet sich sauber. Neu: Erkennung von Programm-Hängern und Speicherengpässen.",
+    "version": "2.2.2",
+    "datei": "LaptopDiagnose-2.2.2.zip",
+    "sha256": "11fe9cdc9f8f56c43c2c087ee365ada57e020cf60587beddd42e8b807cf1386c",
+    "notizen": "Behebt: Programm-Updates wurden nicht installiert, solange das Programmfenster geöffnet war (Programmsymbol gesperrt). Updates werden jetzt Datei für Datei mit Sicherung installiert. Enthält alle Verbesserungen aus 2.2.1: weniger Systemlast und Erkennung von Programm-Hängern.",
     "veroeffentlicht": "2026-10-10"
 }
