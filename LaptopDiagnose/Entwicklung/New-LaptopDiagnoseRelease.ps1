@@ -21,6 +21,9 @@ param(
     [switch]$Signieren,
     [string]$Thumbprint,
     [string]$PfxPath,
+    [switch]$SignTool,
+    [string]$Dlib,
+    [string]$DlibMetadata,
     [string]$Notizen = ''
 )
 
@@ -34,6 +37,8 @@ if ($Signieren) {
     $signArgs = @{}
     if ($Thumbprint) { $signArgs.Thumbprint = $Thumbprint }
     if ($PfxPath) { $signArgs.PfxPath = $PfxPath }
+    if ($SignTool) { $signArgs.SignTool = $true }
+    if ($Dlib) { $signArgs.Dlib = $Dlib; $signArgs.DlibMetadata = $DlibMetadata }
     & (Join-Path $PSScriptRoot 'Sign-LaptopDiagnose.ps1') @signArgs
 }
 

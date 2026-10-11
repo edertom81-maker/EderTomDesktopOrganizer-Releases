@@ -1,0 +1,110 @@
+﻿<#
+    Kurze Erklärungen zu jeder Prüfung (»?« an den Ergebniskarten): Warum ist das wichtig?
+    Teil von PC Repair Pro – Copyright 2026 by Eder Tom
+#>
+
+$Script:CheckHelp = @{
+    # Fehlersuche
+    'Windows-Version und Support-Status'                       = 'Windows-Versionen ohne Support bekommen keine Sicherheitsupdates mehr. Lücken bleiben dann dauerhaft offen.'
+    'Ereignisprotokolle der letzten 7 Tage'                     = 'Windows protokolliert Fehler, bevor man sie bemerkt. Häufungen deuten auf defekte Treiber, Dienste oder Hardware hin.'
+    'Bluescreens und Absturzursachen (30 Tage)'                 = 'Bluescreens haben fast immer eine bestimmte Ursache (Treiber, Arbeitsspeicher, Datenträger). Der Stoppcode zeigt, wo man ansetzen muss.'
+    'Ergebnis des letzten Arbeitsspeicher-Tests'                = 'Defekter Arbeitsspeicher verursacht zufällige Abstürze und beschädigte Dateien – ein fehlerhafter Test ist ein klares Warnsignal.'
+    'Programm-Hänger und Speicherengpässe (7 Tage)'            = 'Häufig hängende Programme oder knapper Arbeitsspeicher erklären, warum sich das Gerät langsam oder unzuverlässig anfühlt.'
+    'Geräte-Manager auf Problemgeräte'                          = 'Geräte ohne passenden Treiber funktionieren nicht oder nur eingeschränkt (z. B. WLAN, Touchpad, Kamera).'
+    'Automatisch startende Dienste'                             = 'Ein Dienst, der starten soll, aber nicht läuft, legt oft eine Windows-Funktion lahm (Drucken, Updates, Audio).'
+    'Integrität des Windows-Systemabbilds (DISM)'               = 'Ein beschädigtes Systemabbild verhindert Updates und Reparaturen. DISM stellt die Originaldateien wieder her.'
+    'Gesundheit der Datenträger (SMART)'                        = 'Datenträger kündigen Ausfälle oft vorher über SMART-Werte an. Dann sofort sichern – bevor Daten verloren gehen.'
+    'Dateisystem des Systemlaufwerks'                           = 'Fehler im Dateisystem können Dateien beschädigen und Windows instabil machen. Eine Prüfung beim Neustart repariert sie.'
+    'Ausstehender Neustart'                                     = 'Viele Updates und Reparaturen werden erst nach einem Neustart wirksam. Bis dahin bleibt das System in einem Zwischenzustand.'
+    'Defekte Verknüpfungen (Desktop, Startmenü, Taskleiste, Autostart)' = 'Verknüpfungen auf gelöschte Programme verwirren und erzeugen beim Start Fehlermeldungen.'
+    # Speicher
+    'Arbeitsspeicher-Auslastung'                                = 'Ist der Arbeitsspeicher voll, lagert Windows auf den Datenträger aus – das macht alles spürbar langsamer.'
+    'Prozesse mit hohem Speicherverbrauch'                      = 'Einzelne Programme belegen oft den Großteil des Arbeitsspeichers. Wer sie kennt, kann gezielt schließen oder ersetzen.'
+    'Freier Speicherplatz auf den Laufwerken'                   = 'Unter etwa 10 % freiem Platz werden Updates, Auslagerung und Programme langsam oder schlagen fehl.'
+    'Datenmüll (Temp, Caches, Absturzabbilder, Papierkorb)'     = 'Temporäre Dateien und Caches wachsen unbemerkt auf viele Gigabyte. Sie zu entfernen ist gefahrlos und schafft schnell Platz.'
+    'Reste alter Windows-Installationen und Updates'            = 'Nach einem großen Windows-Update bleibt die alte Installation (Windows.old) liegen – oft 10–30 GB.'
+    'Speicherbelegung analysieren (kann 1–2 Minuten dauern)'    = 'Zeigt, welche Ordner den meisten Platz belegen – die Grundlage für gezieltes Aufräumen.'
+    'Große Dateien in den Benutzerordnern'                      = 'Wenige große Dateien (Videos, Abbilder, alte Sicherungen) belegen oft mehr Platz als alles andere zusammen.'
+    'Downloads-Ordner (alte Installationsdateien, Duplikate, große Dateien)' = 'Im Downloads-Ordner sammeln sich Installationsdateien und Archive, die nach der Installation niemand mehr braucht.'
+    'Wiederherstellungspunkte'                                  = 'Wiederherstellungspunkte retten Windows nach einem fehlerhaften Update oder Treiber. Zu viele belegen aber viel Platz.'
+    'Reste von Windows-Upgrades'                                = 'Upgrade-Reste werden nach erfolgreichem Update nicht mehr gebraucht und belegen oft mehrere Gigabyte.'
+    'Alte Systemabbild-Sicherungen'                             = 'Alte Systemabbilder sind meist durch neuere ersetzt und belegen viel Platz auf dem Sicherungslaufwerk.'
+    'Dateiversionsverlauf'                                      = 'Der Dateiversionsverlauf sichert Dateien automatisch. Alte Versionen können aber viel Platz belegen.'
+    'Alte Treiberpakete (Treiberspeicher)'                      = 'Windows behält alte Treiberversionen. Nicht mehr benutzte Pakete lassen sich gefahrlos entfernen.'
+    # Leistung
+    'Prozessorauslastung (3 Sekunden Messung)'                  = 'Ein dauerhaft ausgelasteter Prozessor bremst alles aus und lässt Lüfter laufen und Akku schrumpfen.'
+    'Geplante Aufgaben und Dienste beim Start'                  = 'Updater und Hintergrunddienste von Fremdherstellern verlängern den Start und kosten dauerhaft Leistung.'
+    'Autostart-Programme'                                       = 'Jedes Programm im Autostart verlängert den Systemstart und läuft danach im Hintergrund mit.'
+    'Dauer des Systemstarts'                                    = 'Ein langsamer Start ist meist das erste sichtbare Zeichen für zu viele Autostarts oder einen langsamen Datenträger.'
+    'Energiesparplan und Prozessorleistung'                     = 'Ein falscher Energiesparplan drosselt den Prozessor dauerhaft – auch am Netzteil.'
+    'Bildwiederholrate der Bildschirme'                         = 'Ein 120/144-Hz-Bildschirm, der nur mit 60 Hz läuft, wirkt ruckelig. Oft genügt eine Einstellung.'
+    'Arbeitsspeicher: Takt und Bestückung'                      = 'Läuft der Arbeitsspeicher unter Nenntakt oder nur mit einem Modul (Single-Channel), verschenkt das spürbar Leistung.'
+    'Bildschirm- und Standby-Zeiten'                            = 'Ein Bildschirm, der nie ausgeht, und ein PC, der nie in den Standby wechselt, verbrauchen unnötig Strom.'
+    'Laufzeit seit dem letzten Neustart'                        = 'Nach Wochen ohne Neustart sammeln sich Speicherlecks und halb installierte Updates. Ein Neustart behebt vieles.'
+    'Systemlaufwerk (SSD/HDD, TRIM)'                            = 'Eine HDD als Systemlaufwerk ist die häufigste Bremse überhaupt. Bei SSDs hält TRIM die Geschwindigkeit dauerhaft hoch.'
+    'Auslagerungsdatei'                                         = 'Eine zu kleine oder abgeschaltete Auslagerungsdatei führt zu Abstürzen, wenn der Arbeitsspeicher knapp wird.'
+    'Temperatur'                                                = 'Bei zu hoher Temperatur drosselt der Prozessor – das Gerät wird langsam. Ursache sind oft verstaubte Lüfter.'
+    'Spiele- und Grafikleistung'                                = 'Spielmodus, GPU-Planung und Energiemodus entscheiden mit über Bilder pro Sekunde und Ruckler in Spielen.'
+    'Vorinstallierte Zusatzsoftware'                            = 'Vom Hersteller vorinstallierte Testversionen und Zusatz-Apps belegen Platz und laufen oft im Hintergrund mit.'
+    # Akku
+    'Akkuzustand und Verschleiß'                                = 'Unter etwa 70 % der ursprünglichen Kapazität ist der Akku spürbar verschlissen. Dann lohnt sich ein Austausch.'
+    'Aktueller Ladezustand'                                     = 'Ein Akku, der am Netzteil nicht lädt, kann defekt sein oder ein Problem mit Netzteil bzw. Ladeelektronik haben.'
+    'Ladegrenze (Akkuschonung)'                                 = 'Wer meist am Netzteil arbeitet, schont den Akku mit einer Ladegrenze von ca. 80 % – das verdoppelt oft seine Lebensdauer.'
+    'Standby-Art und Akkuverbrauch nach Apps'                   = 'Moderner Standby kann den Akku in der Tasche leeren. Der Verbrauch nach Apps zeigt die Stromfresser.'
+    'Was den Energiesparmodus verhindert'                       = 'Programme oder Geräte, die den Energiesparmodus blockieren, halten das Gerät wach und leeren den Akku.'
+    'Detaillierten Akkubericht erstellen'                       = 'Der Windows-Akkubericht zeigt Kapazitätsverlauf und Nutzung der letzten Wochen im Detail.'
+    # Windows & Treiber
+    'Suche nach Windows-Updates (kann einige Minuten dauern)'   = 'Windows-Updates schließen Sicherheitslücken und beheben Fehler. Fehlende Updates sind ein Sicherheitsrisiko.'
+    'Suche nach Treiber-Updates über Windows Update'            = 'Aktuelle Treiber beheben Abstürze, Akku- und WLAN-Probleme. Über Windows Update kommen geprüfte Versionen.'
+    'Veraltete Treiber wichtiger Geräte'                        = 'Sehr alte Treiber für Grafik, WLAN oder Chipsatz verursachen häufig Abstürze, Ruckler und Verbindungsabbrüche.'
+    'Grafiktreiber'                                             = 'Der Grafiktreiber ist für Stabilität und Spieleleistung entscheidend. Der Microsoft-Basistreiber ist nur eine Notlösung.'
+    'Alter des BIOS'                                            = 'BIOS-Updates beheben Sicherheitslücken, Akku- und Stabilitätsprobleme. Ein sehr altes BIOS ist ein Risiko.'
+    'Treiber- und BIOS-Updates des Geräteherstellers'           = 'Die Hersteller-Tools liefern Firmware und Treiber, die Windows Update nicht kennt.'
+    # Herunterfahren
+    'Dauer der letzten Herunterfahrvorgänge (30 Tage)'          = 'Dauert das Herunterfahren lange, hängt meist ein Programm, Dienst oder Treiber. Die Messung zeigt, ob es schlimmer wird.'
+    'Programme, Dienste und Treiber, die das Herunterfahren bremsen' = 'Windows misst selbst, wer das Herunterfahren verzögert. So lässt sich der Verursacher gezielt beheben.'
+    'Dienste, die beim Herunterfahren hängen'                   = 'Ein hängender Dienst hält das Herunterfahren auf, bis Windows ihn nach einer Wartezeit zwangsweise beendet.'
+    'Wartezeiten beim Herunterfahren'                           = 'Zu lange Wartezeiten lassen Windows minutenlang auf hängende Programme warten.'
+    'Auslagerungsdatei beim Herunterfahren löschen'             = 'Diese Sicherheitsoption überschreibt die Auslagerungsdatei bei jedem Herunterfahren – das kann Minuten dauern.'
+    'Ausstehende Updates'                                       = 'Werden beim Herunterfahren Updates installiert, dauert es entsprechend länger.'
+    'Getrennte Netzlaufwerke'                                   = 'Nicht erreichbare Netzlaufwerke verzögern Anmeldung, Explorer und Herunterfahren.'
+    'Skripte beim Herunterfahren'                               = 'Skripte, die beim Herunterfahren laufen, können das Ausschalten deutlich verzögern.'
+    'Schnellstart'                                              = 'Der Schnellstart beschleunigt das Einschalten, kann aber Probleme mit Updates und Dual-Boot verursachen.'
+    'Leistungsprotokoll für das Herunterfahren'                 = 'Ohne dieses Windows-Protokoll lassen sich bremsende Programme beim Herunterfahren nicht messen.'
+    'Ungewolltes Aufwachen aus dem Energiesparmodus'            = 'Wacht das Gerät von selbst auf, leert es den Akku in der Tasche und kann überhitzen.'
+    'Programme ohne Rückfrage beenden (optional)'               = 'Optional: Windows beendet hängende Programme beim Herunterfahren ohne Rückfrage – ungespeicherte Daten gehen dabei verloren.'
+    # Netzwerk
+    'Internetverbindung'                                        = 'Prüft, ob Internet und Namensauflösung (DNS) funktionieren – die Grundlage für alles Weitere.'
+    'WLAN-Verbindung'                                           = 'Schwaches Signal, ein überfülltes Band oder unsichere Verschlüsselung erklären langsames oder unsicheres WLAN.'
+    'Geschwindigkeit und Latenz (lädt ca. 20 MB)'               = 'Zeigt, ob die gebuchte Geschwindigkeit ankommt und ob hohe Latenz Videoanrufe oder Spiele stört.'
+    'Proxy-Einstellungen'                                       = 'Ein unbekannter Proxy kann den Internetverkehr umleiten – ein mögliches Zeichen für Schadsoftware.'
+    'Netzwerkkabel (LAN)'                                       = 'Läuft ein Kabelanschluss nur mit 100 Mbit/s statt 1 Gbit/s, ist meist das Kabel oder ein Stecker defekt.'
+    'WLAN-Treiber'                                              = 'Alte WLAN-Treiber sind die häufigste Ursache für Verbindungsabbrüche und langsames WLAN.'
+    'WLAN-Bericht'                                              = 'Der Windows-WLAN-Bericht zeigt Verbindungsabbrüche und Fehler der letzten Tage im Detail.'
+    # Sicherheit
+    'Datensicherung'                                            = 'Ohne aktuelle Sicherung sind Fotos und Dokumente bei Defekt, Diebstahl oder Verschlüsselungstrojaner verloren.'
+    'Datenschutz-Einstellungen'                                 = 'Windows sammelt standardmäßig mehr Nutzungsdaten als nötig und zeigt Werbung. Das lässt sich gefahrlos reduzieren.'
+    'Browser-Erweiterungen'                                     = 'Erweiterungen mit weitreichenden Rechten können alles mitlesen, was im Browser passiert – auch Passwörter.'
+    'Virenschutz'                                               = 'Ohne aktiven, aktuellen Virenschutz ist das Gerät Schadsoftware schutzlos ausgeliefert.'
+    'Firewall'                                                  = 'Die Firewall blockiert unerwünschte Zugriffe aus dem Netzwerk – besonders wichtig in öffentlichen WLANs.'
+    'Secure Boot'                                               = 'Secure Boot verhindert, dass sich Schadsoftware schon vor Windows einnistet.'
+    'TPM-Sicherheitschip'                                       = 'Das TPM schützt Schlüssel für Verschlüsselung und Windows Hello und ist für Windows 11 Pflicht.'
+    'Laufwerksverschlüsselung'                                  = 'Ohne Verschlüsselung kann jeder, der das Gerät stiehlt, die Festplatte auslesen.'
+    'Kernisolierung (Speicherintegrität)'                       = 'Die Speicherintegrität verhindert, dass Schadsoftware Treiber manipuliert und sich tief im System festsetzt.'
+    'Benutzerkontensteuerung (UAC)'                             = 'Die Benutzerkontensteuerung fragt nach, bevor Programme Systemänderungen vornehmen – ein wichtiger Schutz.'
+    'Veraltetes Netzwerkprotokoll SMB1'                         = 'SMB1 ist unsicher und wurde von Erpressungstrojanern wie WannaCry ausgenutzt. Es sollte abgeschaltet sein.'
+    'Freigegebene Ordner'                                       = 'Freigaben machen Ordner im Netzwerk sichtbar. Unbeabsichtigte Freigaben sind ein Datenschutzrisiko.'
+    'Remotedesktop'                                             = 'Ein offener Remotedesktop ist ein beliebtes Angriffsziel. Er sollte nur bei Bedarf eingeschaltet sein.'
+    'Pausierte Windows-Updates'                                 = 'Pausierte Updates werden leicht vergessen – das Gerät bleibt dann ohne Sicherheitsupdates.'
+    'Browser und Mailprogramme aktuell'                         = 'Browser und Mailprogramme sind das Haupteinfallstor für Angriffe. Veraltete Versionen haben bekannte Lücken.'
+    'Ransomware- und PUA-Schutz'                                = 'Schützt Dokumente vor Verschlüsselungstrojanern und blockiert Adware in Installationsprogrammen.'
+    'SmartScreen'                                               = 'SmartScreen warnt vor bekannten Schadprogrammen und Betrugsseiten, bevor sie Schaden anrichten.'
+    'Benutzerkonten und Anmeldung'                              = 'Konten ohne Kennwort, ein aktives Gastkonto oder automatische Anmeldung machen das Gerät für jeden offen.'
+    'Fernwartungsprogramme'                                     = 'Fernwartungsprogramme erlauben die Steuerung aus der Ferne – praktisch, aber auch beliebtes Werkzeug von Betrügern.'
+}
+
+function Get-CheckHelp {
+    param([string]$Check)
+    if (-not $Check) { return $null }
+    return $Script:CheckHelp[$Check]
+}

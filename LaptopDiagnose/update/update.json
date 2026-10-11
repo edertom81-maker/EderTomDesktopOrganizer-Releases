@@ -1,7 +1,7 @@
 {
-    "version": "3.0.0",
-    "datei": "LaptopDiagnose-3.0.0.zip",
-    "sha256": "4ea2bca9c8b4f38c84e415c52344a61e34ea08c8c118b4bc162142a5ca3e916b",
-    "notizen": "Neu: Meldungen ausblenden (bleiben bei späteren Prüfungen ausgeblendet, in den Einstellungen wieder einblendbar), erweiterte Sicherheit (Ransomware- und PUA-Schutz, SmartScreen, Gastkonto, Konten ohne Kennwort, automatische Anmeldung, Fernwartungsprogramme), Treiber sichern (auch automatisch vor Treiber-Updates) und Prüfung auf ungewolltes Aufwachen aus dem Energiesparmodus.",
+    "version": "3.1.0",
+    "datei": "LaptopDiagnose-3.1.0.zip",
+    "sha256": "0ddee6ba8a1a39b0bb7fbd9b665a871a47c1ac5d437b6c2099c4e375d6fbab58",
+    "notizen": "Neu: Live-Monitor mit Aufzeichnung »Was bremst gerade?«, Prüfung der Spiele- und Grafikleistung, Suche, Filter und CSV-Export in den Ergebnissen, »?«-Erklärung an jeder Prüfung, deutlich schnelleres Entfernen von Datenmüll und Papierkorb sowie Vorbereitung für ein gekauftes Signaturzertifikat.",
     "veroeffentlicht": "2026-10-11"
 }

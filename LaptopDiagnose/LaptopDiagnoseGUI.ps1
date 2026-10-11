@@ -52,6 +52,7 @@ Add-Type -AssemblyName PresentationFramework, PresentationCore, WindowsBase, Sys
 # Berichtordner festlegen (beim ersten Start ab 2.4 einmalig aus dem OneDrive-Dokumente-Ordner umziehen)
 . (Join-Path $PSScriptRoot 'Module\Berichtordner.ps1')
 . (Join-Path $PSScriptRoot 'Module\Programm.ps1')
+. (Join-Path $PSScriptRoot 'Module\LiveMonitor.ps1')
 $Script:FolderMigrationMessage = $null
 $folderInfo = Resolve-ReportFolder -Requested $BerichtOrdner
 $BerichtOrdner = $folderInfo.Folder
@@ -247,6 +248,18 @@ $Script:Xaml = @'
               <Button DockPanel.Dock="Right" Tag="HideBtn" Content="Ausblenden" ToolTip="Diese Meldung bei künftigen Prüfungen nicht mehr anzeigen (wieder einblenden unter Einstellungen)"
                       Visibility="{Binding CanHide, Converter={StaticResource B2V}}" Cursor="Hand" Margin="10,0,0,0" Padding="6,1" FontSize="11"
                       Background="Transparent" BorderThickness="0" Foreground="{DynamicResource Link}" VerticalAlignment="Top"/>
+              <Border DockPanel.Dock="Right" Width="18" Height="18" CornerRadius="9" BorderThickness="1" BorderBrush="{DynamicResource TextMuted}" Margin="8,1,0,0" VerticalAlignment="Top"
+                      Visibility="{Binding HasHelp, Converter={StaticResource B2V}}" Cursor="Help" Background="Transparent" ToolTipService.ShowDuration="60000" ToolTipService.InitialShowDelay="150">
+                <Border.ToolTip>
+                  <ToolTip MaxWidth="420">
+                    <StackPanel>
+                      <TextBlock Text="{Binding CheckName}" FontWeight="SemiBold" TextWrapping="Wrap" Margin="0,0,0,4"/>
+                      <TextBlock Text="{Binding Help}" TextWrapping="Wrap"/>
+                    </StackPanel>
+                  </ToolTip>
+                </Border.ToolTip>
+                <TextBlock Text="?" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource TextMuted}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+              </Border>
               <TextBlock DockPanel.Dock="Right" Text="{Binding CategoryTitle}" Foreground="{DynamicResource TextMuted}" FontSize="11" Margin="10,3,0,0"/>
               <TextBlock Text="{Binding Title}" FontWeight="SemiBold" FontSize="14" Foreground="{DynamicResource TextPrimary}" TextWrapping="Wrap"/>
             </DockPanel>
@@ -425,6 +438,9 @@ $Script:Xaml = @'
                 <TextBlock Text="Reparatur-Werkzeuge" VerticalAlignment="Center"/></DockPanel>
             </RadioButton>
             <Border Height="1" Background="{DynamicResource SidebarDivider}" Margin="8,8"/>
+            <RadioButton x:Name="NavMonitor" Tag="Monitor" Style="{StaticResource Nav}">
+              <DockPanel><TextBlock Text="&#xE7F4;" Style="{StaticResource NavIcon}"/><TextBlock Text="Live-Monitor" VerticalAlignment="Center"/></DockPanel>
+            </RadioButton>
             <RadioButton x:Name="NavVerlauf" Tag="Verlauf" Style="{StaticResource Nav}">
               <DockPanel><TextBlock Text="&#xE81C;" Style="{StaticResource NavIcon}"/><TextBlock Text="Verlauf &amp; Trends" VerticalAlignment="Center"/></DockPanel>
             </RadioButton>
@@ -535,6 +551,30 @@ $Script:Xaml = @'
                 <TextBlock x:Name="EmptyHintText" Margin="0,10,0,0" Foreground="{DynamicResource TextSecondary}" TextWrapping="Wrap" TextAlignment="Center" FontSize="14"/>
               </StackPanel>
             </Border>
+            <Border x:Name="FilterBar" Style="{StaticResource Card}" Padding="12,8" Margin="0,0,0,12">
+              <DockPanel LastChildFill="True">
+                <Button x:Name="BtnExportCsv" DockPanel.Dock="Right" Style="{StaticResource Btn}" Margin="10,0,0,0" ToolTip="Die angezeigten Ergebnisse als CSV-Datei (z. B. für Excel) im Berichtordner speichern">
+                  <StackPanel Orientation="Horizontal">
+                    <TextBlock Text="&#xE9F9;" FontFamily="Segoe MDL2 Assets" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                    <TextBlock Text="Als CSV exportieren"/>
+                  </StackPanel>
+                </Button>
+                <CheckBox x:Name="ChkOnlyFixable" DockPanel.Dock="Right" Content="Nur behebbare" VerticalAlignment="Center" Margin="12,0,0,0" Foreground="{DynamicResource TextPrimary}"/>
+                <ComboBox x:Name="FilterSeverity" DockPanel.Dock="Right" Width="170" Margin="12,0,0,0" VerticalAlignment="Center" SelectedIndex="0">
+                  <ComboBoxItem Content="Alle Schweregrade" Tag=""/>
+                  <ComboBoxItem Content="Kritisch" Tag="Kritisch"/>
+                  <ComboBoxItem Content="Warnungen" Tag="Warnung"/>
+                  <ComboBoxItem Content="Hinweise" Tag="Info"/>
+                  <ComboBoxItem Content="In Ordnung" Tag="OK"/>
+                  <ComboBoxItem Content="Kritisch und Warnungen" Tag="Kritisch,Warnung"/>
+                </ComboBox>
+                <TextBlock Text="&#xE721;" FontFamily="Segoe MDL2 Assets" DockPanel.Dock="Left" VerticalAlignment="Center" Margin="2,0,8,0" Foreground="{DynamicResource TextMuted}"/>
+                <Grid>
+                  <TextBox x:Name="SearchBox" VerticalContentAlignment="Center" Padding="4,3" ToolTip="Sucht in Titel, Details, Einträgen und Prüfungsname"/>
+                  <TextBlock x:Name="SearchHint" Text="Ergebnisse durchsuchen …" IsHitTestVisible="False" Foreground="{DynamicResource TextMuted}" Margin="8,0,0,0" VerticalAlignment="Center"/>
+                </Grid>
+              </DockPanel>
+            </Border>
             <ItemsControl x:Name="FindingsList" ItemTemplate="{StaticResource FindingTemplate}"/>
           </StackPanel>
         </ScrollViewer>
@@ -569,6 +609,108 @@ $Script:Xaml = @'
                 </DataTemplate>
               </ItemsControl.ItemTemplate>
             </ItemsControl>
+          </StackPanel>
+        </ScrollViewer>
+
+        <!-- Live-Monitor -->
+        <ScrollViewer x:Name="MonitorPanel" Visibility="Collapsed" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+          <StackPanel Margin="0,0,6,0">
+            <WrapPanel Margin="0,0,-12,0">
+              <Border Style="{StaticResource Card}" Width="250" Margin="0,0,12,12">
+                <StackPanel>
+                  <TextBlock Text="Prozessor" Foreground="{DynamicResource TextSecondary}"/>
+                  <TextBlock x:Name="MonCpu" Text="–" FontSize="26" FontWeight="Bold" Foreground="{DynamicResource TextPrimary}"/>
+                  <TextBlock x:Name="MonCpuSub" Text=" " Foreground="{DynamicResource TextMuted}" FontSize="12"/>
+                  <Canvas Width="216" Height="48" Margin="0,6,0,0" HorizontalAlignment="Left" ClipToBounds="True">
+                    <Polyline x:Name="MonCpuLine" Stroke="#1570EF" StrokeThickness="2" StrokeLineJoin="Round"/>
+                  </Canvas>
+                </StackPanel>
+              </Border>
+              <Border Style="{StaticResource Card}" Width="250" Margin="0,0,12,12">
+                <StackPanel>
+                  <TextBlock Text="Arbeitsspeicher" Foreground="{DynamicResource TextSecondary}"/>
+                  <TextBlock x:Name="MonRam" Text="–" FontSize="26" FontWeight="Bold" Foreground="{DynamicResource TextPrimary}"/>
+                  <TextBlock x:Name="MonRamSub" Text=" " Foreground="{DynamicResource TextMuted}" FontSize="12"/>
+                  <Canvas Width="216" Height="48" Margin="0,6,0,0" HorizontalAlignment="Left" ClipToBounds="True">
+                    <Polyline x:Name="MonRamLine" Stroke="#7A5AF8" StrokeThickness="2" StrokeLineJoin="Round"/>
+                  </Canvas>
+                </StackPanel>
+              </Border>
+              <Border Style="{StaticResource Card}" Width="250" Margin="0,0,12,12">
+                <StackPanel>
+                  <TextBlock Text="Datenträger (aktiv)" Foreground="{DynamicResource TextSecondary}"/>
+                  <TextBlock x:Name="MonDisk" Text="–" FontSize="26" FontWeight="Bold" Foreground="{DynamicResource TextPrimary}"/>
+                  <TextBlock x:Name="MonDiskSub" Text=" " Foreground="{DynamicResource TextMuted}" FontSize="12"/>
+                  <Canvas Width="216" Height="48" Margin="0,6,0,0" HorizontalAlignment="Left" ClipToBounds="True">
+                    <Polyline x:Name="MonDiskLine" Stroke="#DC8A00" StrokeThickness="2" StrokeLineJoin="Round"/>
+                  </Canvas>
+                </StackPanel>
+              </Border>
+              <Border Style="{StaticResource Card}" Width="250" Margin="0,0,12,12">
+                <StackPanel>
+                  <TextBlock Text="Netzwerk" Foreground="{DynamicResource TextSecondary}"/>
+                  <TextBlock x:Name="MonNet" Text="–" FontSize="26" FontWeight="Bold" Foreground="{DynamicResource TextPrimary}"/>
+                  <TextBlock x:Name="MonNetSub" Text=" " Foreground="{DynamicResource TextMuted}" FontSize="12"/>
+                  <Canvas Width="216" Height="48" Margin="0,6,0,0" HorizontalAlignment="Left" ClipToBounds="True">
+                    <Polyline x:Name="MonNetLine" Stroke="#079455" StrokeThickness="2" StrokeLineJoin="Round"/>
+                  </Canvas>
+                </StackPanel>
+              </Border>
+              <Border Style="{StaticResource Card}" Width="250" Margin="0,0,12,12">
+                <StackPanel>
+                  <TextBlock Text="Temperatur" Foreground="{DynamicResource TextSecondary}"/>
+                  <TextBlock x:Name="MonTemp" Text="–" FontSize="26" FontWeight="Bold" Foreground="{DynamicResource TextPrimary}"/>
+                  <TextBlock x:Name="MonTempSub" Text=" " Foreground="{DynamicResource TextMuted}" FontSize="12"/>
+                  <Canvas Width="216" Height="48" Margin="0,6,0,0" HorizontalAlignment="Left" ClipToBounds="True">
+                    <Polyline x:Name="MonTempLine" Stroke="#D92D20" StrokeThickness="2" StrokeLineJoin="Round"/>
+                  </Canvas>
+                </StackPanel>
+              </Border>
+            </WrapPanel>
+            <Border Style="{StaticResource Card}" Margin="0,0,0,12">
+              <StackPanel>
+                <DockPanel>
+                  <Button x:Name="BtnMonRecord" DockPanel.Dock="Right" Style="{StaticResource BtnPrimary}" VerticalAlignment="Center">
+                    <StackPanel Orientation="Horizontal">
+                      <TextBlock Text="&#xE7C8;" FontFamily="Segoe MDL2 Assets" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                      <TextBlock x:Name="BtnMonRecordText" Text="60 Sekunden aufzeichnen"/>
+                    </StackPanel>
+                  </Button>
+                  <StackPanel>
+                    <TextBlock Text="Was bremst gerade?" Style="{StaticResource CardTitle}"/>
+                    <TextBlock x:Name="MonRecStatus" Style="{StaticResource Muted}" Text="Starten Sie die Aufzeichnung, während das Gerät langsam ist. Danach nennt PC Repair Pro die wahrscheinliche Ursache und die größten Verbraucher."/>
+                  </StackPanel>
+                </DockPanel>
+                <TextBlock x:Name="MonRecVerdict" Visibility="Collapsed" TextWrapping="Wrap" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimary}" Margin="0,12,0,0"/>
+                <TextBox x:Name="MonRecDetail" Visibility="Collapsed" IsReadOnly="True" FontFamily="Consolas" FontSize="12" BorderThickness="0" Background="Transparent" Foreground="{DynamicResource TextSecondary}" Margin="0,8,0,0"/>
+              </StackPanel>
+            </Border>
+            <Border Style="{StaticResource Card}">
+              <StackPanel>
+                <TextBlock Text="Größte Verbraucher (laufend)" Style="{StaticResource CardTitle}"/>
+                <Grid Margin="0,4,0,6">
+                  <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="200"/><ColumnDefinition Width="110"/></Grid.ColumnDefinitions>
+                  <TextBlock Text="Programm" Foreground="{DynamicResource TextMuted}" FontSize="12"/>
+                  <TextBlock Grid.Column="1" Text="Prozessor" Foreground="{DynamicResource TextMuted}" FontSize="12"/>
+                  <TextBlock Grid.Column="2" Text="Arbeitsspeicher" Foreground="{DynamicResource TextMuted}" FontSize="12" HorizontalAlignment="Right"/>
+                </Grid>
+                <ItemsControl x:Name="MonProcList">
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                      <Grid Margin="0,3">
+                        <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="200"/><ColumnDefinition Width="110"/></Grid.ColumnDefinitions>
+                        <TextBlock Text="{Binding Name}" Foreground="{DynamicResource TextPrimary}" TextTrimming="CharacterEllipsis"/>
+                        <StackPanel Grid.Column="1" Orientation="Horizontal">
+                          <Border Width="{Binding BarW}" Height="10" CornerRadius="3" Background="#1570EF" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                          <TextBlock Text="{Binding CpuText}" Foreground="{DynamicResource TextSecondary}"/>
+                        </StackPanel>
+                        <TextBlock Grid.Column="2" Text="{Binding RamText}" Foreground="{DynamicResource TextSecondary}" HorizontalAlignment="Right"/>
+                      </Grid>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+              </StackPanel>
+            </Border>
           </StackPanel>
         </ScrollViewer>
 
@@ -884,6 +1026,7 @@ function global:Get-GuiSnapshot {
                 HideKey        = "$($f.HideKey)"
                 CheckKey       = "$($f.CheckKey)"
                 Check          = "$($f.Check)"
+                Help           = "$($f.Help)"
                 FixLabel       = $f.FixLabel
                 CanFix         = ([bool]$f.Fix -and -not $f.Fixed)
                 Fixed          = [bool]$f.Fixed
@@ -965,13 +1108,14 @@ $Script:Pages = [ordered]@{
     'Fehler'        = @{ Kind = 'Findings'; Title = 'Fehlersuche'; Sub = 'Bluescreens mit Ursachen, Abstürze, Problemgeräte, Dienste, Systemdateien, Datenträger, Speichertest und defekte Verknüpfungen.'; Scan = 'Invoke-ErrorScan' }
     'Sicherheit'    = @{ Kind = 'Findings'; Title = 'Sicherheit'; Sub = 'Datensicherung, Datenschutz, Browser-Erweiterungen, Virenschutz, Ransomware- und PUA-Schutz, SmartScreen, Konten, Fernwartung, Firewall, Secure Boot, TPM, Verschlüsselung, Kernisolierung, UAC, SMB1, Freigaben und veraltete Browser.'; Scan = 'Invoke-SecurityScan' }
     'Speicher'      = @{ Kind = 'Findings'; Title = 'Speicherfresser'; Sub = 'Arbeitsspeicher, freier Speicherplatz, Datenmüll inkl. Browser-Caches, Wiederherstellungspunkte und alte Sicherungen, Speicherbelegung als Grafik – dazu Werkzeuge für Duplikate, große Ordner, Programme und Entwickler-Reste.'; Scan = 'Invoke-MemoryScanDetailed' }
-    'Leistung'      = @{ Kind = 'Findings'; Title = 'Leistungsbremsen'; Sub = 'Prozessorlast, Autostart inkl. geplanter Aufgaben und Dienste, Startdauer, Bildwiederholrate, Arbeitsspeicher-Takt, Energie- und Standby-Einstellungen, Laufwerk, Temperatur und Zusatzsoftware.'; Scan = 'Invoke-PerformanceScan' }
+    'Leistung'      = @{ Kind = 'Findings'; Title = 'Leistungsbremsen'; Sub = 'Prozessorlast, Autostart inkl. geplanter Aufgaben und Dienste, Startdauer, Bildwiederholrate, Arbeitsspeicher-Takt, Energie- und Standby-Einstellungen, Laufwerk, Temperatur, Spiele- und Grafikleistung und Zusatzsoftware.'; Scan = 'Invoke-PerformanceScan' }
     'Herunterfahren' = @{ Kind = 'Findings'; Title = 'Herunterfahren & Neustart'; Sub = 'Dauer der letzten Herunterfahrvorgänge, ungewolltes Aufwachen aus dem Energiesparmodus, bremsende Programme, Dienste und Treiber, Wartezeiten, ausstehende Updates und Netzlaufwerke.'; Scan = 'Invoke-ShutdownScan'; ScanText = 'Herunterfahren prüfen' }
     'Akku'          = @{ Kind = 'Findings'; Title = 'Akku'; Sub = 'Gesundheit, Kapazitätsverlauf, Ladezyklen, Ladezustand, Standby und was das Energiesparen verhindert.'; Scan = 'Invoke-BatteryScan' }
     'Netzwerk'      = @{ Kind = 'Findings'; Title = 'Netzwerk & WLAN'; Sub = 'Internetverbindung, WLAN-Signal und -Sicherheit, Netzwerkkabel (LAN), Geschwindigkeit, Latenz, Proxy und WLAN-Treiber.'; Scan = 'Invoke-NetworkScan' }
     'Software'      = @{ Kind = 'Findings'; Title = 'Software-Updates'; Sub = 'Verfügbare Updates für installierte Programme (über WinGet).'; Scan = 'Invoke-SoftwareScan' }
     'Windows'       = @{ Kind = 'Findings'; Title = 'Windows & Treiber'; Sub = 'Windows-Updates, Treiber-Updates, Grafiktreiber, BIOS-Alter und Hersteller-Tools für BIOS und Firmware.'; Scan = 'Invoke-WindowsUpdateScan' }
     'Werkzeuge'     = @{ Kind = 'Findings'; Title = 'Reparatur-Werkzeuge'; Sub = 'Gezielte Reparaturen und Tests – Werkzeug ankreuzen und »Ausgewählte beheben« klicken.'; Scan = 'Invoke-ToolsScan'; ScanText = 'Werkzeuge laden' }
+    'Monitor'       = @{ Kind = 'Monitor'; Title = 'Live-Monitor'; Sub = 'Laufende Anzeige von Prozessor, Arbeitsspeicher, Datenträger, Netzwerk und Temperatur mit den größten Verbrauchern – und Aufzeichnung »Was bremst gerade?«.' }
     'Verlauf'       = @{ Kind = 'History'; Title = 'Verlauf & Trends'; Sub = 'Entwicklung der wichtigsten Kennzahlen über alle Komplett-Diagnosen.' }
     'Aenderungen'   = @{ Kind = 'Changes'; Title = 'Änderungen'; Sub = 'Protokoll aller Änderungen mit Rückgängig-Funktion.' }
     'Einstellungen' = @{ Kind = 'Settings'; Title = 'Einstellungen'; Sub = 'Design, Umfang der Komplett-Diagnose, geplante Wartung, Berichte, ausgeblendete Meldungen und Programm-Updates.' }
@@ -1009,7 +1153,8 @@ $Script:Table = New-Table @(
     @('FixText', [string]), @('Status', [string]), @('HasDetail', [bool]), @('HasItems', [bool]), @('HasStatus', [bool]),
     @('CanFix', [bool]), @('IsFixed', [bool]), @('RequiresReboot', [bool]), @('SelectAll', [bool]), @('ShowFix', [bool]),
     @('IsSelected', [bool]), @('SelectLabels', [object]), @('Chart', [object]), @('HasChart', [bool]), @('Tiles', [object]), @('HasTiles', [bool]),
-    @('RunOk', [bool]), @('HasPaths', [bool]), @('HideKey', [string]), @('CheckKey', [string]), @('CheckName', [string]), @('CanHide', [bool]), @('AskFolder', [bool]), @('Repeatable', [bool]), @('SelectDefault', [object])
+    @('RunOk', [bool]), @('HasPaths', [bool]), @('HideKey', [string]), @('CheckKey', [string]), @('CheckName', [string]), @('CanHide', [bool]), @('AskFolder', [bool]), @('Repeatable', [bool]), @('SelectDefault', [object]),
+    @('Help', [string]), @('HasHelp', [bool])
 )
 $Script:View = New-Object System.Data.DataView($Script:Table)
 $Script:View.Sort = 'Order ASC'
@@ -1172,6 +1317,8 @@ function Update-FromSnapshot {
         $vm.HideKey = "$($f.HideKey)"
         $vm.CheckKey = "$($f.CheckKey)"
         $vm.CheckName = "$($f.Check)"
+        $vm.Help = "$($f.Help)"
+        $vm.HasHelp = [bool]$f.Help
         $vm.CanHide = ($f.Severity -ne 'OK') -and -not $f.Repeatable -and $f.Category -ne 'Werkzeuge' -and [bool]$f.HideKey
         $fixText = if ($f.Category -eq 'Werkzeuge' -or $f.Repeatable) { "Ausführen: $($f.FixLabel)" } else { "Beheben: $($f.FixLabel)" }
         if ($f.RequiresReboot) { $fixText += '  (Neustart nötig)' }
@@ -1189,6 +1336,61 @@ function Update-FromSnapshot {
     Update-View
 }
 
+function Test-FilterActive {
+    $ui = $Script:UI
+    if (-not $ui.SearchBox) { return $false }
+    return [bool]($ui.SearchBox.Text.Trim() -or $ui.FilterSeverity.SelectedIndex -gt 0 -or $ui.ChkOnlyFixable.IsChecked)
+}
+
+function ConvertTo-LikeValue {
+    <# Suchtext für DataView.RowFilter (LIKE) maskieren. #>
+    param([string]$Text)
+    $t = $Text -replace "'", "''"
+    return ($t -replace '([\[\]\*%])', '[$1]')
+}
+
+function Get-FindingsRowFilter {
+    param([string]$Kind, [string]$Page)
+    $parts = @($(if ($Kind -ne 'Findings' -or $Page -eq 'Alle') { "Category <> 'Werkzeuge'" } else { "Category = '$Page'" }))
+    $ui = $Script:UI
+    if ($Kind -eq 'Findings' -and $ui.SearchBox) {
+        foreach ($word in @($ui.SearchBox.Text.Trim() -split '\s+' | Where-Object { $_ })) {
+            $w = ConvertTo-LikeValue $word
+            $parts += "(Title LIKE '*$w*' OR Detail LIKE '*$w*' OR ItemsText LIKE '*$w*' OR CheckName LIKE '*$w*' OR CategoryTitle LIKE '*$w*')"
+        }
+        $tag = "$($ui.FilterSeverity.SelectedItem.Tag)"
+        if ($tag) { $parts += '(' + ((@($tag -split ',') | ForEach-Object { "Severity = '$_'" }) -join ' OR ') + ')' }
+        if ($ui.ChkOnlyFixable.IsChecked) { $parts += '(CanFix = true AND IsFixed = false)' }
+    }
+    return ($parts -join ' AND ')
+}
+
+function Export-FindingsCsv {
+    $sevName = @{ Kritisch = 'Kritisch'; Warnung = 'Warnung'; Info = 'Hinweis'; OK = 'In Ordnung' }
+    $rows = foreach ($r in $Script:View) {
+        [pscustomobject][ordered]@{
+            Bereich    = $r.CategoryTitle
+            Schweregrad = $sevName["$($r.Severity)"]
+            'Prüfung'  = $r.CheckName
+            Titel      = $r.Title
+            Details    = $r.Detail
+            'Einträge' = (("$($r.ItemsText)" -split "`r?`n" | Where-Object { $_.Trim() }) | ForEach-Object { $_.Trim() }) -join ' | '
+            Behebbar   = $(if ($r.CanFix -and -not $r.IsFixed) { 'Ja' } else { 'Nein' })
+            Status     = $r.Status
+        }
+    }
+    if (-not $rows) { $null = Show-Message 'Es werden keine Ergebnisse angezeigt, die exportiert werden könnten.' 'CSV-Export'; return }
+    $file = Join-Path $BerichtOrdner ('Ergebnisse_{0:yyyyMMdd_HHmm}.csv' -f (Get-Date))
+    try {
+        # Semikolon und UTF-8 mit BOM: wird von einem deutschen Excel direkt richtig geöffnet
+        @($rows) | Export-Csv -LiteralPath $file -Delimiter ';' -NoTypeInformation -Encoding UTF8 -ErrorAction Stop
+        Add-LogLine "CSV-Export: $(@($rows).Count) Ergebnis(se) nach $file"
+        Start-Process -FilePath explorer.exe -ArgumentList "/select,`"$file`""
+    } catch {
+        $null = Show-Message "Die CSV-Datei konnte nicht gespeichert werden:`n`n$($_.Exception.Message)" 'CSV-Export' 'Error'
+    }
+}
+
 function Update-View {
     $page = $Script:Page
     $def = $Script:Pages[$page]
@@ -1197,6 +1399,8 @@ function Update-View {
     $Script:UI.PageSubtitle.Text = $def.Sub
     $Script:UI.FindingsScroll.Visibility = if ($kind -eq 'Findings') { 'Visible' } else { 'Collapsed' }
     $Script:UI.HistoryPanel.Visibility = if ($kind -eq 'History') { 'Visible' } else { 'Collapsed' }
+    $Script:UI.MonitorPanel.Visibility = if ($kind -eq 'Monitor') { 'Visible' } else { 'Collapsed' }
+    if ($kind -eq 'Monitor') { Start-LiveMonitor } else { Stop-LiveMonitor }
     $Script:UI.ChangesPanel.Visibility = if ($kind -eq 'Changes') { 'Visible' } else { 'Collapsed' }
     $Script:UI.SettingsPanel.Visibility = if ($kind -eq 'Settings') { 'Visible' } else { 'Collapsed' }
     $Script:UI.LogBox.Visibility = if ($kind -eq 'Log') { 'Visible' } else { 'Collapsed' }
@@ -1216,11 +1420,14 @@ function Update-View {
         $Script:UI.SystemCard.Visibility = 'Collapsed'
     }
 
-    $Script:View.RowFilter = if ($kind -ne 'Findings' -or $page -eq 'Alle') { "Category <> 'Werkzeuge'" } else { "Category = '$page'" }
+    $Script:View.RowFilter = Get-FindingsRowFilter $kind $page
     if (-not [object]::ReferenceEquals($Script:UI.FindingsList.ItemsSource, $Script:View)) { $Script:UI.FindingsList.ItemsSource = $Script:View }
+    $Script:UI.FilterBar.Visibility = if ($kind -eq 'Findings' -and ($Script:Items.Count -gt 0)) { 'Visible' } else { 'Collapsed' }
     if (-not $Script:View.Count) {
         $Script:UI.EmptyHint.Visibility = 'Visible'
-        $Script:UI.EmptyHintText.Text = if ($page -eq 'Alle') {
+        $Script:UI.EmptyHintText.Text = if (Test-FilterActive) {
+            "Keine Ergebnisse für diese Suche bzw. diesen Filter.`nSuchbegriff ändern oder Filter zurücksetzen."
+        } elseif ($page -eq 'Alle') {
             "Noch keine Ergebnisse.`nKlicken Sie auf »Komplett-Diagnose starten«, um das Gerät vollständig zu prüfen."
         } elseif ($page -eq 'Werkzeuge') {
             'Die Werkzeuge werden geladen …'
@@ -1357,6 +1564,8 @@ function Invoke-SelectedFixes {
                 'Markieren Sie die alten, nicht benutzten Treiberpakete, die entfernt werden sollen. Der aktive Treiber bleibt immer erhalten.'
             } elseif ($vm.FixLabel -match 'Weckberechtigung') {
                 'Markieren Sie die Geräte, die den Computer nicht mehr aufwecken sollen. Vorausgewählt sind Mäuse und Netzwerkadapter; die Tastatur bleibt zum Aufwecken nutzbar. Rückgängig jederzeit unter »Änderungen«.'
+            } elseif ($vm.FixLabel -match 'Spiele-Einstellungen') {
+                'Markieren Sie die Einstellungen, die gesetzt werden sollen. Die GPU-Planung wirkt erst nach einem Neustart. Rückgängig jederzeit unter »Änderungen«.'
             } elseif ($vm.FixLabel -match 'Update') {
                 'Markieren Sie die Updates, die installiert werden sollen.'
             } else { 'Markieren Sie die Einträge, die bearbeitet werden sollen.' }
@@ -1764,6 +1973,150 @@ function Install-ToolUpdateUi {
     }
 }
 
+#region Live-Monitor
+$Script:Mon = [hashtable]::Synchronized(@{ Run = $false; Quit = $false; Last = $null; Seq = 0; Rec = $null; RecStart = $null; Error = $null })
+$Script:MonJob = $null
+$Script:MonTimer = $null
+$Script:MonSeen = 0
+$Script:MonHist = @{}
+$Script:MonRecSeconds = 60
+
+function Start-LiveMonitor {
+    $Script:Mon.Run = $true
+    if (-not $Script:MonJob) {
+        foreach ($k in 'Cpu', 'Ram', 'Disk', 'Net', 'Temp') { $Script:MonHist[$k] = New-Object System.Collections.Generic.List[double] }
+        $iss = [initialsessionstate]::CreateDefault()
+        try { $iss.ExecutionPolicy = [Microsoft.PowerShell.ExecutionPolicy]::Bypass } catch { }
+        $rs = [runspacefactory]::CreateRunspace($iss)
+        $rs.Open()
+        $rs.SessionStateProxy.SetVariable('mon', $Script:Mon)
+        $rs.SessionStateProxy.SetVariable('modPath', (Join-Path $PSScriptRoot 'Module\LiveMonitor.ps1'))
+        $ps = [powershell]::Create()
+        $ps.Runspace = $rs
+        $null = $ps.AddScript({
+                . $modPath
+                $st = New-LiveMonitorState
+                while (-not $mon.Quit) {
+                    if (-not $mon.Run) { Start-Sleep -Milliseconds 400; $st.PrevTime = $null; continue }
+                    $t0 = [datetime]::UtcNow
+                    try {
+                        $smp = Get-LiveSample -State $st
+                        $mon.Last = $smp
+                        $mon.Seq++
+                        if ($null -ne $mon.Rec) { $null = $mon.Rec.Add($smp) }
+                    } catch { $mon.Error = "$($_.Exception.Message)" }
+                    $wait = 1000 - ([datetime]::UtcNow - $t0).TotalMilliseconds
+                    if ($wait -gt 0) { Start-Sleep -Milliseconds ([int]$wait) }
+                }
+            })
+        $Script:MonJob = @{ PS = $ps; RS = $rs; Handle = $ps.BeginInvoke() }
+        $Script:MonTimer = New-Object System.Windows.Threading.DispatcherTimer
+        $Script:MonTimer.Interval = [TimeSpan]::FromMilliseconds(500)
+        $Script:MonTimer.Add_Tick({ try { Update-LiveMonitorUi } catch { Add-LogLine "FEHLER (Live-Monitor): $($_.Exception.Message)" } })
+        $Script:MonTimer.Start()
+    }
+}
+
+function Stop-LiveMonitor {
+    <# Beim Verlassen der Seite pausieren – eine laufende Aufzeichnung läuft weiter. #>
+    if (-not $Script:MonJob -or $null -ne $Script:Mon.Rec) { return }
+    $Script:Mon.Run = $false
+}
+
+function Close-LiveMonitor {
+    if (-not $Script:MonJob) { return }
+    $Script:Mon.Quit = $true
+    try { $Script:MonTimer.Stop() } catch { }
+    try { $null = $Script:MonJob.PS.BeginStop($null, $null) } catch { }
+}
+
+function ConvertTo-MonPoints {
+    param($Values, [double]$Max)
+    $v = @($Values)
+    if (-not $v.Count) { return [System.Windows.Media.PointCollection]::new() }
+    if ($Max -le 0) { $Max = 1 }
+    $step = 216.0 / 59
+    $off = 59 - ($v.Count - 1)
+    $pts = for ($i = 0; $i -lt $v.Count; $i++) {
+        $y = 47 - [math]::Min(1, [double]$v[$i] / $Max) * 45
+        '{0},{1}' -f [math]::Round(($off + $i) * $step, 1).ToString([Globalization.CultureInfo]::InvariantCulture), [math]::Round($y, 1).ToString([Globalization.CultureInfo]::InvariantCulture)
+    }
+    [System.Windows.Media.PointCollection]::Parse(($pts -join ' '))
+}
+
+function Add-MonValue {
+    param([string]$Key, $Value)
+    $h = $Script:MonHist[$Key]
+    $h.Add($(if ($null -eq $Value) { 0 } else { [double]$Value }))
+    while ($h.Count -gt 60) { $h.RemoveAt(0) }
+}
+
+function Update-LiveMonitorUi {
+    if ($Script:Mon.Seq -eq $Script:MonSeen) { return }
+    $Script:MonSeen = $Script:Mon.Seq
+    $s = $Script:Mon.Last
+    if (-not $s) { return }
+    foreach ($k in 'Cpu', 'Ram', 'Disk', 'Net', 'Temp') { Add-MonValue $k $(if ($k -eq 'Ram') { $s.RamPct } else { $s.$k }) }
+    $peak = { param($k) [math]::Round((@($Script:MonHist[$k]) | Measure-Object -Maximum).Maximum, 0) }
+    $ui = $Script:UI
+    $ui.MonCpu.Text = if ($null -ne $s.Cpu) { "$([math]::Round($s.Cpu)) %" } else { '–' }
+    $ui.MonCpuSub.Text = "Spitze (letzte Minute): $(& $peak 'Cpu') %"
+    $ui.MonRam.Text = if ($null -ne $s.RamPct) { "$([math]::Round($s.RamPct)) %" } else { '–' }
+    $ui.MonRamSub.Text = '{0:N1} von {1:N1} GB belegt' -f ($s.RamUsed / 1GB), ($s.RamTotal / 1GB)
+    $ui.MonDisk.Text = if ($null -ne $s.Disk) { "$([math]::Round($s.Disk)) %" } else { '–' }
+    $ui.MonDiskSub.Text = "Spitze (letzte Minute): $(& $peak 'Disk') %"
+    $ui.MonNet.Text = Format-MonRate $s.Net
+    $ui.MonNetSub.Text = "Spitze: $(Format-MonRate ((@($Script:MonHist['Net']) | Measure-Object -Maximum).Maximum))"
+    $ui.MonTemp.Text = if ($null -ne $s.Temp) { "$($s.Temp) °C" } else { '–' }
+    $ui.MonTempSub.Text = if ($null -ne $s.Temp) { 'höchster Sensorwert' } else { 'vom Gerät nicht gemeldet' }
+    $ui.MonCpuLine.Points = ConvertTo-MonPoints $Script:MonHist['Cpu'] 100
+    $ui.MonRamLine.Points = ConvertTo-MonPoints $Script:MonHist['Ram'] 100
+    $ui.MonDiskLine.Points = ConvertTo-MonPoints $Script:MonHist['Disk'] 100
+    $ui.MonNetLine.Points = ConvertTo-MonPoints $Script:MonHist['Net'] ([math]::Max(100KB, (@($Script:MonHist['Net']) | Measure-Object -Maximum).Maximum))
+    $ui.MonTempLine.Points = ConvertTo-MonPoints $Script:MonHist['Temp'] 100
+
+    $top = @($s.Procs | Sort-Object Cpu, Ram -Descending | Select-Object -First 12)
+    $maxCpu = [math]::Max(1, (@($top | ForEach-Object { $_.Cpu }) | Measure-Object -Maximum).Maximum)
+    $t = New-Table @(@('Name', [string]), @('CpuText', [string]), @('RamText', [string]), @('BarW', [double]))
+    foreach ($p in $top) {
+        $n = if ($p.Count -gt 1) { "$($p.Name) ($($p.Count)×)" } else { $p.Name }
+        $null = $t.Rows.Add($n, ('{0:N1} %' -f $p.Cpu), ('{0:N0} MB' -f ($p.Ram / 1MB)), [math]::Max(1, 110 * $p.Cpu / $maxCpu))
+    }
+    $ui.MonProcList.ItemsSource = $t.DefaultView
+
+    # Aufzeichnung »Was bremst gerade?«
+    $rec = $Script:Mon.Rec
+    if ($null -ne $rec) {
+        $n = $rec.Count
+        $ui.MonRecStatus.Text = "Aufzeichnung läuft: $n von $Script:MonRecSeconds Sekunden – das Gerät dabei normal weiterbenutzen …"
+        if ($n -ge $Script:MonRecSeconds) {
+            $Script:Mon.Rec = $null
+            $a = Get-LoadAnalysis $rec.ToArray()
+            $ui.MonRecStatus.Text = "Aufzeichnung vom $(Get-Date -Format 'dd.MM.yyyy HH:mm') ($($a.Samples) Messpunkte):"
+            $ui.MonRecVerdict.Text = $a.Verdict
+            $ui.MonRecVerdict.Visibility = 'Visible'
+            $ui.MonRecDetail.Text = (@($a.Lines) -join [Environment]::NewLine)
+            $ui.MonRecDetail.Visibility = 'Visible'
+            $ui.BtnMonRecord.IsEnabled = $true
+            $ui.BtnMonRecordText.Text = 'Erneut aufzeichnen'
+            Add-LogLine "Live-Aufzeichnung: $($a.Verdict)"
+            foreach ($l in $a.Lines) { Add-LogLine "   $l" }
+            if ($Script:Page -ne 'Monitor') { $Script:Mon.Run = $false }
+        }
+    }
+}
+
+function Start-LoadRecording {
+    $Script:Mon.Rec = [System.Collections.ArrayList]::Synchronized((New-Object System.Collections.ArrayList))
+    $Script:UI.BtnMonRecord.IsEnabled = $false
+    $Script:UI.BtnMonRecordText.Text = 'Aufzeichnung läuft …'
+    $Script:UI.MonRecVerdict.Visibility = 'Collapsed'
+    $Script:UI.MonRecDetail.Visibility = 'Collapsed'
+    $Script:UI.MonRecStatus.Text = 'Aufzeichnung startet …'
+    Start-LiveMonitor
+}
+#endregion
+
 #endregion
 
 #region ---------- Start ----------
@@ -1810,9 +2163,12 @@ try {
         'BtnFixText', 'Busy', 'StatusText', 'HistoryPanel', 'HistoryHint', 'HistoryList', 'ChangesPanel', 'ChangesHint', 'ChangesList',
         'SettingsPanel', 'ThemeSystem', 'ThemeLight', 'ThemeDark', 'MaintStatus', 'IntWeekly', 'IntDaily', 'DayRow', 'MaintTime', 'BtnMaintSet',
         'BtnMaintRemove', 'ChkPdf', 'BtnFleet', 'UpdateStatus', 'BtnUpdateCheck', 'BtnUpdateInstall', 'SignatureText', 'ChkAutoUpdate', 'BadgeUpdate', 'AboutText', 'SidebarLogo', 'AboutLogo',
-         'HiddenHint', 'HiddenList', 'BtnUnhideAll', 'ChkStorageFull', 'ChkAreaFehler', 'ChkAreaSpeicher', 'ChkAreaLeistung', 'ChkAreaHerunterfahren', 'ChkAreaAkku', 'ChkAreaNetzwerk', 'ChkAreaSoftware', 'ChkAreaSicherheit', 'ChkAreaWindows', 'ReportFolderText', 'BtnReportFolderChange', 'BtnReportFolderOpen', 'Keep10', 'Keep30', 'Keep100', 'Keep0'
+         'HiddenHint', 'HiddenList', 'BtnUnhideAll', 'ChkStorageFull', 'ChkAreaFehler', 'ChkAreaSpeicher', 'ChkAreaLeistung', 'ChkAreaHerunterfahren', 'ChkAreaAkku', 'ChkAreaNetzwerk', 'ChkAreaSoftware', 'ChkAreaSicherheit', 'ChkAreaWindows', 'ReportFolderText', 'BtnReportFolderChange', 'BtnReportFolderOpen', 'Keep10', 'Keep30', 'Keep100', 'Keep0',
+        'MonitorPanel', 'MonCpu', 'MonCpuSub', 'MonCpuLine', 'MonRam', 'MonRamSub', 'MonRamLine', 'MonDisk', 'MonDiskSub', 'MonDiskLine', 'MonNet', 'MonNetSub', 'MonNetLine',
+        'MonTemp', 'MonTempSub', 'MonTempLine', 'BtnMonRecord', 'BtnMonRecordText', 'MonRecStatus', 'MonRecVerdict', 'MonRecDetail',
+        'FilterBar', 'SearchBox', 'SearchHint', 'FilterSeverity', 'ChkOnlyFixable', 'BtnExportCsv'
     )
-    $navNames = @('NavAlle') + @($Script:CategoryKeys | ForEach-Object { "Nav$_" }) + @('NavVerlauf', 'NavAenderungen', 'NavEinstellungen', 'NavLog')
+    $navNames = @('NavAlle') + @($Script:CategoryKeys | ForEach-Object { "Nav$_" }) + @('NavMonitor', 'NavVerlauf', 'NavAenderungen', 'NavEinstellungen', 'NavLog')
     $names += $navNames
     $names += @($Script:CategoryKeys | ForEach-Object { "Badge$_"; "Badge${_}Text" })
     $names += 1..7 | ForEach-Object { "Day$_" }
@@ -1857,6 +2213,14 @@ try {
             Update-FixButtons
         })
     $Script:UI.BtnFix.Add_Click({ Invoke-SelectedFixes })
+    $Script:UI.BtnMonRecord.Add_Click({ Start-LoadRecording })
+    $Script:UI.SearchBox.Add_TextChanged({
+            $Script:UI.SearchHint.Visibility = if ($Script:UI.SearchBox.Text) { 'Collapsed' } else { 'Visible' }
+            Update-View
+        })
+    $Script:UI.FilterSeverity.Add_SelectionChanged({ if ($Script:UI.FindingsList) { Update-View } })
+    $Script:UI.ChkOnlyFixable.Add_Click({ Update-View })
+    $Script:UI.BtnExportCsv.Add_Click({ Export-FindingsCsv })
     $Script:UI.BtnReport.Add_Click({ Open-Report })
     $Script:UI.BtnFolder.Add_Click({ Start-Process -FilePath explorer.exe -ArgumentList "`"$BerichtOrdner`"" })
     $Script:UI.ChkNurPruefen.Add_Click({
@@ -2028,6 +2392,7 @@ try {
                 try { $null = $Script:Job.PS.BeginStop($null, $null) } catch { }
             }
             $Script:Timer.Stop()
+            Close-LiveMonitor
             Save-LogBuffer
         })
 
