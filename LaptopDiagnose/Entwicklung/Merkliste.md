@@ -4,7 +4,7 @@ Stand: 10.10.2026. Neue Wünsche hier ergänzen.
 
 ## Offen (noch nicht gebaut)
 
-Geplant: Version 3.0 = 26–28, Version 3.1 = 29–31.
+Geplant: Version 3.0 = 26–28 und 33, Version 3.1 = 29–31.
 
 26. **Erweiterte Sicherheit:** überwachter Ordnerzugriff (Ransomware-Schutz), PUA-Schutz, SmartScreen, Konten ohne Passwort, automatische Anmeldung, Gastkonto, installierte bzw. automatisch startende Fernwartungsprogramme (AnyDesk, TeamViewer, RustDesk …) mit Hinweis.
 27. **Treiber sichern:** vor Treiber-Updates (und als Werkzeug) alle Fremdtreiber mit `Export-WindowsDriver` in einen Ordner sichern; Hinweis, wie ein Treiber im Geräte-Manager zurückgesetzt bzw. aus der Sicherung installiert wird.
@@ -15,6 +15,13 @@ Geplant: Version 3.0 = 26–28, Version 3.1 = 29–31.
     - Vorbereitung für eine echte Code-Signatur (gekauftes Zertifikat, ca. 100–300 €/Jahr; Kauf durch den Benutzer) – Signier-Skript und Anleitung, damit Virenscanner/SmartScreen nicht mehr warnen.
     - Suchfeld und Filter (Schweregrad, behebbar) in den Ergebnissen, Export der Ergebnisse als CSV.
     - »?« an jeder Prüfung mit kurzer Erklärung, warum sie wichtig ist.
+33. **Meldungen ausblenden:**
+    - An jeder Ergebniskarte (Warnung, Hinweis, auch »Kritisch«) ein Knopf »Ausblenden«; die Meldung erscheint bei späteren Prüfungen nicht mehr.
+    - Wiedererkennung über Bereich und Prüfung (stabiler Schlüssel), nicht über den genauen Text – z. B. bleibt »Ladegrenze« ausgeblendet, auch wenn sich der Prozentwert ändert.
+    - Optional »Nur diese Ausprägung ausblenden« (z. B. genau dieser Dienst oder diese Erweiterung), damit neue Funde derselben Prüfung trotzdem erscheinen.
+    - Ausgeblendete Meldungen zählen nicht in Gesundheitswert und Zählung; der Bericht nennt am Ende »N Meldungen ausgeblendet«.
+    - Unter *Einstellungen › Ausgeblendete Meldungen* eine Liste mit Datum des Ausblendens; einzeln oder alle wieder einblenden.
+    - Gilt für Fenster, Konsole und geplante Wartung (Benachrichtigungen nur für nicht ausgeblendete Meldungen). Gespeichert in den Einstellungen im Berichtordner.
 
 Bewusst weiterhin nicht: Registry-Reiniger, Treiber von Drittanbieter-Seiten, automatische Reparaturen ohne Rückfrage, »RAM-Booster« und ähnliche Schein-Optimierer.
 
