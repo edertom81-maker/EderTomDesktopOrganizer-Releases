@@ -4,7 +4,7 @@ Stand: 11.10.2026. Neue Wünsche hier ergänzen.
 
 ## Offen (noch nicht gebaut)
 
-Derzeit keine offenen Punkte.
+38. **Externe Datenträger: Werkzeuge automatisch laden:** Beim Klick auf »Externe Datenträger« in der Seitenleiste automatisch die schnelle Prüfung starten (wie bei den Reparatur-Werkzeugen), sodass Übersicht, Partitionsleisten und alle Werkzeuge sofort da sind – ohne vorher »Datenträger prüfen« zu klicken. Die vollständige Dateisystemprüfung bleibt beim Knopf »Datenträger prüfen«.
 
 Bewusst weiterhin nicht: Registry-Reiniger, Treiber von Drittanbieter-Seiten, automatische Reparaturen ohne Rückfrage, »RAM-Booster« und ähnliche Schein-Optimierer.
 
