@@ -4,7 +4,7 @@ Stand: 10.10.2026. Neue Wünsche hier ergänzen.
 
 ## Offen (noch nicht gebaut)
 
-Empfohlene Reihenfolge: 21–25 zuerst, danach 26 und 28.
+Empfohlene Reihenfolge: Version 2.9 = 21–25 und 32, Version 3.0 = 26–28, Version 3.1 = 29–31.
 
 21. **Datensicherung prüfen:** Windows-Sicherung, Dateiversionsverlauf, OneDrive-Ordnersicherung (Dokumente/Bilder/Desktop) und Systemabbild erkennen, letztes Sicherungsdatum anzeigen. Warnung, wenn keine oder eine veraltete Sicherung existiert (besonders zusammen mit SMART-Problemen). Knopf öffnet die passenden Windows-Einstellungen.
 22. **Programme deinstallieren:** Liste aller installierten Programme (Desktop-Programme und Store-Apps) mit Größe, Installationsdatum, Hersteller; sortier- und filterbar. Deinstallation nur über den offiziellen Deinstaller nach Auswahl. Danach Suche nach Resten (Ordner in Programme/AppData, Verknüpfungen, Autostart) zur Auswahl. Systemkomponenten und Treiber werden nicht angeboten.
@@ -21,6 +21,14 @@ Empfohlene Reihenfolge: 21–25 zuerst, danach 26 und 28.
     - Suchfeld und Filter (Schweregrad, behebbar) in den Ergebnissen, Export der Ergebnisse als CSV.
     - »?« an jeder Prüfung mit kurzer Erklärung, warum sie wichtig ist.
 
+32. **Alte Sicherungen und Wiederherstellungsdaten** (Bereich »Speicherfresser«, passt zu Punkt 21):
+    - Wiederherstellungspunkte: belegter Platz und Obergrenze anzeigen, Warnung bei sehr viel Platz; ältere Punkte nach Auswahl entfernen (der neueste bleibt immer), Obergrenze einstellbar (`vssadmin`), umkehrbar soweit möglich.
+    - Alte Systemabbild-Sicherungen (`WindowsImageBackup`, auch auf externen Platten) mit Datum und Größe; nur ältere Sicherungen zum Löschen anbieten, die neueste bleibt.
+    - Dateiversionsverlauf: Platzbedarf alter Versionen anzeigen, Aufräumen älterer Versionen über die Windows-Funktion anstoßen.
+    - Reste von Windows-Upgrades: `$WINDOWS.~BT`, `$WINDOWS.~WS`, `C:\ESD`, `$GetCurrent` (nur wenn kein Upgrade läuft).
+    - Alte Treiberpakete im Treiberspeicher (DriverStore): ältere Versionen desselben Treibers nach Auswahl entfernen (`pnputil`), der aktive Treiber bleibt.
+    - Alte Windows-Protokolle (CBS-, DISM- und Setup-Logs) über einer Größe von z. B. 100 MB.
+    - Löschen nur nach Auswahl, Eintrag im Änderungsprotokoll; was nicht in den Papierkorb kann, über die Karte »Endgültig löschen?«.
 Bewusst weiterhin nicht: Registry-Reiniger, Treiber von Drittanbieter-Seiten, automatische Reparaturen ohne Rückfrage, »RAM-Booster« und ähnliche Schein-Optimierer.
 
 ## Erledigt in Version 2.8.0
