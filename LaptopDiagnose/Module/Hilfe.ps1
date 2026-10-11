@@ -107,7 +107,7 @@ $Script:CheckHelp = @{
     'Externe Datenträger: Dateisystem'                          = 'Wird ein Datenträger ohne »Sicher entfernen« abgezogen, kann das Dateisystem beschädigt werden – Dateien fehlen oder sind unlesbar.'
     'Externe Datenträger: Probleme'                             = 'Schreibschutz, fehlender Laufwerksbuchstabe, ein unlesbares (RAW) Dateisystem oder ungenutzter Platz verhindern die normale Nutzung.'
     'Zusatzlaufwerke: Partitionen'                              = 'Zeigt die Aufteilung interner Zusatzlaufwerke (z. B. einer zweiten Festplatte). Das Windows-Laufwerk wird hier nie angezeigt und lässt sich nicht verändern.'
-    'Partitionen und Klonen: Werkzeuge'                         = 'Partitionen anlegen, aufteilen, löschen oder in der Größe ändern sowie Laufwerke kopieren bzw. klonen – das Windows-Laufwerk ist dabei immer gesperrt.'
+    'Partitionen und Klonen: Werkzeuge'                         = 'Partitionen anlegen, aufteilen, löschen oder in der Größe ändern, Laufwerke kopieren bzw. klonen, gelöschte Dateien retten und Datenträger sicher löschen – das Windows-Laufwerk ist für alle ändernden Werkzeuge gesperrt.'
     'Externe Datenträger: Werkzeuge'                            = 'Geschwindigkeits- und Echtheitstest zeigen, ob ein Datenträger hält, was er verspricht – gefälschte Sticks verlieren unbemerkt Daten.'
 }
 

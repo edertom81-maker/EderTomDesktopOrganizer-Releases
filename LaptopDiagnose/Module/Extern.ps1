@@ -208,7 +208,7 @@ function Invoke-ExternalDriveScan {
     }
     Invoke-Check $cat 'Zusatzlaufwerke: Partitionen' { Add-PartitionOverviewFindings -Category $cat }
     if (-not $disks) {
-        Invoke-Check $cat 'Partitionen und Klonen: Werkzeuge' { Add-PartitionToolFindings -Category $cat; Add-CloneToolFindings -Category $cat }
+        Invoke-Check $cat 'Partitionen und Klonen: Werkzeuge' { Add-PartitionToolFindings -Category $cat; Add-CloneToolFindings -Category $cat; Add-RecoveryToolFindings -Category $cat }
         return
     }
 
@@ -270,7 +270,7 @@ function Invoke-ExternalDriveScan {
 
     Invoke-Check $cat 'Externe Datenträger: Probleme' { Add-ExternalProblemFindings -Category $cat -Disks $disks }
     Invoke-Check $cat 'Externe Datenträger: Werkzeuge' { Add-ExternalToolFindings -Category $cat }
-    Invoke-Check $cat 'Partitionen und Klonen: Werkzeuge' { Add-PartitionToolFindings -Category $cat; Add-CloneToolFindings -Category $cat }
+    Invoke-Check $cat 'Partitionen und Klonen: Werkzeuge' { Add-PartitionToolFindings -Category $cat; Add-CloneToolFindings -Category $cat; Add-RecoveryToolFindings -Category $cat }
 }
 
 function Invoke-ExternalDriveScanDetailed { Invoke-ExternalDriveScan -Tiefenpruefung }

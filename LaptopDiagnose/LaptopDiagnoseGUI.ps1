@@ -665,7 +665,7 @@ $Script:Xaml = @'
               </Border>
               <Border Style="{StaticResource Card}" Width="250" Margin="0,0,12,12">
                 <StackPanel>
-                  <TextBlock Text="Datenträger (aktiv)" Foreground="{DynamicResource TextSecondary}"/>
+                  <TextBlock Text="Datenträger gesamt (aktiv)" Foreground="{DynamicResource TextSecondary}"/>
                   <TextBlock x:Name="MonDisk" Text="–" FontSize="26" FontWeight="Bold" Foreground="{DynamicResource TextPrimary}"/>
                   <TextBlock x:Name="MonDiskSub" Text=" " Foreground="{DynamicResource TextMuted}" FontSize="12"/>
                   <Canvas Width="216" Height="48" Margin="0,6,0,0" HorizontalAlignment="Left" ClipToBounds="True">
@@ -710,6 +710,38 @@ $Script:Xaml = @'
                 </DockPanel>
                 <TextBlock x:Name="MonRecVerdict" Visibility="Collapsed" TextWrapping="Wrap" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimary}" Margin="0,12,0,0"/>
                 <TextBox x:Name="MonRecDetail" Visibility="Collapsed" IsReadOnly="True" FontFamily="Consolas" FontSize="12" BorderThickness="0" Background="Transparent" Foreground="{DynamicResource TextSecondary}" Margin="0,8,0,0"/>
+              </StackPanel>
+            </Border>
+            <Border Style="{StaticResource Card}" Margin="0,0,0,12">
+              <StackPanel>
+                <TextBlock Text="Datenträger einzeln (intern und extern)" Style="{StaticResource CardTitle}"/>
+                <Grid Margin="0,4,0,6">
+                  <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="170"/><ColumnDefinition Width="100"/><ColumnDefinition Width="100"/><ColumnDefinition Width="170"/></Grid.ColumnDefinitions>
+                  <TextBlock Text="Datenträger" Foreground="{DynamicResource TextMuted}" FontSize="12"/>
+                  <TextBlock Grid.Column="1" Text="Aktivität" Foreground="{DynamicResource TextMuted}" FontSize="12"/>
+                  <TextBlock Grid.Column="2" Text="Lesen" Foreground="{DynamicResource TextMuted}" FontSize="12" HorizontalAlignment="Right"/>
+                  <TextBlock Grid.Column="3" Text="Schreiben" Foreground="{DynamicResource TextMuted}" FontSize="12" HorizontalAlignment="Right"/>
+                  <TextBlock Grid.Column="4" Text="Verlauf (1 Minute)" Foreground="{DynamicResource TextMuted}" FontSize="12" Margin="10,0,0,0"/>
+                </Grid>
+                <ItemsControl x:Name="MonDiskList">
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                      <Grid Margin="0,3">
+                        <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="170"/><ColumnDefinition Width="100"/><ColumnDefinition Width="100"/><ColumnDefinition Width="170"/></Grid.ColumnDefinitions>
+                        <TextBlock Text="{Binding Name}" Foreground="{DynamicResource TextPrimary}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center"/>
+                        <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                          <Border Width="{Binding BarW}" Height="10" CornerRadius="3" Background="{Binding Stroke}" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                          <TextBlock Text="{Binding ActText}" Foreground="{DynamicResource TextSecondary}"/>
+                        </StackPanel>
+                        <TextBlock Grid.Column="2" Text="{Binding ReadText}" Foreground="{DynamicResource TextSecondary}" HorizontalAlignment="Right" VerticalAlignment="Center"/>
+                        <TextBlock Grid.Column="3" Text="{Binding WriteText}" Foreground="{DynamicResource TextSecondary}" HorizontalAlignment="Right" VerticalAlignment="Center"/>
+                        <Canvas Grid.Column="4" Width="160" Height="26" Margin="10,0,0,0" HorizontalAlignment="Left" ClipToBounds="True">
+                          <Polyline Points="{Binding Points}" Stroke="{Binding Stroke}" StrokeThickness="1.5" StrokeLineJoin="Round"/>
+                        </Canvas>
+                      </Grid>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
               </StackPanel>
             </Border>
             <Border Style="{StaticResource Card}">
@@ -1122,6 +1154,9 @@ function global:Get-GuiSnapshot {
 $Script:Sync = [hashtable]::Synchronized(@{ Log = New-Object 'System.Collections.Concurrent.ConcurrentQueue[string]' })
 $Script:Job = $null
 $Script:PendingLoad = $null
+$Script:DriveSignature = $null
+$Script:LastDriveCheck = [DateTime]::MinValue
+$Script:InDialog = $false
 
 function New-Worker {
     $iss = [initialsessionstate]::CreateDefault()
@@ -1188,7 +1223,7 @@ $Script:Pages = [ordered]@{
     'Netzwerk'      = @{ Kind = 'Findings'; Title = 'Netzwerk & WLAN'; Sub = 'Internetverbindung, WLAN-Signal und -Sicherheit, Netzwerkkabel (LAN), Geschwindigkeit, Latenz, Proxy und WLAN-Treiber.'; Scan = 'Invoke-NetworkScan' }
     'Software'      = @{ Kind = 'Findings'; Title = 'Software-Updates'; Sub = 'Verfügbare Updates für installierte Programme (über WinGet).'; Scan = 'Invoke-SoftwareScan' }
     'Windows'       = @{ Kind = 'Findings'; Title = 'Windows & Treiber'; Sub = 'Windows-Updates, Treiber-Updates, Grafiktreiber, BIOS-Alter und Hersteller-Tools für BIOS und Firmware.'; Scan = 'Invoke-WindowsUpdateScan' }
-    'Extern'        = @{ Kind = 'Findings'; Title = 'Externe Datenträger'; Sub = 'USB-Sticks, externe Festplatten und SD-Karten: Zustand, Dateisystem und Probleme prüfen und reparieren, Geschwindigkeits- und Echtheitstest, formatieren und sicher entfernen. Interne Laufwerke werden nie angeboten.'; Scan = 'Invoke-ExternalDriveScanDetailed'; ScanText = 'Datenträger prüfen' }
+    'Extern'        = @{ Kind = 'Findings'; Title = 'Externe Datenträger'; Sub = 'USB-Sticks, externe Festplatten und SD-Karten: Zustand, Dateisystem und Probleme prüfen und reparieren, Geschwindigkeits- und Echtheitstest, formatieren und sicher entfernen. Die Seite lädt sich beim Anstecken oder Abziehen eines Datenträgers selbst neu; »Datenträger prüfen« prüft zusätzlich die Dateisysteme vollständig.'; Scan = 'Invoke-ExternalDriveScanDetailed'; ScanText = 'Datenträger prüfen' }
     'Werkzeuge'     = @{ Kind = 'Findings'; Title = 'Reparatur-Werkzeuge'; Sub = 'Gezielte Reparaturen und Tests – Werkzeug ankreuzen und »Ausgewählte beheben« klicken.'; Scan = 'Invoke-ToolsScan'; ScanText = 'Werkzeuge laden' }
     'Monitor'       = @{ Kind = 'Monitor'; Title = 'Live-Monitor'; Sub = 'Laufende Anzeige von Prozessor, Arbeitsspeicher, Datenträger, Netzwerk und Temperatur mit den größten Verbrauchern – und Aufzeichnung »Was bremst gerade?«.' }
     'Verlauf'       = @{ Kind = 'History'; Title = 'Verlauf & Trends'; Sub = 'Entwicklung der wichtigsten Kennzahlen über alle Komplett-Diagnosen.' }
@@ -1511,6 +1546,8 @@ function Update-View {
             "Noch keine Ergebnisse.`nKlicken Sie auf »Komplett-Diagnose starten«, um das Gerät vollständig zu prüfen."
         } elseif ($page -eq 'Werkzeuge') {
             'Die Werkzeuge werden geladen …'
+        } elseif ($page -eq 'Extern') {
+            'Die Datenträger und Werkzeuge werden geladen …'
         } else {
             "Dieser Bereich wurde noch nicht geprüft.`nKlicken Sie auf »$($def.Title) prüfen«."
         }
@@ -1752,6 +1789,33 @@ Get-GuiSnapshot
 function Import-Tools {
     if ($Script:Job) { $Script:PendingLoad = 'Import-Tools'; return }
     Start-Scan -Commands @('Invoke-ToolsScan') -Status 'Werkzeuge werden geladen …'
+}
+
+function Import-ExternTools {
+    <# Externe Datenträger: schnelle Prüfung samt Partitionsleisten und Werkzeugen (ohne vollständige Dateisystemprüfung). #>
+    if ($Script:Job) { $Script:PendingLoad = 'Import-ExternTools'; return }
+    $Script:DriveSignature = Get-DriveSignature
+    Start-Scan -Commands @('Invoke-ExternalDriveScan') -Status 'Datenträger werden gelesen …'
+}
+
+function Get-DriveSignature {
+    <# Kurzer »Fingerabdruck« der angeschlossenen Laufwerke, um Anstecken und Abziehen zu bemerken. #>
+    $sig = (@([IO.DriveInfo]::GetDrives() | ForEach-Object { $_.Name }) -join ',')
+    try { $sig += '|' + @(Get-CimInstance Win32_DiskDrive -ErrorAction Stop).Count } catch { }
+    return $sig
+}
+
+function Test-DriveChange {
+    <# Bei geöffneter Seite »Externe Datenträger« alle 3 Sekunden prüfen; bei Änderung neu laden – nie während einer Aktion oder eines Dialogs. #>
+    if ($Script:Page -ne 'Extern' -or $Script:InDialog) { return }
+    if (([DateTime]::UtcNow - $Script:LastDriveCheck).TotalSeconds -lt 3) { return }
+    $Script:LastDriveCheck = [DateTime]::UtcNow
+    $sig = Get-DriveSignature
+    if ($null -eq $Script:DriveSignature) { $Script:DriveSignature = $sig; return }
+    if ($sig -eq $Script:DriveSignature) { return }
+    if ($Script:Job) { return }   # nach dem Ende der laufenden Aktion erneut prüfen
+    Add-LogLine 'Datenträger wurde angesteckt oder abgezogen – »Externe Datenträger« wird neu geladen.'
+    Import-ExternTools
 }
 
 function Invoke-SelectedFixes {
@@ -2240,6 +2304,7 @@ $Script:MonJob = $null
 $Script:MonTimer = $null
 $Script:MonSeen = 0
 $Script:MonHist = @{}
+$Script:MonDiskHist = @{}
 $Script:MonRecSeconds = 60
 
 function Start-LiveMonitor {
@@ -2292,14 +2357,14 @@ function Close-LiveMonitor {
 }
 
 function ConvertTo-MonPoints {
-    param($Values, [double]$Max)
+    param($Values, [double]$Max, [double]$Width = 216, [double]$Height = 48)
     $v = @($Values)
     if (-not $v.Count) { return [System.Windows.Media.PointCollection]::new() }
     if ($Max -le 0) { $Max = 1 }
-    $step = 216.0 / 59
+    $step = $Width / 59
     $off = 59 - ($v.Count - 1)
     $pts = for ($i = 0; $i -lt $v.Count; $i++) {
-        $y = 47 - [math]::Min(1, [double]$v[$i] / $Max) * 45
+        $y = ($Height - 1) - [math]::Min(1, [double]$v[$i] / $Max) * ($Height - 3)
         '{0},{1}' -f [math]::Round(($off + $i) * $step, 1).ToString([Globalization.CultureInfo]::InvariantCulture), [math]::Round($y, 1).ToString([Globalization.CultureInfo]::InvariantCulture)
     }
     [System.Windows.Media.PointCollection]::Parse(($pts -join ' '))
@@ -2344,6 +2409,19 @@ function Update-LiveMonitorUi {
         $null = $t.Rows.Add($n, ('{0:N1} %' -f $p.Cpu), ('{0:N0} MB' -f ($p.Ram / 1MB)), [math]::Max(1, 110 * $p.Cpu / $maxCpu))
     }
     $ui.MonProcList.ItemsSource = $t.DefaultView
+
+    # Datenträger einzeln (auch externe; angesteckte erscheinen, abgezogene verschwinden)
+    $dt = New-Table @(@('Name', [string]), @('ActText', [string]), @('BarW', [double]), @('ReadText', [string]), @('WriteText', [string]), @('Points', [object]), @('Stroke', [object]))
+    $seen = @{}
+    foreach ($dk in @($s.Disks)) {
+        $seen[$dk.Key] = $true
+        if (-not $Script:MonDiskHist.ContainsKey($dk.Key)) { $Script:MonDiskHist[$dk.Key] = New-Object System.Collections.Generic.List[double] }
+        $h = $Script:MonDiskHist[$dk.Key]; $h.Add([double]$dk.Active); while ($h.Count -gt 60) { $h.RemoveAt(0) }
+        $null = $dt.Rows.Add($dk.Name, ('{0:N0} %' -f $dk.Active), [math]::Max(1, 1.1 * $dk.Active), (Format-MonRate $dk.Read), (Format-MonRate $dk.Write),
+            (ConvertTo-MonPoints $h 100 -Width 160 -Height 26), (Get-Brush $(if ($dk.External) { '#0E9384' } else { '#DC8A00' })))
+    }
+    foreach ($k in @($Script:MonDiskHist.Keys)) { if (-not $seen.ContainsKey($k)) { $Script:MonDiskHist.Remove($k) } }
+    $ui.MonDiskList.ItemsSource = $dt.DefaultView
 
     # Aufzeichnung »Was bremst gerade?«
     $rec = $Script:Mon.Rec
@@ -2426,7 +2504,7 @@ try {
         'BtnMaintRemove', 'ChkPdf', 'BtnFleet', 'UpdateStatus', 'BtnUpdateCheck', 'BtnUpdateInstall', 'SignatureText', 'ChkAutoUpdate', 'BadgeUpdate', 'AboutText', 'SidebarLogo', 'AboutLogo',
          'HiddenHint', 'HiddenList', 'BtnUnhideAll', 'ChkStorageFull', 'ChkAreaFehler', 'ChkAreaSpeicher', 'ChkAreaLeistung', 'ChkAreaHerunterfahren', 'ChkAreaAkku', 'ChkAreaNetzwerk', 'ChkAreaSoftware', 'ChkAreaSicherheit', 'ChkAreaWindows', 'ReportFolderText', 'BtnReportFolderChange', 'BtnReportFolderOpen', 'Keep10', 'Keep30', 'Keep100', 'Keep0',
         'MonitorPanel', 'MonCpu', 'MonCpuSub', 'MonCpuLine', 'MonRam', 'MonRamSub', 'MonRamLine', 'MonDisk', 'MonDiskSub', 'MonDiskLine', 'MonNet', 'MonNetSub', 'MonNetLine',
-        'MonTemp', 'MonTempSub', 'MonTempLine', 'BtnMonRecord', 'BtnMonRecordText', 'MonRecStatus', 'MonRecVerdict', 'MonRecDetail',
+        'MonTemp', 'MonTempSub', 'MonTempLine', 'BtnMonRecord', 'BtnMonRecordText', 'MonRecStatus', 'MonRecVerdict', 'MonRecDetail', 'MonDiskList',
         'FilterBar', 'SearchBox', 'SearchHint', 'FilterSeverity', 'ChkOnlyFixable', 'BtnExportCsv', 'ChkAreaExtern', 'BtnCancel'
     )
     $navNames = @('NavAlle') + @($Script:CategoryKeys | ForEach-Object { "Nav$_" }) + @('NavMonitor', 'NavVerlauf', 'NavAenderungen', 'NavEinstellungen', 'NavLog')
@@ -2455,6 +2533,7 @@ try {
                     'Settings' { Import-SettingsPage }
                 }
                 if ($Script:Page -eq 'Werkzeuge' -and -not ($Script:Items | Where-Object { $_.Category -eq 'Werkzeuge' })) { Import-Tools }
+                if ($Script:Page -eq 'Extern' -and -not ($Script:Items | Where-Object { $_.Category -eq 'Extern' })) { Import-ExternTools }
             })
     }
 
@@ -2473,7 +2552,11 @@ try {
             foreach ($it in $Script:Items) { $it.IsSelected = $false }
             Update-FixButtons
         })
-    $Script:UI.BtnFix.Add_Click({ Invoke-SelectedFixes })
+    $Script:UI.BtnFix.Add_Click({
+            # Während der Auswahl-Dialoge nicht automatisch neu laden (die Auswahl bezieht sich auf die angezeigten Karten)
+            $Script:InDialog = $true
+            try { Invoke-SelectedFixes } finally { $Script:InDialog = $false }
+        })
     $Script:UI.BtnMonRecord.Add_Click({ Start-LoadRecording })
     $Script:UI.BtnCancel.Add_Click({
             $Script:Sync.Cancel = $true
@@ -2643,6 +2726,7 @@ try {
                     if ($Script:Job -and $t -match '^(›|▶)') { $Script:UI.StatusText.Text = $t.TrimStart('›', '▶', ' ').TrimEnd('.', ' ') + ' …' }
                 }
                 if ($Script:Job -and $Script:Job.Handle.IsCompleted) { Complete-WorkerJob }
+                Test-DriveChange
                 $Script:UI.BtnCancel.Visibility = if ($Script:Job -and $Script:Sync.CanCancel) { 'Visible' } else { 'Collapsed' }
                 if (([DateTime]::UtcNow - $Script:LastLogFlush).TotalSeconds -ge 5) { Save-LogBuffer }
                 Update-FixButtons

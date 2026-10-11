@@ -4,13 +4,8 @@ Stand: 11.10.2026. Neue Wünsche hier ergänzen.
 
 ## Offen (noch nicht gebaut)
 
-38. **Externe Datenträger: Werkzeuge automatisch laden:** Beim Klick auf »Externe Datenträger« in der Seitenleiste automatisch die schnelle Prüfung starten (wie bei den Reparatur-Werkzeugen), sodass Übersicht, Partitionsleisten und alle Werkzeuge sofort da sind – ohne vorher »Datenträger prüfen« zu klicken. Die vollständige Dateisystemprüfung bleibt beim Knopf »Datenträger prüfen«.
-    - Zusätzlich: Solange die Seite geöffnet ist, lädt sie sich automatisch neu, wenn ein Datenträger angesteckt oder abgezogen wird (nicht während eine Aktion läuft).
+Geplant: Version 3.5 = 42, 43, 48, 49; Version 3.6 = 44–47.
 
-39. **Live-Monitor: einzelne Datenträger inkl. externer:** Statt nur »Datenträger gesamt« eine Zeile je Datenträger (intern und extern, z. B. »E: SanDisk Ultra (USB)«) mit Aktivität in %, Lesen und Schreiben in MB/s und kleiner Verlaufskurve. Angesteckte oder abgezogene Datenträger erscheinen bzw. verschwinden automatisch. Die Aufzeichnung »Was bremst gerade?« nennt dann auch den Datenträger, der bremst (z. B. »externe Festplatte E: dauerhaft 100 % aktiv«).
-
-40. **Gelöschte Dateien retten:** Oberfläche für das kostenlose Microsoft-Tool »Windows File Recovery« (winfr; Installation aus dem Microsoft Store anbieten): Laufwerk und Dateiarten bzw. Ordner wählen, Ergebnis immer auf ein anderes Laufwerk; Hinweis, das betroffene Laufwerk bis dahin nicht weiter zu beschreiben.
-41. **Datenträger sicher löschen (vor Verkauf/Weitergabe):** externe Datenträger und interne Zusatzlaufwerke mehrfach überschreiben bzw. freien Platz überschreiben (`cipher /w`); bei SSDs Hinweis auf »Secure Erase« über das Hersteller-Tool; Nachweis im Bericht (Datum, Datenträger, Verfahren). Windows-Datenträger ausgeschlossen.
 42. **Browser-Entführer erkennen:** veränderte Startseite/Suchmaschine in Edge/Chrome/Firefox, unbekannter Proxy, manipulierte DNS-Server, Einträge in der Hosts-Datei; Zurücksetzen nach Auswahl (umkehrbar bzw. über die Browser-Einstellungen).
 43. **»Wer ist in meinem WLAN?«:** Geräte im Heimnetz auflisten (IP, Name, Hersteller anhand der MAC-Adresse), unbekannte Geräte hervorheben; nur lesen.
 44. **Gerätecheck (z. B. beim Gebrauchtkauf):** Tastaturtest (jede Taste leuchtet auf), Pixelfehler-Test (Vollbild in Farben), Lautsprecher links/rechts, Mikrofon- und Kameratest, dazu Akkuzustand, Datenträger-Gesundheit, Seriennummern – zusammengefasst als Bericht »Zustand des Geräts«.
@@ -21,6 +16,19 @@ Stand: 11.10.2026. Neue Wünsche hier ergänzen.
 49. **Audio und Bluetooth:** falsches Standard-Ausgabe-/Eingabegerät, stummgeschaltete oder sehr leise Apps, deaktivierte Geräte, Bluetooth-Geräte, die sich nicht neu koppeln (entfernen und neu koppeln), Audiodienste; Testton links/rechts.
 
 Bewusst weiterhin nicht: Registry-Reiniger, Treiber von Drittanbieter-Seiten, automatische Reparaturen ohne Rückfrage, »RAM-Booster« und ähnliche Schein-Optimierer.
+
+## Erledigt in Version 3.4.0
+
+Umsetzungshinweise:
+- Anstecken und Abziehen bemerkt das Tool an den Laufwerksbuchstaben und der Zahl der Datenträger (Prüfung alle 3 Sekunden). Während eines Dialogs oder einer Aktion lädt die Seite nicht neu.
+- Dateien retten nutzt Windows File Recovery im Modus »normal« bzw. »gründlich«. Speicherkarten mit FAT/exFAT werden immer gründlich durchsucht.
+- Sicher löschen ist für den Windows-Datenträger gesperrt. Dafür verweist das Tool auf »Diesen PC zurücksetzen« mit »Laufwerk bereinigen«.
+
+38. **Externe Datenträger: Werkzeuge automatisch laden:** Beim Klick auf »Externe Datenträger« in der Seitenleiste automatisch die schnelle Prüfung starten (wie bei den Reparatur-Werkzeugen), sodass Übersicht, Partitionsleisten und alle Werkzeuge sofort da sind – ohne vorher »Datenträger prüfen« zu klicken. Die vollständige Dateisystemprüfung bleibt beim Knopf »Datenträger prüfen«.
+    - Zusätzlich: Solange die Seite geöffnet ist, lädt sie sich automatisch neu, wenn ein Datenträger angesteckt oder abgezogen wird (nicht während eine Aktion läuft).
+39. **Live-Monitor: einzelne Datenträger inkl. externer:** Statt nur »Datenträger gesamt« eine Zeile je Datenträger (intern und extern, z. B. »E: SanDisk Ultra (USB)«) mit Aktivität in %, Lesen und Schreiben in MB/s und kleiner Verlaufskurve. Angesteckte oder abgezogene Datenträger erscheinen bzw. verschwinden automatisch. Die Aufzeichnung »Was bremst gerade?« nennt dann auch den Datenträger, der bremst (z. B. »externe Festplatte E: dauerhaft 100 % aktiv«).
+40. **Gelöschte Dateien retten:** Oberfläche für das kostenlose Microsoft-Tool »Windows File Recovery« (winfr; Installation aus dem Microsoft Store anbieten): Laufwerk und Dateiarten bzw. Ordner wählen, Ergebnis immer auf ein anderes Laufwerk; Hinweis, das betroffene Laufwerk bis dahin nicht weiter zu beschreiben.
+41. **Datenträger sicher löschen (vor Verkauf/Weitergabe):** externe Datenträger und interne Zusatzlaufwerke mehrfach überschreiben bzw. freien Platz überschreiben (`cipher /w`); bei SSDs Hinweis auf »Secure Erase« über das Hersteller-Tool; Nachweis im Bericht (Datum, Datenträger, Verfahren). Windows-Datenträger ausgeschlossen.
 
 ## Erledigt in Version 3.3.0
 

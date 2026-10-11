@@ -13,7 +13,29 @@ function Format-MonRate {
 }
 
 function New-LiveMonitorState {
-    @{ Prev = @{}; PrevTime = $null; Cores = [math]::Max(1, [Environment]::ProcessorCount); TempTime = [datetime]::MinValue; Temp = $null }
+    @{ Prev = @{}; PrevTime = $null; Cores = [math]::Max(1, [Environment]::ProcessorCount); TempTime = [datetime]::MinValue; Temp = $null
+        DiskNames = @{}; DiskNamesTime = [datetime]::MinValue }
+}
+
+function Get-MonDiskNames {
+    <# Anzeigenamen je Datenträgernummer, z. B. »E: SanDisk Ultra (USB)«; alle 15 Sekunden bzw. bei unbekannter Nummer neu gelesen. #>
+    param([hashtable]$State, [string[]]$Numbers)
+    $now = [datetime]::UtcNow
+    $missing = @($Numbers | Where-Object { -not $State.DiskNames.ContainsKey($_) })
+    if (-not $missing -and ($now - $State.DiskNamesTime).TotalSeconds -lt 15) { return $State.DiskNames }
+    $State.DiskNamesTime = $now
+    $names = @{}
+    try {
+        foreach ($d in @(Get-Disk -ErrorAction Stop)) {
+            $bus = "$($d.BusType)"
+            $kind = if ($bus -in 'USB', 'SD', 'MMC', '1394') { $bus } else { 'intern' }
+            $names["$($d.Number)"] = @{ Name = ("$($d.FriendlyName)".Trim() -replace '\s+', ' '); Kind = $kind }
+        }
+    } catch { }
+    # Unbekannte Nummern merken, damit nicht bei jeder Messung neu gelesen wird
+    foreach ($n in $Numbers) { if (-not $names.ContainsKey($n)) { $names[$n] = $null } }
+    $State.DiskNames = $names
+    return $names
 }
 
 function Get-LiveSample {
@@ -22,9 +44,23 @@ function Get-LiveSample {
     $now = [datetime]::UtcNow
     $cpu = $null; $disk = $null; $net = [double]0; $ramPct = $null; $ramUsed = [double]0; $ramTotal = [double]0
     try { $cpu = [double](Get-CimInstance Win32_PerfFormattedData_PerfOS_Processor -Filter "Name='_Total'" -ErrorAction Stop).PercentProcessorTime } catch { }
+    $disks = @()
     try {
-        $d = Get-CimInstance Win32_PerfFormattedData_PerfDisk_PhysicalDisk -Filter "Name='_Total'" -ErrorAction Stop
-        $disk = [math]::Min(100, [math]::Max(0, 100 - [double]$d.PercentIdleTime))
+        $all = @(Get-CimInstance Win32_PerfFormattedData_PerfDisk_PhysicalDisk -ErrorAction Stop)
+        $tot = $all | Where-Object { $_.Name -eq '_Total' } | Select-Object -First 1
+        if ($tot) { $disk = [math]::Min(100, [math]::Max(0, 100 - [double]$tot.PercentIdleTime)) }
+        # Einzelne Datenträger: Instanzname »1 E: F:« = Datenträgernummer und Laufwerksbuchstaben
+        $per = @($all | Where-Object { $_.Name -ne '_Total' })
+        $names = Get-MonDiskNames -State $State -Numbers @($per | ForEach-Object { ("$($_.Name)" -split ' ')[0] })
+        foreach ($x in $per) {
+            $parts = "$($x.Name)" -split ' '
+            $num = $parts[0]
+            $letters = @($parts | Select-Object -Skip 1 | Where-Object { $_ -match '^[A-Za-z]:$' })
+            $info = $names[$num]
+            $label = '{0}{1} ({2})' -f $(if ($letters) { ($letters -join ' ') + ' ' } else { '' }), $(if ($info) { $info.Name } else { "Datenträger $num" }), $(if ($info) { $info.Kind } else { '?' })
+            $disks += [pscustomobject]@{ Key = $num; Name = $label; External = [bool]($info -and $info.Kind -ne 'intern')
+                Active = [math]::Min(100, [math]::Max(0, 100 - [double]$x.PercentIdleTime)); Read = [double]$x.DiskReadBytesPersec; Write = [double]$x.DiskWriteBytesPersec }
+        }
     } catch { }
     try { Get-CimInstance Win32_PerfFormattedData_Tcpip_NetworkInterface -ErrorAction Stop | ForEach-Object { $net += [double]$_.BytesTotalPersec } } catch { }
     try {
@@ -58,7 +94,7 @@ function Get-LiveSample {
     $State.Prev = $cur; $State.PrevTime = $now
     [pscustomobject]@{
         Time = [datetime]::Now; Cpu = $cpu; RamPct = $ramPct; RamUsed = $ramUsed; RamTotal = $ramTotal
-        Disk = $disk; Net = $net; Temp = $State.Temp
+        Disk = $disk; Net = $net; Temp = $State.Temp; Disks = @($disks | Sort-Object Key)
         Procs = @($byName.Values | Sort-Object Cpu, Ram -Descending | Select-Object -First 25)
         HasCpuDelta = ($elapsed -gt 0)
     }
@@ -85,7 +121,16 @@ function Get-LoadAnalysis {
     if ($cpuA -ge 70) { $causes += "Prozessor dauerhaft stark ausgelastet (Ø $cpuA %)$(if ($topCpu) { " – vor allem durch $($topCpu[0].Name) (Ø $($topCpu[0].Cpu) %)" })" }
     elseif ($cpuM -ge 95 -and $cpuA -ge 40) { $causes += "Prozessor zeitweise voll ausgelastet (Spitze $cpuM %)" }
     if ($ramA -ge 85) { $causes += "Arbeitsspeicher fast voll (Ø $ramA %) – Windows lagert auf den Datenträger aus$(if ($topRam) { "; größter Verbraucher: $($topRam[0].Name) ($([math]::Round($topRam[0].Ram / 1MB)) MB)" })" }
-    if ($diskA -ge 60) { $causes += "Datenträger dauerhaft stark beschäftigt (Ø $diskA % aktiv) – typisch bei HDD, Updates, Virenscan oder Indizierung" }
+    # Einzelne Datenträger: Durchschnitt der Aktivität sowie Lesen/Schreiben je Datenträger
+    $dagg = @{}
+    foreach ($x in $s) { foreach ($dk in @($x.Disks)) {
+            if (-not $dagg.ContainsKey($dk.Key)) { $dagg[$dk.Key] = @{ Name = $dk.Name; External = $dk.External; Act = 0.0; Read = 0.0; Write = 0.0; N = 0 } }
+            $e = $dagg[$dk.Key]; $e.Act += $dk.Active; $e.Read += $dk.Read; $e.Write += $dk.Write; $e.N++ } }
+    $perDisk = @($dagg.Values | ForEach-Object { [pscustomobject]@{ Name = $_.Name; External = $_.External; Act = [math]::Round($_.Act / $_.N, 0); Read = $_.Read / $_.N; Write = $_.Write / $_.N } } | Sort-Object Act -Descending)
+    $busy = @($perDisk | Where-Object { $_.Act -ge 60 })
+    if ($busy) {
+        foreach ($b in $busy) { $causes += "$(if ($b.External) { 'Externer Datenträger' } else { 'Datenträger' }) »$($b.Name)« dauerhaft stark beschäftigt (Ø $($b.Act) % aktiv)$(if ($b.External) { ' – z. B. Kopieren, Sicherung oder ein langsamer USB-Anschluss' } else { ' – typisch bei HDD, Updates, Virenscan oder Indizierung' })" }
+    } elseif ($diskA -ge 60) { $causes += "Datenträger dauerhaft stark beschäftigt (Ø $diskA % aktiv) – typisch bei HDD, Updates, Virenscan oder Indizierung" }
     if ($tempM -ge 90) { $causes += "Sehr hohe Temperatur ($tempM °C) – der Prozessor drosselt vermutlich" }
     $verdict = if ($causes) { 'Was gerade bremst: ' + ($causes -join '; ') + '.' } else { 'Keine auffällige Last – das System hatte während der Aufzeichnung genug Reserven.' }
 
@@ -96,6 +141,10 @@ function Get-LoadAnalysis {
         "Netzwerk:         Ø $(Format-MonRate ([double]$netA))"
     )
     if ($null -ne $tempM) { $lines += "Temperatur:       höchstens $tempM °C" }
+    if ($perDisk) {
+        $lines += 'Datenträger einzeln (Ø aktiv, lesen, schreiben):'
+        $lines += @($perDisk | ForEach-Object { '  {0,4} %  {1,10}  {2,10}  {3}' -f $_.Act, (Format-MonRate $_.Read), (Format-MonRate $_.Write), $_.Name })
+    }
     $lines += ''
     $lines += 'Größte Prozessor-Verbraucher (Durchschnitt):'
     $lines += @($topCpu | ForEach-Object { '  {0,6:N1} %  {1}' -f $_.Cpu, $_.Name })
