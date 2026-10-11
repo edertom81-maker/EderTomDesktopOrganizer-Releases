@@ -1214,13 +1214,13 @@ function Complete-WorkerJob {
 
 $Script:Pages = [ordered]@{
     'Alle'          = @{ Kind = 'Findings'; Title = 'Übersicht'; Sub = 'Gesamtzustand des Geräts – alle Ergebnisse nach Dringlichkeit sortiert.' }
-    'Fehler'        = @{ Kind = 'Findings'; Title = 'Fehlersuche'; Sub = 'Bluescreens mit Ursachen, Abstürze, Problemgeräte, Dienste, Systemdateien, Datenträger, Speichertest und defekte Verknüpfungen.'; Scan = 'Invoke-ErrorScan' }
-    'Sicherheit'    = @{ Kind = 'Findings'; Title = 'Sicherheit'; Sub = 'Datensicherung, Datenschutz, Browser-Erweiterungen, Virenschutz, Ransomware- und PUA-Schutz, SmartScreen, Konten, Fernwartung, Firewall, Secure Boot, TPM, Verschlüsselung, Kernisolierung, UAC, SMB1, Freigaben und veraltete Browser.'; Scan = 'Invoke-SecurityScan' }
+    'Fehler'        = @{ Kind = 'Findings'; Title = 'Fehlersuche'; Sub = 'Bluescreens mit Ursachen, Abstürze, Problemgeräte, Dienste, Systemdateien, Datenträger, Speichertest, defekte Verknüpfungen, Drucker, Audio und Bluetooth.'; Scan = 'Invoke-ErrorScan' }
+    'Sicherheit'    = @{ Kind = 'Findings'; Title = 'Sicherheit'; Sub = 'Datensicherung, Datenschutz, Browser-Erweiterungen und Browser-Entführer, Virenschutz, Ransomware- und PUA-Schutz, SmartScreen, Konten, Fernwartung, Firewall, Secure Boot, TPM, Verschlüsselung, Kernisolierung, UAC, SMB1, Freigaben und veraltete Browser.'; Scan = 'Invoke-SecurityScan' }
     'Speicher'      = @{ Kind = 'Findings'; Title = 'Speicherfresser'; Sub = 'Arbeitsspeicher, freier Speicherplatz, Datenmüll inkl. Browser-Caches, Wiederherstellungspunkte und alte Sicherungen, Speicherbelegung als Grafik – dazu Werkzeuge für Duplikate, große Ordner, Programme und Entwickler-Reste.'; Scan = 'Invoke-MemoryScanDetailed' }
     'Leistung'      = @{ Kind = 'Findings'; Title = 'Leistungsbremsen'; Sub = 'Prozessorlast, Autostart inkl. geplanter Aufgaben und Dienste, Startdauer, Bildwiederholrate, Arbeitsspeicher-Takt, Energie- und Standby-Einstellungen, Laufwerk, Temperatur, Spiele- und Grafikleistung und Zusatzsoftware.'; Scan = 'Invoke-PerformanceScan' }
     'Herunterfahren' = @{ Kind = 'Findings'; Title = 'Herunterfahren & Neustart'; Sub = 'Dauer der letzten Herunterfahrvorgänge, ungewolltes Aufwachen aus dem Energiesparmodus, bremsende Programme, Dienste und Treiber, Wartezeiten, ausstehende Updates und Netzlaufwerke.'; Scan = 'Invoke-ShutdownScan'; ScanText = 'Herunterfahren prüfen' }
     'Akku'          = @{ Kind = 'Findings'; Title = 'Akku'; Sub = 'Gesundheit, Kapazitätsverlauf, Ladezyklen, Ladezustand, Standby und was das Energiesparen verhindert.'; Scan = 'Invoke-BatteryScan' }
-    'Netzwerk'      = @{ Kind = 'Findings'; Title = 'Netzwerk & WLAN'; Sub = 'Internetverbindung, WLAN-Signal und -Sicherheit, Netzwerkkabel (LAN), Geschwindigkeit, Latenz, Proxy und WLAN-Treiber.'; Scan = 'Invoke-NetworkScan' }
+    'Netzwerk'      = @{ Kind = 'Findings'; Title = 'Netzwerk & WLAN'; Sub = 'Internetverbindung, WLAN-Signal und -Sicherheit, Netzwerkkabel (LAN), Geschwindigkeit, Latenz, Proxy, WLAN-Treiber und Geräte im Heimnetz.'; Scan = 'Invoke-NetworkScan' }
     'Software'      = @{ Kind = 'Findings'; Title = 'Software-Updates'; Sub = 'Verfügbare Updates für installierte Programme (über WinGet).'; Scan = 'Invoke-SoftwareScan' }
     'Windows'       = @{ Kind = 'Findings'; Title = 'Windows & Treiber'; Sub = 'Windows-Updates, Treiber-Updates, Grafiktreiber, BIOS-Alter und Hersteller-Tools für BIOS und Firmware.'; Scan = 'Invoke-WindowsUpdateScan' }
     'Extern'        = @{ Kind = 'Findings'; Title = 'Externe Datenträger'; Sub = 'USB-Sticks, externe Festplatten und SD-Karten: Zustand, Dateisystem und Probleme prüfen und reparieren, Geschwindigkeits- und Echtheitstest, formatieren und sicher entfernen. Die Seite lädt sich beim Anstecken oder Abziehen eines Datenträgers selbst neu; »Datenträger prüfen« prüft zusätzlich die Dateisysteme vollständig.'; Scan = 'Invoke-ExternalDriveScanDetailed'; ScanText = 'Datenträger prüfen' }
@@ -1884,6 +1884,16 @@ function Invoke-SelectedFixes {
                 'Markieren Sie die Laufwerke für den Echtheitstest. Der freie Platz wird komplett mit Testdaten beschrieben und wieder gelesen – das kann je nach Größe Stunden dauern. Vorhandene Dateien bleiben unberührt; Abbrechen ist jederzeit unten rechts möglich.'
             } elseif ($vm.FixLabel -match 'sicher entfernen') {
                 'Markieren Sie die Datenträger, die sicher entfernt werden sollen. Vorher alle Dateien und Fenster auf diesen Laufwerken schließen.'
+            } elseif ($vm.FixLabel -match 'Browser-Richtlinien') {
+                'Markieren Sie die erzwungenen Browser-Einstellungen, die entfernt werden sollen. Auf Firmengeräten nichts entfernen, ohne die IT zu fragen. Rückgängig jederzeit unter »Änderungen«.'
+            } elseif ($vm.FixLabel -match 'DNS-Server') {
+                'Markieren Sie die Netzwerkadapter, deren DNS-Server wieder automatisch vom Router bezogen werden sollen. Rückgängig jederzeit unter »Änderungen«.'
+            } elseif ($vm.FixLabel -match 'Hosts-Einträge') {
+                'Vorausgewählt sind Einträge, die Update-, Sicherheits- oder Bankseiten umleiten. Die Hosts-Datei wird vorher gesichert; rückgängig jederzeit unter »Änderungen«.'
+            } elseif ($vm.FixLabel -match 'Browser-Verknüpfungen') {
+                'Markieren Sie die Verknüpfungen, aus denen die angehängte Webadresse entfernt werden soll. Rückgängig jederzeit unter »Änderungen«.'
+            } elseif ($vm.FixLabel -match 'Audiogeräte') {
+                'Markieren Sie die Audiogeräte, die wieder aktiviert werden sollen. Rückgängig jederzeit unter »Änderungen«.'
             } elseif ($vm.FixLabel -match 'Spiele-Einstellungen') {
                 'Markieren Sie die Einstellungen, die gesetzt werden sollen. Die GPU-Planung wirkt erst nach einem Neustart. Rückgängig jederzeit unter »Änderungen«.'
             } elseif ($vm.FixLabel -match 'Update') {

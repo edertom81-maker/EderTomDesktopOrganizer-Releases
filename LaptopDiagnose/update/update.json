@@ -1,7 +1,7 @@
 {
-    "version": "3.4.1",
-    "datei": "LaptopDiagnose-3.4.1.zip",
-    "sha256": "9cd31226749afb6205723d54eb96a5fbaed4d2fea0b8f44beb1d10c6dafddd0a",
-    "notizen": "Fehlerbehebung Live-Monitor: Die Aufzeichnung »Was bremst gerade?« endet wieder nach 60 Sekunden, und »Datenträger einzeln«, »Größte Verbraucher« sowie die Verlaufskurven werden angezeigt.",
+    "version": "3.5.0",
+    "datei": "LaptopDiagnose-3.5.0.zip",
+    "sha256": "5f901b736b33011f3e4049b40b87d1cc51c6cc75c50468c2649ca5b0660cee59",
+    "notizen": "Neu: Browser-Entführer erkennen (Richtlinien, Startseiten, Proxy-Skript, DNS, Hosts-Datei, Verknüpfungen), »Wer ist in meinem WLAN?«, Drucker-Diagnose, Audio- und Bluetooth-Prüfung mit Lautsprecher-Test. Außerdem behoben: Live-Monitor (Aufzeichnung endete nicht, Listen blieben leer).",
     "veroeffentlicht": "2026-10-11"
 }

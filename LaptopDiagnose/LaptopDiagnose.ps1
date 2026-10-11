@@ -50,7 +50,7 @@ param(
 
 if ($Unbeaufsichtigt) { $NurPruefen = $true }
 
-$Script:ToolVersion = '3.4.1'
+$Script:ToolVersion = '3.5.0'
 $Script:InstallDir = $PSScriptRoot
 $Script:ChangeCounter = 0
 $Script:SoftwareUpdateCache = $null
@@ -717,6 +717,9 @@ function Invoke-ErrorScan {
     }
 
     Invoke-Check $cat 'Defekte Verknüpfungen (Desktop, Startmenü, Taskleiste, Autostart)' { Add-BrokenShortcutFindings -Category $cat }
+    Invoke-Check $cat 'Drucker' { Add-PrinterFindings -Category $cat }
+    Invoke-Check $cat 'Audio (Ton und Mikrofon)' { Add-AudioFindings -Category $cat }
+    Invoke-Check $cat 'Bluetooth' { Add-BluetoothFindings -Category $cat }
 }
 
 function Repair-SystemFiles {

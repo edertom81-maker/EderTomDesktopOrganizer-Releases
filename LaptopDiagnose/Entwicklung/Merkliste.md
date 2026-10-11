@@ -4,18 +4,33 @@ Stand: 11.10.2026. Neue Wünsche hier ergänzen.
 
 ## Offen (noch nicht gebaut)
 
-Geplant: Version 3.5 = 42, 43, 48, 49; Version 3.6 = 44–47.
+Geplant: Version 3.6 = 44–47.
 
-42. **Browser-Entführer erkennen:** veränderte Startseite/Suchmaschine in Edge/Chrome/Firefox, unbekannter Proxy, manipulierte DNS-Server, Einträge in der Hosts-Datei; Zurücksetzen nach Auswahl (umkehrbar bzw. über die Browser-Einstellungen).
-43. **»Wer ist in meinem WLAN?«:** Geräte im Heimnetz auflisten (IP, Name, Hersteller anhand der MAC-Adresse), unbekannte Geräte hervorheben; nur lesen.
 44. **Gerätecheck (z. B. beim Gebrauchtkauf):** Tastaturtest (jede Taste leuchtet auf), Pixelfehler-Test (Vollbild in Farben), Lautsprecher links/rechts, Mikrofon- und Kameratest, dazu Akkuzustand, Datenträger-Gesundheit, Seriennummern – zusammengefasst als Bericht »Zustand des Geräts«.
 45. **Garantie und Inventar:** Hersteller, Modell, Seriennummer, ggf. Herstell-/Kaufdatum; direkter Link zur Garantieabfrage beim Hersteller (Lenovo, HP, Dell, ASUS, Acer, MSI …); Export als Datei.
 46. **Notfall-Starthilfe:** mit einem Klick in den abgesicherten Modus bzw. die Windows-Reparaturumgebung neu starten (mit Rückweg-Anleitung), Startreparatur und Bootkonfiguration prüfen.
 47. **Windows reparieren ohne Datenverlust:** Assistent für die Reparaturinstallation (In-Place-Upgrade) – passendes Windows-Abbild laden, Programme und Dateien bleiben erhalten; vorher Prüfung von Speicherplatz, Version und Sprache.
-48. **Drucker-Diagnose:** Offline-Status, wechselnder bzw. falscher Standarddrucker (»Windows verwaltet Standarddrucker«), hängende Aufträge, Spooler-Fehler, fehlender oder generischer Treiber; Beheben nach Auswahl.
-49. **Audio und Bluetooth:** falsches Standard-Ausgabe-/Eingabegerät, stummgeschaltete oder sehr leise Apps, deaktivierte Geräte, Bluetooth-Geräte, die sich nicht neu koppeln (entfernen und neu koppeln), Audiodienste; Testton links/rechts.
 
 Bewusst weiterhin nicht: Registry-Reiniger, Treiber von Drittanbieter-Seiten, automatische Reparaturen ohne Rückfrage, »RAM-Booster« und ähnliche Schein-Optimierer.
+
+## Erledigt in Version 3.5.0
+
+Umsetzungshinweise:
+- **Browser-Entführer:**
+  - Erzwungene Browser-Richtlinien gelten auf Firmengeräten (Domäne) nur als Hinweis.
+  - Startseiten ändert das Tool nicht selbst. Es öffnet die Browser-Einstellungen, weil direkte Änderungen an den Profildateien vom Browser zurückgesetzt bzw. als Manipulation gewertet werden.
+- **Heimnetz:**
+  - Den Hersteller eines Geräts zeigt das Tool nur bei wenigen sicheren Kennungen (z. B. Raspberry Pi). Sonst gibt es Namen aus dem Netz und den Hinweis »private Adresse«.
+  - Große Netze werden nur im eigenen /24-Bereich durchsucht.
+- **Audio:**
+  - Stummgeschaltete Apps lassen sich ohne zusätzlichen Hilfscode nicht auslesen. Dafür gibt es die Taste »Lautstärkemixer öffnen«.
+  - Den Testton gibt es als Werkzeug.
+- **Bluetooth:** Neu koppeln geht über die Windows-Einstellungen. Dort wird das Gerät entfernt und neu hinzugefügt.
+
+42. **Browser-Entführer erkennen:** veränderte Startseite/Suchmaschine in Edge/Chrome/Firefox, unbekannter Proxy, manipulierte DNS-Server, Einträge in der Hosts-Datei; Zurücksetzen nach Auswahl (umkehrbar bzw. über die Browser-Einstellungen).
+43. **»Wer ist in meinem WLAN?«:** Geräte im Heimnetz auflisten (IP, Name, Hersteller anhand der MAC-Adresse), unbekannte Geräte hervorheben; nur lesen.
+48. **Drucker-Diagnose:** Offline-Status, wechselnder bzw. falscher Standarddrucker (»Windows verwaltet Standarddrucker«), hängende Aufträge, Spooler-Fehler, fehlender oder generischer Treiber; Beheben nach Auswahl.
+49. **Audio und Bluetooth:** falsches Standard-Ausgabe-/Eingabegerät, stummgeschaltete oder sehr leise Apps, deaktivierte Geräte, Bluetooth-Geräte, die sich nicht neu koppeln (entfernen und neu koppeln), Audiodienste; Testton links/rechts.
 
 ## Erledigt in Version 3.4.1
 
