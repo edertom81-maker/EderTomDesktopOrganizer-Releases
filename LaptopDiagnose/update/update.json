@@ -1,7 +1,7 @@
 {
-    "version": "3.3.0",
-    "datei": "LaptopDiagnose-3.3.0.zip",
-    "sha256": "0a2862460f9241e19c42dbf49b902f04fe4692803e3afc277b716146a3057a8b",
-    "notizen": "Neu: Partitionswerkzeuge (Partitionsleiste, erstellen, aufteilen, löschen, Größe ändern, Laufwerksbuchstabe und Name, FAT32 in NTFS umwandeln) – auch für interne Zusatzlaufwerke – sowie Datenträger klonen: Kopie auf Dateiebene mit Vergleich, Assistent für den Umzug von Windows auf eine neue SSD, 1:1-Klon Sektor für Sektor und Abbilddateien (.img) erstellen und zurückschreiben.",
+    "version": "3.4.0",
+    "datei": "LaptopDiagnose-3.4.0.zip",
+    "sha256": "5a82e294b769014182317eba4a3269e5f63de9a7314ef8f25f8ea8a3f16bbf5d",
+    "notizen": "Neu: »Externe Datenträger« lädt automatisch und aktualisiert sich beim Anstecken oder Abziehen, der Live-Monitor zeigt jeden Datenträger einzeln (auch externe), gelöschte Dateien retten mit Windows File Recovery und Datenträger sicher löschen mit Nachweis im Bericht.",
     "veroeffentlicht": "2026-10-11"
 }
