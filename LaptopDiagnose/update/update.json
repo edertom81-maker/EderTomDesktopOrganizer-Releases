@@ -1,7 +1,7 @@
 {
-    "version": "3.6.0",
-    "datei": "LaptopDiagnose-3.6.0.zip",
-    "sha256": "bd45a700dbb4cbad8c898947c0e5131b6afea492a61b6667c6c872f66e4374e2",
-    "notizen": "Neu: Gerätecheck mit Bericht »Zustand des Geräts« (Tastatur, Pixelfehler, Lautsprecher, Kamera, Mikrofon, Akku, Datenträger), Garantie und Inventar, Notfall-Starthilfe (abgesicherter Modus mit Rückweg, Reparaturumgebung, Prüfung der Startkonfiguration), Windows reparieren ohne Datenverlust (In-Place-Upgrade-Assistent). Werkzeuge erscheinen jetzt sofort beim Öffnen eines Bereichs. Behoben: Live-Monitor zeigte »Größte Verbraucher« nicht an.",
+    "version": "3.6.1",
+    "datei": "LaptopDiagnose-3.6.1.zip",
+    "sha256": "a95f32472c7a8b4b173922f2cd22371e94f9daadecac42db9571502d20db7bd2",
+    "notizen": "Behoben: Im Live-Monitor blieb »Größte Verbraucher (laufend)« leer.",
     "veroeffentlicht": "2026-10-11"
 }
