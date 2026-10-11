@@ -4,7 +4,37 @@ Stand: 10.10.2026. Neue Wünsche hier ergänzen.
 
 ## Offen (noch nicht gebaut)
 
-– derzeit nichts –
+Geplant: Version 3.0 = 26–28, Version 3.1 = 29–31.
+
+26. **Erweiterte Sicherheit:** überwachter Ordnerzugriff (Ransomware-Schutz), PUA-Schutz, SmartScreen, Konten ohne Passwort, automatische Anmeldung, Gastkonto, installierte bzw. automatisch startende Fernwartungsprogramme (AnyDesk, TeamViewer, RustDesk …) mit Hinweis.
+27. **Treiber sichern:** vor Treiber-Updates (und als Werkzeug) alle Fremdtreiber mit `Export-WindowsDriver` in einen Ordner sichern; Hinweis, wie ein Treiber im Geräte-Manager zurückgesetzt bzw. aus der Sicherung installiert wird.
+28. **Ungewolltes Aufwachen:** letzte Weckquelle (`powercfg /lastwake`), Weck-Zeitgeber, Geräte mit Weckberechtigung (Maus, Netzwerkkarte …), Standby-Abbrüche aus dem Ereignisprotokoll; Weckberechtigung nach Auswahl entziehen (umkehrbar).
+29. **Live-Monitor:** laufende Anzeige von CPU, RAM, Datenträger, Netzwerk und Temperatur mit den größten Verbrauchern; Aufzeichnung über 1–2 Minuten »Was bremst gerade?« mit Auswertung.
+30. **Spiele- und Grafikleistung:** Spielmodus, Hardware-beschleunigte GPU-Planung, Energiemodus (Windows-Leistungsregler), visuelle Effekte, Game-Bar-Aufzeichnung im Hintergrund; Empfehlungen nach Auswahl setzen, umkehrbar.
+31. **Feinschliff:**
+    - Vorbereitung für eine echte Code-Signatur (gekauftes Zertifikat, ca. 100–300 €/Jahr; Kauf durch den Benutzer) – Signier-Skript und Anleitung, damit Virenscanner/SmartScreen nicht mehr warnen.
+    - Suchfeld und Filter (Schweregrad, behebbar) in den Ergebnissen, Export der Ergebnisse als CSV.
+    - »?« an jeder Prüfung mit kurzer Erklärung, warum sie wichtig ist.
+
+Bewusst weiterhin nicht: Registry-Reiniger, Treiber von Drittanbieter-Seiten, automatische Reparaturen ohne Rückfrage, »RAM-Booster« und ähnliche Schein-Optimierer.
+
+## Erledigt in Version 2.9.0
+
+Umsetzungshinweise: Die Programmliste ist nach Größe sortiert (kein eigener Filter – kommt mit Punkt 31). Standortdienst wird nur angezeigt, nicht umgestellt; der Aktivitätsverlauf entfällt (unter Windows 11 nicht mehr vorhanden), dafür Eingabe-Personalisierung, Feedback-Anfragen und Sprachliste für Webseiten.
+
+21. **Datensicherung prüfen:** Windows-Sicherung, Dateiversionsverlauf, OneDrive-Ordnersicherung (Dokumente/Bilder/Desktop) und Systemabbild erkennen, letztes Sicherungsdatum anzeigen. Warnung, wenn keine oder eine veraltete Sicherung existiert (besonders zusammen mit SMART-Problemen). Knopf öffnet die passenden Windows-Einstellungen.
+22. **Programme deinstallieren:** Liste aller installierten Programme (Desktop-Programme und Store-Apps) mit Größe, Installationsdatum, Hersteller; sortier- und filterbar. Deinstallation nur über den offiziellen Deinstaller nach Auswahl. Danach Suche nach Resten (Ordner in Programme/AppData, Verknüpfungen, Autostart) zur Auswahl. Systemkomponenten und Treiber werden nicht angeboten.
+23. **Browser aufräumen:** Caches von Edge, Chrome, Firefox (und Brave/Opera, falls vorhanden) messen und in den Datenmüll aufnehmen; nur bei geschlossenem Browser löschen. Cookies, Passwörter, Verlauf und Lesezeichen werden nie angefasst. Zusätzlich installierte Erweiterungen auflisten und bekannte Werbe-/Spionage-Erweiterungen hervorheben (Entfernen über die Browser-Einstellungen).
+24. **Autostart vollständig:** zusätzlich geplante Aufgaben, die bei Anmeldung/Start laufen (z. B. Updater), und automatisch startende Dienste von Fremdherstellern anzeigen; deaktivieren nach Auswahl, rückgängig über »Änderungen«. Windows-eigene Aufgaben und Dienste sowie Virenschutz werden nicht angeboten.
+25. **Datenschutz-Einstellungen:** Telemetrie-Stufe, Werbe-ID, personalisierte Werbung/Tipps, Standortdienst, Aktivitätsverlauf, Websuche im Startmenü prüfen; empfohlene Werte nach Auswahl setzen, alles umkehrbar. Anzeige, welche Apps zuletzt auf Kamera und Mikrofon zugegriffen haben.
+32. **Alte Sicherungen und Wiederherstellungsdaten** (Bereich »Speicherfresser«, passt zu Punkt 21):
+    - Wiederherstellungspunkte: belegter Platz und Obergrenze anzeigen, Warnung bei sehr viel Platz; ältere Punkte nach Auswahl entfernen (der neueste bleibt immer), Obergrenze einstellbar (`vssadmin`), umkehrbar soweit möglich.
+    - Alte Systemabbild-Sicherungen (`WindowsImageBackup`, auch auf externen Platten) mit Datum und Größe; nur ältere Sicherungen zum Löschen anbieten, die neueste bleibt.
+    - Dateiversionsverlauf: Platzbedarf alter Versionen anzeigen, Aufräumen älterer Versionen über die Windows-Funktion anstoßen.
+    - Reste von Windows-Upgrades: `$WINDOWS.~BT`, `$WINDOWS.~WS`, `C:\ESD`, `$GetCurrent` (nur wenn kein Upgrade läuft).
+    - Alte Treiberpakete im Treiberspeicher (DriverStore): ältere Versionen desselben Treibers nach Auswahl entfernen (`pnputil`), der aktive Treiber bleibt.
+    - Alte Windows-Protokolle (CBS-, DISM- und Setup-Logs) über einer Größe von z. B. 100 MB.
+    - Löschen nur nach Auswahl, Eintrag im Änderungsprotokoll; was nicht in den Papierkorb kann, über die Karte »Endgültig löschen?«.
 
 ## Erledigt in Version 2.8.0
 

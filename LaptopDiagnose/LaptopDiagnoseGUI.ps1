@@ -933,9 +933,9 @@ function Complete-WorkerJob {
 $Script:Pages = [ordered]@{
     'Alle'          = @{ Kind = 'Findings'; Title = 'Übersicht'; Sub = 'Gesamtzustand des Geräts – alle Ergebnisse nach Dringlichkeit sortiert.' }
     'Fehler'        = @{ Kind = 'Findings'; Title = 'Fehlersuche'; Sub = 'Bluescreens mit Ursachen, Abstürze, Problemgeräte, Dienste, Systemdateien, Datenträger, Speichertest und defekte Verknüpfungen.'; Scan = 'Invoke-ErrorScan' }
-    'Sicherheit'    = @{ Kind = 'Findings'; Title = 'Sicherheit'; Sub = 'Virenschutz, Firewall, Secure Boot, TPM, Verschlüsselung, Kernisolierung, UAC, SMB1, Freigaben und veraltete Browser.'; Scan = 'Invoke-SecurityScan' }
-    'Speicher'      = @{ Kind = 'Findings'; Title = 'Speicherfresser'; Sub = 'Arbeitsspeicher, größte Programme, freier Speicherplatz, Speicherbelegung als Grafik und Datenmüll.'; Scan = 'Invoke-MemoryScanDetailed' }
-    'Leistung'      = @{ Kind = 'Findings'; Title = 'Leistungsbremsen'; Sub = 'Prozessorlast, Autostart, Startdauer, Bildwiederholrate, Arbeitsspeicher-Takt, Energie- und Standby-Einstellungen, Laufwerk, Temperatur und Zusatzsoftware.'; Scan = 'Invoke-PerformanceScan' }
+    'Sicherheit'    = @{ Kind = 'Findings'; Title = 'Sicherheit'; Sub = 'Datensicherung, Datenschutz, Browser-Erweiterungen, Virenschutz, Firewall, Secure Boot, TPM, Verschlüsselung, Kernisolierung, UAC, SMB1, Freigaben und veraltete Browser.'; Scan = 'Invoke-SecurityScan' }
+    'Speicher'      = @{ Kind = 'Findings'; Title = 'Speicherfresser'; Sub = 'Arbeitsspeicher, freier Speicherplatz, Datenmüll inkl. Browser-Caches, Wiederherstellungspunkte und alte Sicherungen, Speicherbelegung als Grafik – dazu Werkzeuge für Duplikate, große Ordner, Programme und Entwickler-Reste.'; Scan = 'Invoke-MemoryScanDetailed' }
+    'Leistung'      = @{ Kind = 'Findings'; Title = 'Leistungsbremsen'; Sub = 'Prozessorlast, Autostart inkl. geplanter Aufgaben und Dienste, Startdauer, Bildwiederholrate, Arbeitsspeicher-Takt, Energie- und Standby-Einstellungen, Laufwerk, Temperatur und Zusatzsoftware.'; Scan = 'Invoke-PerformanceScan' }
     'Herunterfahren' = @{ Kind = 'Findings'; Title = 'Herunterfahren & Neustart'; Sub = 'Dauer der letzten Herunterfahrvorgänge, bremsende Programme, Dienste und Treiber, Wartezeiten, ausstehende Updates und Netzlaufwerke.'; Scan = 'Invoke-ShutdownScan'; ScanText = 'Herunterfahren prüfen' }
     'Akku'          = @{ Kind = 'Findings'; Title = 'Akku'; Sub = 'Gesundheit, Kapazitätsverlauf, Ladezyklen, Ladezustand, Standby und was das Energiesparen verhindert.'; Scan = 'Invoke-BatteryScan' }
     'Netzwerk'      = @{ Kind = 'Findings'; Title = 'Netzwerk & WLAN'; Sub = 'Internetverbindung, WLAN-Signal und -Sicherheit, Netzwerkkabel (LAN), Geschwindigkeit, Latenz, Proxy und WLAN-Treiber.'; Scan = 'Invoke-NetworkScan' }
@@ -1305,7 +1305,25 @@ function Invoke-SelectedFixes {
                 'Markieren Sie die Dateien, die in den Papierkorb verschoben werden sollen. Von dort lassen sie sich bei Bedarf wiederherstellen.'
             } elseif ($vm.FixLabel -match 'Zusatz-Apps') {
                 'Markieren Sie die Apps, die entfernt werden sollen. Sie lassen sich bei Bedarf über den Microsoft Store neu installieren.'
-            } else { 'Markieren Sie die Updates, die installiert werden sollen.' }
+            } elseif ($vm.FixLabel -match 'Programme deinstallieren') {
+                'Markieren Sie die Programme, die deinstalliert werden sollen. Für jedes Programm startet dessen eigener Deinstaller – bitte dessen Fenster bestätigen. Danach werden zurückgebliebene Ordner angeboten.'
+            } elseif ($vm.FixLabel -match 'Programm-Reste') {
+                'Markieren Sie die zurückgebliebenen Ordner, die in den Papierkorb verschoben werden sollen.'
+            } elseif ($vm.FixLabel -match 'geplante Aufgaben') {
+                'Markieren Sie die Aufgaben, die nicht mehr bei Anmeldung bzw. Systemstart laufen sollen. Rückgängig jederzeit unter »Änderungen«.'
+            } elseif ($vm.FixLabel -match 'Dienste') {
+                'Markieren Sie die Dienste, die nur noch bei Bedarf starten sollen (»Manuell«). Im Zweifel nichts ändern. Rückgängig jederzeit unter »Änderungen«.'
+            } elseif ($vm.FixLabel -match 'Datenschutz') {
+                'Markieren Sie die Einstellungen, die auf datensparsame Werte gesetzt werden sollen. Rückgängig jederzeit unter »Änderungen«.'
+            } elseif ($vm.FixLabel -match 'Wiederherstellungspunkte') {
+                'Wählen Sie die gewünschten Maßnahmen. Gelöschte Wiederherstellungspunkte lassen sich nicht zurückholen – der neueste bleibt immer erhalten.'
+            } elseif ($vm.FixLabel -match 'Systemabbilder') {
+                'Markieren Sie die älteren Systemabbilder, die gelöscht werden sollen. Das neueste Abbild je Computer wird nie angeboten.'
+            } elseif ($vm.FixLabel -match 'Treiberpakete') {
+                'Markieren Sie die alten, nicht benutzten Treiberpakete, die entfernt werden sollen. Der aktive Treiber bleibt immer erhalten.'
+            } elseif ($vm.FixLabel -match 'Update') {
+                'Markieren Sie die Updates, die installiert werden sollen.'
+            } else { 'Markieren Sie die Einträge, die bearbeitet werden sollen.' }
             $selection = Show-SelectionDialog -Title $vm.FixLabel -Text $text -Labels $vm.SelectLabels -AllChecked $vm.SelectAll -Defaults ([bool[]]@($vm.SelectDefault))
             if ($null -eq $selection -or $selection.Count -eq 0) { continue }
             $labels.Add("• $($vm.FixLabel) ($($selection.Count) ausgewählt)")

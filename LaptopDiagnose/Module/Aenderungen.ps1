@@ -29,7 +29,8 @@ function Save-ChangeLog {
 function Register-Change {
     <#
         Protokolliert eine Änderung. -Typ bestimmt, wie Undo-Change sie zurücknimmt.
-        Typen: Autostart, Energieplan, Prozessorleistung, TRIM, Auslagerungsdatei, Registry, Feature, Wartungsaufgabe, Netzlaufwerk, Protokoll
+        Typen: Autostart, Energieplan, Prozessorleistung, TRIM, Auslagerungsdatei, Registry, Feature, Wartungsaufgabe, Netzlaufwerk,
+        Aufgabe, Dienst, Schattenspeicher, Protokoll
     #>
     param(
         [Parameter(Mandatory)][string]$Beschreibung,
@@ -130,6 +131,19 @@ function Undo-Change {
         }
         'Wartungsaufgabe' { Unregister-MaintenanceTask -NoLog }
         'Netzlaufwerk' { $null = New-SmbMapping -LocalPath $d.LocalPath -RemotePath $d.RemotePath -Persistent $true -ErrorAction Stop }
+        'Aufgabe' { foreach ($t in @($d.Aufgaben)) { $null = Enable-ScheduledTask -TaskName $t.Name -TaskPath $t.Path -ErrorAction Stop } }
+        'Dienst' {
+            foreach ($s in @($d.Dienste)) {
+                Set-Service -Name $s.Name -StartupType Automatic -ErrorAction Stop
+                if ($s.Delayed) { Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Services\$($s.Name)" -Name DelayedAutostart -Value 1 -Type DWord -ErrorAction SilentlyContinue }
+            }
+        }
+        'Schattenspeicher' {
+            $vol = Get-CimInstance Win32_Volume -Filter "DriveLetter='$($d.Drive)'" -ErrorAction Stop
+            $size = if ([double]$d.PreviousMB * 1MB -ge [double]$vol.Capacity) { 'UNBOUNDED' } else { "$([int64]$d.PreviousMB)MB" }
+            $null = & vssadmin.exe resize shadowstorage /for=$($d.Drive) /on=$($d.Drive) /maxsize=$size 2>&1
+            if ($LASTEXITCODE -ne 0) { throw "vssadmin meldet Exitcode $LASTEXITCODE." }
+        }
         default { throw "Unbekannter Änderungstyp: $($e.Typ)" }
     }
 
