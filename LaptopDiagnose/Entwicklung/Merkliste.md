@@ -11,6 +11,8 @@ Geplant: Version 3.6 = 44–47.
 46. **Notfall-Starthilfe:** mit einem Klick in den abgesicherten Modus bzw. die Windows-Reparaturumgebung neu starten (mit Rückweg-Anleitung), Startreparatur und Bootkonfiguration prüfen.
 47. **Windows reparieren ohne Datenverlust:** Assistent für die Reparaturinstallation (In-Place-Upgrade) – passendes Windows-Abbild laden, Programme und Dateien bleiben erhalten; vorher Prüfung von Speicherplatz, Version und Sprache.
 
+50. **Werkzeuge in allen Bereichen automatisch laden:** Beim Klick auf einen Bereich in der Seitenleiste erscheinen dessen Werkzeug-Karten sofort, ohne vorher »… prüfen« zu klicken. Betroffen: Speicherfresser (Duplikate, große Ordner, Programme, Entwickler-Reste, Downloads …), Leistungsbremsen (»Was bremst gerade?«), Netzwerk (»Wer ist in meinem WLAN?«, WLAN-Bericht), Akku (Akkubericht), Reparatur-Werkzeuge und Externe Datenträger (wie bisher). Die eigentlichen Prüfungen starten weiter erst mit »… prüfen« bzw. der Komplett-Diagnose (manche dauern Minuten); bereits vorhandene Ergebnisse bleiben stehen.
+
 Bewusst weiterhin nicht: Registry-Reiniger, Treiber von Drittanbieter-Seiten, automatische Reparaturen ohne Rückfrage, »RAM-Booster« und ähnliche Schein-Optimierer.
 
 ## Erledigt in Version 3.5.0
