@@ -265,6 +265,8 @@ function Invoke-ShutdownScan {
         }
     }
 
+    Invoke-Check $cat 'Ungewolltes Aufwachen aus dem Energiesparmodus' { Add-WakeFindings -Category $cat }
+
     Invoke-Check $cat 'Programme ohne Rückfrage beenden (optional)' {
         $auto = (Get-ItemProperty -Path 'HKCU:\Control Panel\Desktop' -Name AutoEndTasks -ErrorAction SilentlyContinue).AutoEndTasks
         if ("$auto" -ne '1') {

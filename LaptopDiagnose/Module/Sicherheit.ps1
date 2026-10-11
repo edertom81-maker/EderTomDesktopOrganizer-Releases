@@ -224,4 +224,6 @@ function Invoke-SecurityScan {
             Add-Finding $cat OK 'Browser und Mailprogramme sind aktuell (soweit über WinGet erkennbar)'
         }
     }
+
+    Add-ExtendedSecurityFindings -Category $cat
 }
