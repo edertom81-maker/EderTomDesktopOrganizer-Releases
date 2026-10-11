@@ -101,6 +101,11 @@ $Script:CheckHelp = @{
     'SmartScreen'                                               = 'SmartScreen warnt vor bekannten Schadprogrammen und Betrugsseiten, bevor sie Schaden anrichten.'
     'Benutzerkonten und Anmeldung'                              = 'Konten ohne Kennwort, ein aktives Gastkonto oder automatische Anmeldung machen das Gerät für jeden offen.'
     'Fernwartungsprogramme'                                     = 'Fernwartungsprogramme erlauben die Steuerung aus der Ferne – praktisch, aber auch beliebtes Werkzeug von Betrügern.'
+    'Drucker'                                                   = 'Offline-Drucker, hängende Aufträge und ein automatisch wechselnder Standarddrucker sind die häufigsten Gründe, warum »nichts aus dem Drucker kommt«.'
+    'Audio (Ton und Mikrofon)'                                  = 'Kein Ton liegt meist an einem falschen Ausgabegerät (z. B. Bildschirm statt Lautsprecher), einem deaktivierten Gerät oder einem gestoppten Audiodienst.'
+    'Bluetooth'                                                 = 'Deaktivierte Adapter, ein gestoppter Bluetooth-Dienst oder fehlerhaft gekoppelte Geräte verhindern, dass sich Kopfhörer, Maus oder Tastatur verbinden.'
+    'Browser-Entführer (Startseite, Suche, DNS, Hosts)'         = 'Adware verändert Startseite, Suchmaschine oder DNS-Server, um Werbung einzublenden oder auf gefälschte Seiten umzuleiten – oft so, dass es sich in den Browser-Einstellungen nicht mehr ändern lässt.'
+    'Geräte im Heimnetz'                                        = 'Zeigt, welche Geräte im eigenen Netz sind. Ein unbekanntes Gerät kann bedeuten, dass jemand Fremdes das WLAN mitbenutzt.'
     # Externe Datenträger
     'Externe Datenträger: Übersicht'                            = 'Zeigt angeschlossene USB-Sticks, externe Festplatten und SD-Karten mit Dateisystem, Größe und freiem Platz.'
     'Externe Datenträger: Zustand'                              = 'Lese- und Schreibfehler kündigen den Ausfall eines Datenträgers an. Dann sofort die Daten auf einen anderen Datenträger kopieren.'

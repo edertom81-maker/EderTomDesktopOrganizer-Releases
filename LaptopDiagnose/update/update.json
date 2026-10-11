@@ -1,7 +1,7 @@
 {
-    "version": "3.4.0",
-    "datei": "LaptopDiagnose-3.4.0.zip",
-    "sha256": "5a82e294b769014182317eba4a3269e5f63de9a7314ef8f25f8ea8a3f16bbf5d",
-    "notizen": "Neu: »Externe Datenträger« lädt automatisch und aktualisiert sich beim Anstecken oder Abziehen, der Live-Monitor zeigt jeden Datenträger einzeln (auch externe), gelöschte Dateien retten mit Windows File Recovery und Datenträger sicher löschen mit Nachweis im Bericht.",
+    "version": "3.5.0",
+    "datei": "LaptopDiagnose-3.5.0.zip",
+    "sha256": "5f901b736b33011f3e4049b40b87d1cc51c6cc75c50468c2649ca5b0660cee59",
+    "notizen": "Neu: Browser-Entführer erkennen (Richtlinien, Startseiten, Proxy-Skript, DNS, Hosts-Datei, Verknüpfungen), »Wer ist in meinem WLAN?«, Drucker-Diagnose, Audio- und Bluetooth-Prüfung mit Lautsprecher-Test. Außerdem behoben: Live-Monitor (Aufzeichnung endete nicht, Listen blieben leer).",
     "veroeffentlicht": "2026-10-11"
 }

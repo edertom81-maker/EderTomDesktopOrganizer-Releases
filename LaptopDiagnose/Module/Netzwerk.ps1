@@ -184,6 +184,7 @@ function Invoke-NetworkScan {
         }
     }
 
+    Invoke-Check $cat 'Geräte im Heimnetz' { Add-HomeNetworkToolFinding -Category $cat }
     Invoke-Check $cat 'WLAN-Bericht' {
         Add-Finding $cat Info 'Optional: Ausführlicher WLAN-Bericht der letzten 3 Tage (Verbindungsabbrüche, Fehler)' `
             -FixLabel 'WLAN-Bericht erstellen und öffnen' -Fix { param($d) New-WlanReport }

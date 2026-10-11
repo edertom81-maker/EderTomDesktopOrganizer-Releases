@@ -143,6 +143,22 @@ function Undo-Change {
         'Volumename' {
             Get-Partition -DiskNumber $d.Disk -PartitionNumber $d.Partition -ErrorAction Stop | Get-Volume -ErrorAction Stop | Set-Volume -NewFileSystemLabel "$($d.Previous)" -ErrorAction Stop
         }
+        'DnsServer' {
+            Set-DnsClientServerAddress -InterfaceIndex $d.Index -ServerAddresses @($d.Servers) -ErrorAction Stop
+            try { Clear-DnsClientCache -ErrorAction Stop } catch { }
+        }
+        'Hosts' {
+            if (-not (Test-Path -LiteralPath $d.Backup)) { throw "Sicherung der Hosts-Datei nicht gefunden: $($d.Backup)" }
+            [IO.File]::WriteAllText((Join-Path $env:windir 'System32\drivers\etc\hosts'), [IO.File]::ReadAllText($d.Backup))
+            try { Clear-DnsClientCache -ErrorAction Stop } catch { }
+        }
+        'Verknuepfung' {
+            $shell = New-Object -ComObject WScript.Shell
+            foreach ($e in @($d.Eintraege)) { if (Test-Path -LiteralPath $e.Path) { $l = $shell.CreateShortcut($e.Path); $l.Arguments = $e.Arguments; $l.Save() } }
+        }
+        'Geraet' {
+            foreach ($id in @($d.Ids)) { Disable-PnpDevice -InstanceId $id -Confirm:$false -ErrorAction Stop }
+        }
         'Weckgeraet' {
             foreach ($g in @($d.Geraete)) { $null = & powercfg.exe /deviceenablewake "$g" 2>&1 }
         }
