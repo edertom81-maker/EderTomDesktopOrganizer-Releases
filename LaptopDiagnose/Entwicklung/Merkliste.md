@@ -7,6 +7,8 @@ Stand: 11.10.2026. Neue Wünsche hier ergänzen.
 38. **Externe Datenträger: Werkzeuge automatisch laden:** Beim Klick auf »Externe Datenträger« in der Seitenleiste automatisch die schnelle Prüfung starten (wie bei den Reparatur-Werkzeugen), sodass Übersicht, Partitionsleisten und alle Werkzeuge sofort da sind – ohne vorher »Datenträger prüfen« zu klicken. Die vollständige Dateisystemprüfung bleibt beim Knopf »Datenträger prüfen«.
     - Zusätzlich: Solange die Seite geöffnet ist, lädt sie sich automatisch neu, wenn ein Datenträger angesteckt oder abgezogen wird (nicht während eine Aktion läuft).
 
+39. **Live-Monitor: einzelne Datenträger inkl. externer:** Statt nur »Datenträger gesamt« eine Zeile je Datenträger (intern und extern, z. B. »E: SanDisk Ultra (USB)«) mit Aktivität in %, Lesen und Schreiben in MB/s und kleiner Verlaufskurve. Angesteckte oder abgezogene Datenträger erscheinen bzw. verschwinden automatisch. Die Aufzeichnung »Was bremst gerade?« nennt dann auch den Datenträger, der bremst (z. B. »externe Festplatte E: dauerhaft 100 % aktiv«).
+
 Bewusst weiterhin nicht: Registry-Reiniger, Treiber von Drittanbieter-Seiten, automatische Reparaturen ohne Rückfrage, »RAM-Booster« und ähnliche Schein-Optimierer.
 
 ## Erledigt in Version 3.3.0
