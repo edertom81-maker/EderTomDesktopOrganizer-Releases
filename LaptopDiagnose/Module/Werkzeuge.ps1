@@ -299,7 +299,41 @@ function Invoke-ToolsScan {
     Add-DriverBackupToolFinding -Category $cat
     Add-LoadRecordingToolFinding -Category $cat
     Add-SpeakerTestToolFinding -Category $cat
+    Add-DeviceCheckToolFinding -Category $cat
+    Add-InventoryToolFinding -Category $cat
+    Add-EmergencyStartToolFindings -Category $cat
+    Add-RepairInstallToolFinding -Category $cat
     Add-Finding $cat Info 'Wiederherstellungspunkt jetzt erstellen' -FixLabel 'Systemwiederherstellungspunkt erstellen' -Fix { param($d) New-RestorePoint; 'Wiederherstellungspunkt angelegt (sofern Windows es zulässt).' }
 }
 
 #endregion
+
+function Add-BatteryReportToolFinding {
+    param([string]$Category)
+    Add-Finding $Category Info 'Akkubericht erstellen' -Silent -Repeatable `
+        -Detail 'Erstellt den ausführlichen Windows-Akkubericht (Kapazitätsverlauf, Ladezyklen, Nutzung der letzten Wochen) und öffnet ihn im Browser.' `
+        -FixLabel 'Akkubericht erstellen und öffnen' -Fix {
+        param($d)
+        if (-not (Test-Path -LiteralPath $BerichtOrdner)) { $null = New-Item -ItemType Directory -Path $BerichtOrdner -Force }
+        $html = Join-Path $BerichtOrdner ('Akkubericht_{0:yyyyMMdd_HHmm}.html' -f (Get-Date))
+        $null = & powercfg.exe /batteryreport /output $html 2>&1
+        if (-not (Test-Path -LiteralPath $html)) { throw 'Der Akkubericht konnte nicht erstellt werden (kein Akku erkannt?).' }
+        Invoke-Item -LiteralPath $html
+        "Akkubericht gespeichert und geöffnet: $html"
+    }
+}
+
+function Invoke-AreaTools {
+    <# Werkzeug-Karten eines Bereichs laden, ohne dessen Prüfungen auszuführen (beim Öffnen des Bereichs im Programmfenster). #>
+    param([string]$Category)
+    switch ($Category) {
+        'Speicher' { Add-FileToolFindings -Category 'Speicher' }
+        'Leistung' { Add-LoadRecordingToolFinding -Category 'Leistung' }
+        'Netzwerk' { Add-HomeNetworkToolFinding -Category 'Netzwerk'; Add-WlanReportToolFinding -Category 'Netzwerk' }
+        'Akku' { if ((Get-DeviceKind) -ne 'Desktop') { Add-BatteryReportToolFinding -Category 'Akku' } }
+        'Windows' { Add-DriverBackupToolFinding -Category 'Windows'; Add-RepairInstallToolFinding -Category 'Windows' }
+        'Fehler' { Add-EmergencyStartToolFindings -Category 'Fehler'; Add-SpeakerTestToolFinding -Category 'Fehler' }
+        'Werkzeuge' { Invoke-ToolsScan }
+        'Extern' { Invoke-ExternalDriveScan }
+    }
+}

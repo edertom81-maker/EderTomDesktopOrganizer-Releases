@@ -1466,7 +1466,8 @@ function ConvertTo-LikeValue {
 
 function Get-FindingsRowFilter {
     param([string]$Kind, [string]$Page)
-    $parts = @($(if ($Kind -ne 'Findings' -or $Page -eq 'Alle') { "Category <> 'Werkzeuge'" } else { "Category = '$Page'" }))
+    # Übersicht: ohne Werkzeug-Karten (die stehen in ihrem Bereich), nur Ergebnisse
+    $parts = @($(if ($Kind -ne 'Findings' -or $Page -eq 'Alle') { "Category <> 'Werkzeuge' AND Repeatable = false" } else { "Category = '$Page'" }))
     $ui = $Script:UI
     if ($Kind -eq 'Findings' -and $ui.SearchBox) {
         foreach ($word in @($ui.SearchBox.Text.Trim() -split '\s+' | Where-Object { $_ })) {
@@ -1551,6 +1552,10 @@ function Update-View {
         } else {
             "Dieser Bereich wurde noch nicht geprüft.`nKlicken Sie auf »$($def.Title) prüfen«."
         }
+    } elseif ($kind -eq 'Findings' -and $page -in $Script:AreaToolKeys -and -not (Test-FilterActive) -and -not ($Script:Items | Where-Object { $_.Category -eq $page -and -not $_.Repeatable })) {
+        # Nur Werkzeuge geladen, Prüfungen noch nicht gelaufen
+        $Script:UI.EmptyHint.Visibility = 'Visible'
+        $Script:UI.EmptyHintText.Text = "Die Prüfungen dieses Bereichs wurden noch nicht ausgeführt – oben rechts auf »$(if ($def.ScanText) { $def.ScanText } else { "$($def.Title) prüfen" })« klicken.`nDie Werkzeuge unten lassen sich sofort verwenden."
     } else {
         $Script:UI.EmptyHint.Visibility = 'Collapsed'
     }
@@ -1789,6 +1794,25 @@ Get-GuiSnapshot
 function Import-Tools {
     if ($Script:Job) { $Script:PendingLoad = 'Import-Tools'; return }
     Start-Scan -Commands @('Invoke-ToolsScan') -Status 'Werkzeuge werden geladen …'
+}
+
+$Script:AreaToolKeys = @('Fehler', 'Speicher', 'Leistung', 'Netzwerk', 'Akku', 'Windows')
+
+function Import-AreaTools {
+    <# Werkzeug-Karten eines Bereichs laden (ohne dessen Prüfungen) – beim ersten Öffnen des Bereichs. #>
+    param([string]$Category)
+    if ($Script:Job) { $Script:PendingLoad = [scriptblock]::Create("Import-AreaTools -Category '$Category'"); return }
+    if ($Script:Items | Where-Object { $_.Category -eq $Category -and $_.Repeatable }) { return }
+    $code = @'
+param($cat)
+Invoke-AreaTools -Category $cat
+Get-GuiSnapshot
+'@
+    $null = Start-WorkerJob -Code $code -Arguments @($Category) -Status 'Werkzeuge werden geladen …' -Silent -OnDone {
+        param($out)
+        Update-FromSnapshot (@($out) | Where-Object { $_.IsSnapshot } | Select-Object -Last 1)
+        $Script:UI.StatusText.Text = 'Bereit.'
+    }
 }
 
 function Import-ExternTools {
@@ -2572,6 +2596,7 @@ try {
                 }
                 if ($Script:Page -eq 'Werkzeuge' -and -not ($Script:Items | Where-Object { $_.Category -eq 'Werkzeuge' })) { Import-Tools }
                 if ($Script:Page -eq 'Extern' -and -not ($Script:Items | Where-Object { $_.Category -eq 'Extern' })) { Import-ExternTools }
+                if ($Script:Page -in $Script:AreaToolKeys) { Import-AreaTools -Category $Script:Page }
             })
     }
 

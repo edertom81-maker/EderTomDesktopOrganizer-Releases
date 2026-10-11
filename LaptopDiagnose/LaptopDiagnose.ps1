@@ -50,7 +50,7 @@ param(
 
 if ($Unbeaufsichtigt) { $NurPruefen = $true }
 
-$Script:ToolVersion = '3.5.0'
+$Script:ToolVersion = '3.6.0'
 $Script:InstallDir = $PSScriptRoot
 $Script:ChangeCounter = 0
 $Script:SoftwareUpdateCache = $null
@@ -306,6 +306,13 @@ function Add-Finding {
     $finding.CheckKey = $keys.Pruefung
     # Vom Benutzer ausgeblendete Meldungen nicht anzeigen und nicht werten
     if (Test-FindingHidden $finding) { $Script:HiddenFindings.Add($finding); return }
+    # Werkzeug-Karten gibt es je Bereich nur einmal – eine neu angelegte ersetzt die bisherige
+    if ($Repeatable) {
+        for ($i = $Script:Findings.Count - 1; $i -ge 0; $i--) {
+            $o = $Script:Findings[$i]
+            if ($o.Repeatable -and $o.Category -eq $Category -and $o.Title -eq $Title) { $Script:Findings.RemoveAt($i) }
+        }
+    }
     $Script:Findings.Add($finding)
     if (-not $Silent) { Write-Finding $finding }
     return
@@ -397,8 +404,10 @@ function Remove-FindingByKey {
 }
 
 function Clear-CategoryFindings {
+    <# Ergebnisse eines Bereichs entfernen. Werkzeug-Karten bleiben stehen (außer bei Werkzeugen und externen Datenträgern, die sie selbst neu aufbauen). #>
     param([string]$Category)
-    $keep = @($Script:Findings | Where-Object { $_.Category -ne $Category })
+    $keepTools = $Category -notin 'Werkzeuge', 'Extern'
+    $keep = @($Script:Findings | Where-Object { $_.Category -ne $Category -or ($keepTools -and $_.Repeatable) })
     $Script:Findings.Clear()
     foreach ($f in $keep) { $Script:Findings.Add($f) }
     $keepHidden = @($Script:HiddenFindings | Where-Object { $_.Category -ne $Category })
@@ -720,6 +729,7 @@ function Invoke-ErrorScan {
     Invoke-Check $cat 'Drucker' { Add-PrinterFindings -Category $cat }
     Invoke-Check $cat 'Audio (Ton und Mikrofon)' { Add-AudioFindings -Category $cat }
     Invoke-Check $cat 'Bluetooth' { Add-BluetoothFindings -Category $cat }
+    Invoke-Check $cat 'Windows-Reparaturumgebung und Startkonfiguration' { Add-BootHealthFindings -Category $cat }
 }
 
 function Repair-SystemFiles {

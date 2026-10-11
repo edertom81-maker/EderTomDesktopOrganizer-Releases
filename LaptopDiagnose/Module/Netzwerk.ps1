@@ -185,10 +185,7 @@ function Invoke-NetworkScan {
     }
 
     Invoke-Check $cat 'Geräte im Heimnetz' { Add-HomeNetworkToolFinding -Category $cat }
-    Invoke-Check $cat 'WLAN-Bericht' {
-        Add-Finding $cat Info 'Optional: Ausführlicher WLAN-Bericht der letzten 3 Tage (Verbindungsabbrüche, Fehler)' `
-            -FixLabel 'WLAN-Bericht erstellen und öffnen' -Fix { param($d) New-WlanReport }
-    }
+    Invoke-Check $cat 'WLAN-Bericht' { Add-WlanReportToolFinding -Category $cat }
 }
 
 function New-WlanReport {
@@ -200,4 +197,11 @@ function New-WlanReport {
     Copy-Item -LiteralPath $src -Destination $dst -Force
     if (-not $Unbeaufsichtigt) { Invoke-Item -LiteralPath $dst }
     "WLAN-Bericht gespeichert: $dst"
+}
+
+function Add-WlanReportToolFinding {
+    param([string]$Category)
+    Add-Finding $Category Info 'WLAN-Bericht (Verbindungsabbrüche der letzten 3 Tage)' -Silent -Repeatable `
+        -Detail 'Erstellt den ausführlichen Windows-WLAN-Bericht: Verbindungen, Abbrüche und Fehler der letzten drei Tage mit Zeitleiste.' `
+        -FixLabel 'WLAN-Bericht erstellen und öffnen' -Fix { param($d) New-WlanReport }
 }

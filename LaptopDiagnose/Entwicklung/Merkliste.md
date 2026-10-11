@@ -4,7 +4,17 @@ Stand: 11.10.2026. Neue Wünsche hier ergänzen.
 
 ## Offen (noch nicht gebaut)
 
-Geplant: Version 3.6 = 44–47.
+Zurzeit nichts offen.
+
+Bewusst weiterhin nicht: Registry-Reiniger, Treiber von Drittanbieter-Seiten, automatische Reparaturen ohne Rückfrage, »RAM-Booster« und ähnliche Schein-Optimierer.
+
+## Erledigt in Version 3.6.0
+
+Umsetzungshinweise:
+- **Gerätecheck:** Die Tests laufen in einem eigenen Fenster-Prozess (`Module\Fenster\Geraetetest.ps1`), damit Tastatur und Vollbild sauber funktionieren. Kamera und Mikrofon werden über die Windows-Kamera-App bzw. die Soundeinstellungen geprüft; das Ergebnis gibt man per Ja/Nein an.
+- **Garantie:** Die Herstellerseiten erlauben keine automatische Abfrage. Das Tool öffnet die richtige Seite und legt die Seriennummer in die Zwischenablage. Ein Kaufdatum steht nicht im Gerät; im Inventar stehen BIOS-Datum und Windows-Installationsdatum.
+- **Reparaturinstallation:** Die ISO lädt man selbst von Microsoft herunter (die Seite wird geöffnet). Das Tool prüft Platz, Build, Sprache, Edition und Architektur und startet das Setup erst, wenn alles passt.
+- **Werkzeuge automatisch laden:** Beim Öffnen eines Bereichs werden nur die Werkzeug-Karten geladen, die Prüfungen weiterhin mit »… prüfen«.
 
 44. **Gerätecheck (z. B. beim Gebrauchtkauf):** Tastaturtest (jede Taste leuchtet auf), Pixelfehler-Test (Vollbild in Farben), Lautsprecher links/rechts, Mikrofon- und Kameratest, dazu Akkuzustand, Datenträger-Gesundheit, Seriennummern – zusammengefasst als Bericht »Zustand des Geräts«.
 45. **Garantie und Inventar:** Hersteller, Modell, Seriennummer, ggf. Herstell-/Kaufdatum; direkter Link zur Garantieabfrage beim Hersteller (Lenovo, HP, Dell, ASUS, Acer, MSI …); Export als Datei.
@@ -12,8 +22,6 @@ Geplant: Version 3.6 = 44–47.
 47. **Windows reparieren ohne Datenverlust:** Assistent für die Reparaturinstallation (In-Place-Upgrade) – passendes Windows-Abbild laden, Programme und Dateien bleiben erhalten; vorher Prüfung von Speicherplatz, Version und Sprache.
 
 50. **Werkzeuge in allen Bereichen automatisch laden:** Beim Klick auf einen Bereich in der Seitenleiste erscheinen dessen Werkzeug-Karten sofort, ohne vorher »… prüfen« zu klicken. Betroffen: Speicherfresser (Duplikate, große Ordner, Programme, Entwickler-Reste, Downloads …), Leistungsbremsen (»Was bremst gerade?«), Netzwerk (»Wer ist in meinem WLAN?«, WLAN-Bericht), Akku (Akkubericht), Reparatur-Werkzeuge und Externe Datenträger (wie bisher). Die eigentlichen Prüfungen starten weiter erst mit »… prüfen« bzw. der Komplett-Diagnose (manche dauern Minuten); bereits vorhandene Ergebnisse bleiben stehen.
-
-Bewusst weiterhin nicht: Registry-Reiniger, Treiber von Drittanbieter-Seiten, automatische Reparaturen ohne Rückfrage, »RAM-Booster« und ähnliche Schein-Optimierer.
 
 ## Erledigt in Version 3.5.0
 
