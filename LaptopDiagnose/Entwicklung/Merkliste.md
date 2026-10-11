@@ -17,6 +17,14 @@ Geplant: Version 3.5 = 42, 43, 48, 49; Version 3.6 = 44–47.
 
 Bewusst weiterhin nicht: Registry-Reiniger, Treiber von Drittanbieter-Seiten, automatische Reparaturen ohne Rückfrage, »RAM-Booster« und ähnliche Schein-Optimierer.
 
+## Erledigt in Version 3.4.1
+
+- **Live-Monitor repariert:**
+  - Problem: Die Aufzeichnung »Was bremst gerade?« endete nicht, und »Datenträger einzeln« sowie »Größte Verbraucher« blieben leer.
+  - Ursache: PowerShell zerlegte die Punkte der Verlaufskurven in Einzelwerte. Die Zuweisung an die Kurve schlug fehl und brach die ganze Aktualisierung ab.
+  - Behoben: Die Kurvenpunkte werden jetzt vollständig übergeben. Jeder Anzeigebereich ist einzeln abgesichert, und ein Fehler steht nur einmal im Protokoll.
+  - Die Aufzeichnung wertet unabhängig von der Anzeige aus und endet nach 60 Sekunden Uhrzeit, auch wenn eine Messung länger als eine Sekunde dauert.
+
 ## Erledigt in Version 3.4.0
 
 Umsetzungshinweise:

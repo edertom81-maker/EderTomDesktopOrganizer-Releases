@@ -2305,6 +2305,7 @@ $Script:MonTimer = $null
 $Script:MonSeen = 0
 $Script:MonHist = @{}
 $Script:MonDiskHist = @{}
+$Script:MonErrors = @{}
 $Script:MonRecSeconds = 60
 
 function Start-LiveMonitor {
@@ -2357,9 +2358,13 @@ function Close-LiveMonitor {
 }
 
 function ConvertTo-MonPoints {
+    <#
+        Achtung: Die PointCollection wird mit »,« zurückgegeben – sonst zerlegt PowerShell sie in einzelne Punkte
+        (bzw. bei einem Punkt in einen einzelnen Point), und die Zuweisung an Polyline.Points schlägt fehl.
+    #>
     param($Values, [double]$Max, [double]$Width = 216, [double]$Height = 48)
     $v = @($Values)
-    if (-not $v.Count) { return [System.Windows.Media.PointCollection]::new() }
+    if (-not $v.Count) { return , [System.Windows.Media.PointCollection]::new() }
     if ($Max -le 0) { $Max = 1 }
     $step = $Width / 59
     $off = 59 - ($v.Count - 1)
@@ -2367,7 +2372,7 @@ function ConvertTo-MonPoints {
         $y = ($Height - 1) - [math]::Min(1, [double]$v[$i] / $Max) * ($Height - 3)
         '{0},{1}' -f [math]::Round(($off + $i) * $step, 1).ToString([Globalization.CultureInfo]::InvariantCulture), [math]::Round($y, 1).ToString([Globalization.CultureInfo]::InvariantCulture)
     }
-    [System.Windows.Media.PointCollection]::Parse(($pts -join ' '))
+    return , [System.Windows.Media.PointCollection]::Parse((@($pts) -join ' '))
 }
 
 function Add-MonValue {
@@ -2377,75 +2382,98 @@ function Add-MonValue {
     while ($h.Count -gt 60) { $h.RemoveAt(0) }
 }
 
+function Write-MonError {
+    <# Fehler der Live-Anzeige je Bereich nur einmal protokollieren (die Anzeige läuft jede halbe Sekunde). #>
+    param([string]$Area, $ErrorRecord)
+    $msg = "$Area`: $($ErrorRecord.Exception.Message)"
+    if (-not $Script:MonErrors.ContainsKey($msg)) { $Script:MonErrors[$msg] = $true; Add-LogLine "FEHLER (Live-Monitor) $msg" }
+}
+
 function Update-LiveMonitorUi {
+    # Die Aufzeichnung wird unabhängig von der Anzeige ausgewertet – ein Anzeigefehler darf sie nie blockieren
+    try { Update-LoadRecording } catch { Write-MonError 'Aufzeichnung' $_ }
+    if ($Script:Mon.Error -and -not $Script:Mon.Last) { Write-MonError 'Messung' ([pscustomobject]@{ Exception = [pscustomobject]@{ Message = $Script:Mon.Error } }) }
     if ($Script:Mon.Seq -eq $Script:MonSeen) { return }
     $Script:MonSeen = $Script:Mon.Seq
     $s = $Script:Mon.Last
     if (-not $s) { return }
-    foreach ($k in 'Cpu', 'Ram', 'Disk', 'Net', 'Temp') { Add-MonValue $k $(if ($k -eq 'Ram') { $s.RamPct } else { $s.$k }) }
-    $peak = { param($k) [math]::Round((@($Script:MonHist[$k]) | Measure-Object -Maximum).Maximum, 0) }
     $ui = $Script:UI
-    $ui.MonCpu.Text = if ($null -ne $s.Cpu) { "$([math]::Round($s.Cpu)) %" } else { '–' }
-    $ui.MonCpuSub.Text = "Spitze (letzte Minute): $(& $peak 'Cpu') %"
-    $ui.MonRam.Text = if ($null -ne $s.RamPct) { "$([math]::Round($s.RamPct)) %" } else { '–' }
-    $ui.MonRamSub.Text = '{0:N1} von {1:N1} GB belegt' -f ($s.RamUsed / 1GB), ($s.RamTotal / 1GB)
-    $ui.MonDisk.Text = if ($null -ne $s.Disk) { "$([math]::Round($s.Disk)) %" } else { '–' }
-    $ui.MonDiskSub.Text = "Spitze (letzte Minute): $(& $peak 'Disk') %"
-    $ui.MonNet.Text = Format-MonRate $s.Net
-    $ui.MonNetSub.Text = "Spitze: $(Format-MonRate ((@($Script:MonHist['Net']) | Measure-Object -Maximum).Maximum))"
-    $ui.MonTemp.Text = if ($null -ne $s.Temp) { "$($s.Temp) °C" } else { '–' }
-    $ui.MonTempSub.Text = if ($null -ne $s.Temp) { 'höchster Sensorwert' } else { 'vom Gerät nicht gemeldet' }
-    $ui.MonCpuLine.Points = ConvertTo-MonPoints $Script:MonHist['Cpu'] 100
-    $ui.MonRamLine.Points = ConvertTo-MonPoints $Script:MonHist['Ram'] 100
-    $ui.MonDiskLine.Points = ConvertTo-MonPoints $Script:MonHist['Disk'] 100
-    $ui.MonNetLine.Points = ConvertTo-MonPoints $Script:MonHist['Net'] ([math]::Max([double]100KB, (@($Script:MonHist['Net']) | Measure-Object -Maximum).Maximum))
-    $ui.MonTempLine.Points = ConvertTo-MonPoints $Script:MonHist['Temp'] 100
+    try {
+        foreach ($k in 'Cpu', 'Ram', 'Disk', 'Net', 'Temp') { Add-MonValue $k $(if ($k -eq 'Ram') { $s.RamPct } else { $s.$k }) }
+        $peak = { param($k) [math]::Round([double](@($Script:MonHist[$k]) | Measure-Object -Maximum).Maximum, 0) }
+        $ui.MonCpu.Text = if ($null -ne $s.Cpu) { "$([math]::Round($s.Cpu)) %" } else { '–' }
+        $ui.MonCpuSub.Text = "Spitze (letzte Minute): $(& $peak 'Cpu') %"
+        $ui.MonRam.Text = if ($null -ne $s.RamPct) { "$([math]::Round($s.RamPct)) %" } else { '–' }
+        $ui.MonRamSub.Text = '{0:N1} von {1:N1} GB belegt' -f ($s.RamUsed / 1GB), ($s.RamTotal / 1GB)
+        $ui.MonDisk.Text = if ($null -ne $s.Disk) { "$([math]::Round($s.Disk)) %" } else { '–' }
+        $ui.MonDiskSub.Text = "Spitze (letzte Minute): $(& $peak 'Disk') %"
+        $ui.MonNet.Text = Format-MonRate $s.Net
+        $ui.MonNetSub.Text = "Spitze: $(Format-MonRate ([double](@($Script:MonHist['Net']) | Measure-Object -Maximum).Maximum))"
+        $ui.MonTemp.Text = if ($null -ne $s.Temp) { "$($s.Temp) °C" } else { '–' }
+        $ui.MonTempSub.Text = if ($null -ne $s.Temp) { 'höchster Sensorwert' } else { 'vom Gerät nicht gemeldet' }
+    } catch { Write-MonError 'Werte' $_ }
+    try {
+        $ui.MonCpuLine.Points = ConvertTo-MonPoints $Script:MonHist['Cpu'] 100
+        $ui.MonRamLine.Points = ConvertTo-MonPoints $Script:MonHist['Ram'] 100
+        $ui.MonDiskLine.Points = ConvertTo-MonPoints $Script:MonHist['Disk'] 100
+        $ui.MonNetLine.Points = ConvertTo-MonPoints $Script:MonHist['Net'] ([math]::Max([double]100KB, [double](@($Script:MonHist['Net']) | Measure-Object -Maximum).Maximum))
+        $ui.MonTempLine.Points = ConvertTo-MonPoints $Script:MonHist['Temp'] 100
+    } catch { Write-MonError 'Kurven' $_ }
 
-    $top = @($s.Procs | Sort-Object Cpu, Ram -Descending | Select-Object -First 12)
-    $maxCpu = [math]::Max(1, (@($top | ForEach-Object { $_.Cpu }) | Measure-Object -Maximum).Maximum)
-    $t = New-Table @(@('Name', [string]), @('CpuText', [string]), @('RamText', [string]), @('BarW', [double]))
-    foreach ($p in $top) {
-        $n = if ($p.Count -gt 1) { "$($p.Name) ($($p.Count)×)" } else { $p.Name }
-        $null = $t.Rows.Add($n, ('{0:N1} %' -f $p.Cpu), ('{0:N0} MB' -f ($p.Ram / 1MB)), [math]::Max(1, 110 * $p.Cpu / $maxCpu))
-    }
-    $ui.MonProcList.ItemsSource = $t.DefaultView
+    try {
+        $top = @($s.Procs | Sort-Object Cpu, Ram -Descending | Select-Object -First 12)
+        $maxCpu = [math]::Max([double]1, [double](@($top | ForEach-Object { $_.Cpu }) | Measure-Object -Maximum).Maximum)
+        $t = New-Table @(@('Name', [string]), @('CpuText', [string]), @('RamText', [string]), @('BarW', [double]))
+        foreach ($p in $top) {
+            $n = if ($p.Count -gt 1) { "$($p.Name) ($($p.Count)×)" } else { $p.Name }
+            $null = $t.Rows.Add($n, ('{0:N1} %' -f $p.Cpu), ('{0:N0} MB' -f ($p.Ram / 1MB)), [math]::Max([double]1, 110 * [double]$p.Cpu / $maxCpu))
+        }
+        $ui.MonProcList.ItemsSource = $t.DefaultView
+    } catch { Write-MonError 'Größte Verbraucher' $_ }
 
     # Datenträger einzeln (auch externe; angesteckte erscheinen, abgezogene verschwinden)
-    $dt = New-Table @(@('Name', [string]), @('ActText', [string]), @('BarW', [double]), @('ReadText', [string]), @('WriteText', [string]), @('Points', [object]), @('Stroke', [object]))
-    $seen = @{}
-    foreach ($dk in @($s.Disks)) {
-        $seen[$dk.Key] = $true
-        if (-not $Script:MonDiskHist.ContainsKey($dk.Key)) { $Script:MonDiskHist[$dk.Key] = New-Object System.Collections.Generic.List[double] }
-        $h = $Script:MonDiskHist[$dk.Key]; $h.Add([double]$dk.Active); while ($h.Count -gt 60) { $h.RemoveAt(0) }
-        $null = $dt.Rows.Add($dk.Name, ('{0:N0} %' -f $dk.Active), [math]::Max(1, 1.1 * $dk.Active), (Format-MonRate $dk.Read), (Format-MonRate $dk.Write),
-            (ConvertTo-MonPoints $h 100 -Width 160 -Height 26), (Get-Brush $(if ($dk.External) { '#0E9384' } else { '#DC8A00' })))
-    }
-    foreach ($k in @($Script:MonDiskHist.Keys)) { if (-not $seen.ContainsKey($k)) { $Script:MonDiskHist.Remove($k) } }
-    $ui.MonDiskList.ItemsSource = $dt.DefaultView
-
-    # Aufzeichnung »Was bremst gerade?«
-    $rec = $Script:Mon.Rec
-    if ($null -ne $rec) {
-        $n = $rec.Count
-        $ui.MonRecStatus.Text = "Aufzeichnung läuft: $n von $Script:MonRecSeconds Sekunden – das Gerät dabei normal weiterbenutzen …"
-        if ($n -ge $Script:MonRecSeconds) {
-            $Script:Mon.Rec = $null
-            $a = Get-LoadAnalysis $rec.ToArray()
-            $ui.MonRecStatus.Text = "Aufzeichnung vom $(Get-Date -Format 'dd.MM.yyyy HH:mm') ($($a.Samples) Messpunkte):"
-            $ui.MonRecVerdict.Text = $a.Verdict
-            $ui.MonRecVerdict.Visibility = 'Visible'
-            $ui.MonRecDetail.Text = (@($a.Lines) -join [Environment]::NewLine)
-            $ui.MonRecDetail.Visibility = 'Visible'
-            $ui.BtnMonRecord.IsEnabled = $true
-            $ui.BtnMonRecordText.Text = 'Erneut aufzeichnen'
-            Add-LogLine "Live-Aufzeichnung: $($a.Verdict)"
-            foreach ($l in $a.Lines) { Add-LogLine "   $l" }
-            if ($Script:Page -ne 'Monitor') { $Script:Mon.Run = $false }
+    try {
+        $dt = New-Table @(@('Name', [string]), @('ActText', [string]), @('BarW', [double]), @('ReadText', [string]), @('WriteText', [string]), @('Points', [object]), @('Stroke', [object]))
+        $seen = @{}
+        foreach ($dk in @($s.Disks)) {
+            $seen[$dk.Key] = $true
+            if (-not $Script:MonDiskHist.ContainsKey($dk.Key)) { $Script:MonDiskHist[$dk.Key] = New-Object System.Collections.Generic.List[double] }
+            $h = $Script:MonDiskHist[$dk.Key]; $h.Add([double]$dk.Active); while ($h.Count -gt 60) { $h.RemoveAt(0) }
+            $null = $dt.Rows.Add($dk.Name, ('{0:N0} %' -f $dk.Active), [math]::Max([double]1, 1.1 * [double]$dk.Active), (Format-MonRate $dk.Read), (Format-MonRate $dk.Write),
+                (ConvertTo-MonPoints $h 100 -Width 160 -Height 26), (Get-Brush $(if ($dk.External) { '#0E9384' } else { '#DC8A00' })))
         }
+        foreach ($k in @($Script:MonDiskHist.Keys)) { if (-not $seen.ContainsKey($k)) { $Script:MonDiskHist.Remove($k) } }
+        $ui.MonDiskList.ItemsSource = $dt.DefaultView
+    } catch { Write-MonError 'Datenträger einzeln' $_ }
+}
+
+function Update-LoadRecording {
+    <# Aufzeichnung »Was bremst gerade?«: endet nach 60 Sekunden Uhrzeit (nicht nach 60 Messpunkten – eine Messung kann länger als 1 Sekunde dauern). #>
+    $rec = $Script:Mon.Rec
+    if ($null -eq $rec) { return }
+    $ui = $Script:UI
+    $elapsed = ([DateTime]::UtcNow - $Script:Mon.RecStart).TotalSeconds
+    $n = $rec.Count
+    if ($elapsed -lt $Script:MonRecSeconds -or $n -lt 5) {
+        $ui.MonRecStatus.Text = "Aufzeichnung läuft: $([math]::Min($Script:MonRecSeconds, [math]::Floor($elapsed))) von $Script:MonRecSeconds Sekunden ($n Messpunkte) – das Gerät dabei normal weiterbenutzen …"
+        return
     }
+    $Script:Mon.Rec = $null
+    $ui.BtnMonRecord.IsEnabled = $true
+    $ui.BtnMonRecordText.Text = 'Erneut aufzeichnen'
+    $a = Get-LoadAnalysis $rec.ToArray()
+    $ui.MonRecStatus.Text = "Aufzeichnung vom $(Get-Date -Format 'dd.MM.yyyy HH:mm') ($($a.Samples) Messpunkte):"
+    $ui.MonRecVerdict.Text = $a.Verdict
+    $ui.MonRecVerdict.Visibility = 'Visible'
+    $ui.MonRecDetail.Text = (@($a.Lines) -join [Environment]::NewLine)
+    $ui.MonRecDetail.Visibility = 'Visible'
+    Add-LogLine "Live-Aufzeichnung: $($a.Verdict)"
+    foreach ($l in $a.Lines) { Add-LogLine "   $l" }
+    if ($Script:Page -ne 'Monitor') { $Script:Mon.Run = $false }
 }
 
 function Start-LoadRecording {
+    $Script:Mon.RecStart = [DateTime]::UtcNow
     $Script:Mon.Rec = [System.Collections.ArrayList]::Synchronized((New-Object System.Collections.ArrayList))
     $Script:UI.BtnMonRecord.IsEnabled = $false
     $Script:UI.BtnMonRecordText.Text = 'Aufzeichnung läuft …'

@@ -1,7 +1,7 @@
 {
-    "version": "3.4.0",
-    "datei": "LaptopDiagnose-3.4.0.zip",
-    "sha256": "5a82e294b769014182317eba4a3269e5f63de9a7314ef8f25f8ea8a3f16bbf5d",
-    "notizen": "Neu: »Externe Datenträger« lädt automatisch und aktualisiert sich beim Anstecken oder Abziehen, der Live-Monitor zeigt jeden Datenträger einzeln (auch externe), gelöschte Dateien retten mit Windows File Recovery und Datenträger sicher löschen mit Nachweis im Bericht.",
+    "version": "3.4.1",
+    "datei": "LaptopDiagnose-3.4.1.zip",
+    "sha256": "9cd31226749afb6205723d54eb96a5fbaed4d2fea0b8f44beb1d10c6dafddd0a",
+    "notizen": "Fehlerbehebung Live-Monitor: Die Aufzeichnung »Was bremst gerade?« endet wieder nach 60 Sekunden, und »Datenträger einzeln«, »Größte Verbraucher« sowie die Verlaufskurven werden angezeigt.",
     "veroeffentlicht": "2026-10-11"
 }
