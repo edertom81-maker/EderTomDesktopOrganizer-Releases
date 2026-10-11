@@ -4,7 +4,7 @@ Stand: 11.10.2026. Neue Wünsche hier ergänzen.
 
 ## Offen (noch nicht gebaut)
 
-Zurzeit nichts offen.
+51. **Copyright in der Seitenleiste größer:** »© 2026 Eder Tom« unten in der Seitenleiste von 11 auf 14 pt, halbfett und etwas heller, damit es besser lesbar ist.
 
 Bewusst weiterhin nicht: Registry-Reiniger, Treiber von Drittanbieter-Seiten, automatische Reparaturen ohne Rückfrage, »RAM-Booster« und ähnliche Schein-Optimierer.
 
