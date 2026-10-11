@@ -4,7 +4,15 @@ Stand: 11.10.2026. Neue Wünsche hier ergänzen.
 
 ## Offen (noch nicht gebaut)
 
-Derzeit keine offenen Punkte.
+36. **Partitionswerkzeuge** (Bereich »Externe Datenträger«; gilt auch für **interne Zusatzlaufwerke**, z. B. eine zweite Festplatte im Desktop-PC – der Datenträger mit Windows bzw. Boot-/Systempartitionen bleibt immer ausgeschlossen):
+    - **Partitionsübersicht als Grafik** je Datenträger (Leiste wie in der Datenträgerverwaltung mit Partitionen und freiem Bereich) plus Tabelle: Buchstabe, Name, Dateisystem, Größe, belegt.
+    - **Partition erstellen** im freien Bereich (Größe, Dateisystem, Name, Laufwerksbuchstabe).
+    - **Datenträger aufteilen** (Assistent, z. B. 32 GB FAT32 fürs Autoradio + Rest exFAT; löscht alle Daten).
+    - **Partition löschen** (Inhalt anzeigen, Bestätigung durch Eintippen des Laufwerksbuchstabens).
+    - **Vergrößern** in angrenzenden freien Platz und **Verkleinern** ohne Datenverlust – Windows kann das nur bei NTFS; bei exFAT/FAT32 Erklärung statt Versuch; vor dem Verkleinern Dateisystem prüfen.
+    - **Laufwerksbuchstaben ändern/entfernen**, **Namen ändern**.
+    - **In NTFS umwandeln ohne Datenverlust** (FAT32/exFAT → NTFS, nur in diese Richtung; Hinweis, dass Mac/TV/Autoradio danach meist nicht mehr schreiben können).
+    - Sicherheit wie bisher: Prüfung vor jeder Änderung, Bestätigung durch Eintippen bei Löschen/Aufteilen, Protokoll. Bewusst nicht: Partitionen verschieben oder zusammenführen mit Datenerhalt (kann Windows nicht von sich aus, riskant).
 
 Bewusst weiterhin nicht: Registry-Reiniger, Treiber von Drittanbieter-Seiten, automatische Reparaturen ohne Rückfrage, »RAM-Booster« und ähnliche Schein-Optimierer.
 
