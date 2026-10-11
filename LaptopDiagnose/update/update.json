@@ -1,7 +1,7 @@
 {
     "version": "2.8.0",
     "datei": "LaptopDiagnose-2.8.0.zip",
-    "sha256": "fc09461a858302110d8e05a884226f7a38bd1d25e7564f41229808f25c79523e",
-    "notizen": "Neues Werkzeug »Entwickler-Reste finden« (Speicherfresser und Reparatur-Werkzeuge): findet in Programmier-Projekten – z. B. den Codex-Arbeitsordnern – neu erzeugbare Ordner wie node_modules, Python-Umgebungen, Caches und Build-Ausgaben sowie globale Paket-Caches. Eigener Code und Git-Verläufe bleiben unberührt; vorausgewählt sind nur Reste aus Projekten, die seit über 30 Tagen nicht geändert wurden.",
+    "sha256": "dd9c749bf90f25b5d95b33abe24cb81e50d93d9209415716905f96de193638e7",
+    "notizen": "Neues Werkzeug »Entwickler-Reste finden« (Speicherfresser und Reparatur-Werkzeuge): findet in Programmier-Projekten – z. B. den Codex-Arbeitsordnern – neu erzeugbare Ordner wie node_modules, Python-Umgebungen, Caches und Build-Ausgaben sowie globale Paket-Caches. Eigener Code und Git-Verläufe bleiben unberührt; vorausgewählt sind nur Reste aus Projekten, die seit über 30 Tagen nicht geändert wurden. Außerdem: In den Details öffnet ein Doppelklick auf eine Zeile mit Pfad den Ordner direkt im Explorer.",
     "veroeffentlicht": "2026-10-11"
 }

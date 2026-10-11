@@ -38,7 +38,7 @@ Beim Start fragt Windows nach Administratorrechten. Diese Rechte braucht das Pro
 
 Unten markiert **»Empfohlene auswählen«** alle kritischen Punkte und Warnungen. **»Ausgewählte beheben«** zeigt vorher eine Zusammenfassung zur Bestätigung und fragt nach einem Wiederherstellungspunkt. Bei Autostarts, Updates, Zusatz-Apps und Downloads wählst du die einzelnen Einträge in einer Liste aus. Danach zeigt ein **Vorher/Nachher-Vergleich**, was sich verbessert hat (Gesundheitswert, offene Probleme, freier Speicher, Autostarts, Arbeitsspeicher). Start- und Herunterfahrdauer lassen sich erst nach einem Neustart vergleichen und erscheinen unter *Verlauf*. **»Nur prüfen«** in der Seitenleiste sperrt alle Änderungen.
 
-Das Programmfenster öffnet sich maximiert.
+Das Programmfenster öffnet sich maximiert. In den aufklappbaren Details öffnet ein **Doppelklick auf eine Zeile mit Pfad** den Ordner im Explorer.
 
 ## Geplante Wartung
 
