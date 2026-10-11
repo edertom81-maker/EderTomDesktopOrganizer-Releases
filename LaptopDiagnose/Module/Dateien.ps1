@@ -291,6 +291,131 @@ function Get-LargeFolders {
 
 #endregion
 
+#region ---------- Entwickler-Reste ----------
+
+# Ordner, die immer neu erzeugt werden können (Name → Art)
+$Script:DevAlwaysRebuildable = [ordered]@{
+    'node_modules' = 'Node.js-Pakete (npm install)'; '__pycache__' = 'Python-Zwischendateien'; '.pytest_cache' = 'pytest-Cache'
+    '.mypy_cache' = 'mypy-Cache'; '.ruff_cache' = 'Ruff-Cache'; '.gradle' = 'Gradle-Cache'; '.next' = 'Next.js-Build'; '.nuxt' = 'Nuxt-Build'
+    '.parcel-cache' = 'Parcel-Cache'; '.turbo' = 'Turborepo-Cache'; '.angular' = 'Angular-Cache'; '.svelte-kit' = 'SvelteKit-Build'
+}
+# Build-Ordner nur, wenn daneben eine passende Projektdatei liegt
+$Script:DevBuildDirs = @{
+    'build'  = @('package.json', 'pyproject.toml', 'setup.py', 'CMakeLists.txt', 'build.gradle', 'build.gradle.kts')
+    'dist'   = @('package.json', 'pyproject.toml', 'setup.py')
+    'out'    = @('package.json', 'CMakeLists.txt')
+    'target' = @('Cargo.toml', 'pom.xml')
+    'bin'    = @('*.csproj', '*.vbproj', '*.fsproj')
+    'obj'    = @('*.csproj', '*.vbproj', '*.fsproj')
+}
+
+function Get-DevSearchRoots {
+    param($Data)
+    if ($Data -and $Data.Folder) { return @((Get-Item -LiteralPath $Data.Folder -ErrorAction Stop).FullName.TrimEnd('\')) }
+    $extra = @('source\repos', 'Projects', 'Projekte', 'dev', 'code', 'git') | ForEach-Object { Join-Path $env:USERPROFILE $_ } | Where-Object { Test-Path -LiteralPath $_ }
+    @(@(Get-UserDataRoots) + @($extra) | Select-Object -Unique)
+}
+
+function Find-DevLeftovers {
+    <# Neu erzeugbare Ordner in Projekten (ohne eigenen Code und ohne .git). #>
+    param([string[]]$Roots, [double]$MinSize = 1MB)
+    $found = New-Object System.Collections.Generic.List[object]
+    $seen = @{}
+    $stack = New-Object System.Collections.Generic.Stack[string]
+    foreach ($r in $Roots) { $stack.Push($r) }
+    while ($stack.Count) {
+        $dir = $stack.Pop()
+        if ($seen.ContainsKey($dir.ToLowerInvariant())) { continue }
+        $seen[$dir.ToLowerInvariant()] = $true
+        try { $subs = @((New-Object IO.DirectoryInfo $dir).EnumerateDirectories()) } catch { continue }
+        foreach ($d in $subs) {
+            if ([int]$d.Attributes -band [int][IO.FileAttributes]::ReparsePoint) { continue }
+            $name = $d.Name.ToLowerInvariant()
+            if ($name -in '.git', '.svn', '.hg', 'appdata', '$recycle.bin') { continue }
+            if (Test-InsideSystemArea $d.FullName) { continue }
+            $kind = $null
+            if ($Script:DevAlwaysRebuildable.Contains($name)) { $kind = $Script:DevAlwaysRebuildable[$name] }
+            elseif ($name -in 'venv', '.venv', 'env', '.env' -and (Test-Path -LiteralPath (Join-Path $d.FullName 'pyvenv.cfg'))) { $kind = 'Python-Umgebung (pip install)' }
+            elseif ($Script:DevBuildDirs.ContainsKey($name)) {
+                foreach ($m in $Script:DevBuildDirs[$name]) {
+                    if (@(Get-ChildItem -LiteralPath $dir -Filter $m -File -ErrorAction SilentlyContinue | Select-Object -First 1).Count) { $kind = "Build-Ausgabe ($m)"; break }
+                }
+            }
+            if ($kind) {
+                $size = [double](Get-DirectorySizeFast $d.FullName)
+                if ($size -ge $MinSize) {
+                    $proj = Get-Item -LiteralPath $dir
+                    $last = @($proj.LastWriteTime, $d.LastWriteTime) | Sort-Object -Descending | Select-Object -First 1
+                    $found.Add([pscustomobject]@{ Path = $d.FullName; Name = $d.Name; Size = $size; IsFolder = $true; Kind = $kind; Project = $dir; Changed = $last; Cache = $false })
+                }
+                continue   # in neu erzeugbare Ordner nicht weiter hinabsteigen
+            }
+            $stack.Push($d.FullName)
+        }
+    }
+    return $found.ToArray()
+}
+
+function Get-DevGlobalCaches {
+    <# Globale Paket-Caches im Benutzerprofil. #>
+    $caches = @(
+        @{ Path = (Join-Path $env:LOCALAPPDATA 'npm-cache'); Kind = 'npm-Cache' }
+        @{ Path = (Join-Path $env:APPDATA 'npm-cache'); Kind = 'npm-Cache' }
+        @{ Path = (Join-Path $env:LOCALAPPDATA 'pip\cache'); Kind = 'pip-Cache' }
+        @{ Path = (Join-Path $env:USERPROFILE '.nuget\packages'); Kind = 'NuGet-Paketcache' }
+        @{ Path = (Join-Path $env:LOCALAPPDATA 'Yarn\Cache'); Kind = 'Yarn-Cache' }
+        @{ Path = (Join-Path $env:USERPROFILE '.gradle\caches'); Kind = 'Gradle-Cache' }
+    )
+    foreach ($c in $caches) {
+        if (-not $c.Path -or -not (Test-Path -LiteralPath $c.Path)) { continue }
+        $size = [double](Get-DirectorySizeFast $c.Path)
+        if ($size -lt 50MB) { continue }
+        [pscustomobject]@{ Path = $c.Path; Name = (Split-Path -Leaf $c.Path); Size = $size; IsFolder = $true; Kind = $c.Kind; Project = '(globaler Cache)'; Changed = (Get-Item -LiteralPath $c.Path).LastWriteTime; Cache = $true }
+    }
+}
+
+function Invoke-DevLeftoverSearch {
+    param($Data)
+    $roots = Get-DevSearchRoots $Data
+    Write-Host "     Durchsuche: $($roots -join '; ')" -ForegroundColor Gray
+    $items = @(@(Find-DevLeftovers -Roots $roots) + @(if (-not ($Data -and $Data.Folder)) { Get-DevGlobalCaches }) | Sort-Object Size -Descending)
+    Remove-FindingByKey 'Entwickler'
+    if (-not $items) {
+        Add-Finding Speicher OK 'Keine Entwickler-Reste gefunden' -Key 'Entwickler' -Silent -Detail "Durchsucht: $($roots -join '; ')"
+        return 'Keine Entwickler-Reste gefunden.'
+    }
+    $limit = (Get-Date).AddDays(-30)
+    $labels = @($items | ForEach-Object { '{0} · {1} · {2} · zuletzt geändert {3:dd.MM.yyyy} · {4}' -f (Format-Bytes $_.Size), $_.Kind, $(if ($_.Cache) { 'globaler Cache' } else { 'Projekt ' + (Split-Path -Leaf $_.Project) }), $_.Changed, $_.Path })
+    $defaults = @($items | ForEach-Object { (-not $_.Cache) -and $_.Changed -lt $limit })
+    # Details nach Projekt gruppiert
+    $lines = foreach ($g in @($items | Group-Object Project | Sort-Object { ($_.Group | Measure-Object Size -Sum).Sum } -Descending)) {
+        '{0}  ({1})' -f $g.Name, (Format-Bytes ([double](($g.Group | Measure-Object Size -Sum).Sum)))
+        foreach ($i in $g.Group) { '   {0,10}  {1}  –  {2}' -f (Format-Bytes $i.Size), $i.Name, $i.Kind }
+    }
+    $sum = [double](($items | Measure-Object Size -Sum).Sum)
+    $sev = if ($sum -ge 5GB) { 'Warnung' } else { 'Info' }
+    Add-Finding Speicher $sev "Entwickler-Reste: $(Format-Bytes $sum) in $($items.Count) neu erzeugbaren Ordner(n)" -Key 'Entwickler' -Silent `
+        -Detail "Diese Ordner enthalten keinen eigenen Code: heruntergeladene Pakete, Python-Umgebungen, Caches und Build-Ausgaben. Sie entstehen beim nächsten Bauen bzw. Starten des Projekts neu (z. B. »npm install«, »pip install -r requirements.txt«, erneutes Kompilieren) – das kann beim ersten Mal etwas dauern und braucht Internet. Vorausgewählt sind nur Reste aus Projekten, die seit mehr als 30 Tagen nicht geändert wurden; globale Caches sind nicht vorausgewählt. Eigener Code und Git-Verläufe (.git) werden nie angeboten. Durchsucht: $($roots -join '; ')" `
+        -Items @($lines) -FixData $items -SelectLabels $labels -SelectDefault $defaults `
+        -FixLabel 'Ausgewählte Entwickler-Reste in den Papierkorb verschieben' -Fix {
+        param($d, $pre)
+        $chosen = @($d)
+        if (-not $pre) {
+            for ($i = 0; $i -lt $chosen.Count; $i++) { Write-Host ('    {0,3}) {1,10}  {2}  – {3}' -f ($i + 1), (Format-Bytes $chosen[$i].Size), $chosen[$i].Path, $chosen[$i].Kind) }
+            $sel = Read-Host '   In den Papierkorb: [A] alle, Nummern oder leer = keine'
+            $chosen = if ($sel -match '^\s*(a|alle)\s*$') { $chosen } else { @((Read-Selection $sel $chosen.Count) | ForEach-Object { $chosen[$_] }) }
+            if (-not $chosen) { return 'Nichts ausgewählt – nichts gelöscht.' }
+        }
+        $res = Remove-PathsToRecycleBin $chosen
+        if (@($res.Ok).Count) { Register-Change -Beschreibung "Entwickler-Reste gelöscht: $(@($res.Ok).Count) Ordner ($(Format-Bytes $res.Freed))" -Typ 'Protokoll' -NichtUmkehrbar -Ergebnis (($res.Ok | ForEach-Object { $_.Path }) -join '; ') }
+        Add-PermanentDeleteFinding $res.Rest
+        (Get-DeleteResultText $res 'Ordner') + ' Die Ordner entstehen beim nächsten Bauen bzw. Starten des jeweiligen Projekts neu.'
+    }
+    "$($items.Count) Entwickler-Rest(e) mit $(Format-Bytes $sum) gefunden – siehe Karte »Entwickler-Reste«."
+}
+
+#endregion
+
 #region ---------- Werkzeuge und Ergebniskarten ----------
 
 function Invoke-DuplicateSearch {
@@ -458,7 +583,7 @@ function Invoke-StorageDrillDown {
 }
 
 function Add-FileToolFindings {
-    <# Die drei Datei-Werkzeuge als ausführbare Karten (Bereich »Speicherfresser« und »Reparatur-Werkzeuge«). #>
+    <# Die Datei-Werkzeuge als ausführbare Karten (Bereich »Speicherfresser« und »Reparatur-Werkzeuge«). #>
     param([string]$Category)
     $common = 'Gesucht wird in Dokumente, Bilder, Videos, Musik, Desktop und Downloads – auf Wunsch in einem anderen Ordner oder Laufwerk (Frage beim Start).'
     Add-Finding $Category Info 'Werkzeug: Doppelte Dateien suchen' -Silent -Repeatable -AskFolder `
@@ -470,6 +595,9 @@ function Add-FileToolFindings {
     Add-Finding $Category Info 'Werkzeug: Große Ordner anzeigen und löschen' -Silent -Repeatable -AskFolder `
         -Detail "Listet die größten Ordner (bis zwei Ebenen tief) mit Größe, Dateianzahl und Datum; ganze Ordner lassen sich zum Löschen auswählen. $common" `
         -FixLabel 'Große Ordner anzeigen' -FixData @{ Folder = $null } -Fix { param($d, $pre) if (-not $pre -and -not $d.Folder) { $d = Read-FolderChoice }; Invoke-LargeFolderSearch $d }
+    Add-Finding $Category Info 'Werkzeug: Entwickler-Reste finden' -Silent -Repeatable -AskFolder `
+        -Detail 'Findet neu erzeugbare Ordner in Programmier-Projekten (z. B. Codex-Arbeitsordner): node_modules, Python-Umgebungen, Caches und Build-Ausgaben, dazu globale Paket-Caches von npm, pip, NuGet, Yarn und Gradle. Eigener Code und Git-Verläufe werden nie angeboten. Gesucht wird in Dokumente, Desktop, Downloads und typischen Projektordnern – auf Wunsch in einem anderen Ordner.' `
+        -FixLabel 'Entwickler-Reste finden' -FixData @{ Folder = $null } -Fix { param($d, $pre) if (-not $pre -and -not $d.Folder) { $d = Read-FolderChoice }; Invoke-DevLeftoverSearch $d }
 }
 
 #endregion

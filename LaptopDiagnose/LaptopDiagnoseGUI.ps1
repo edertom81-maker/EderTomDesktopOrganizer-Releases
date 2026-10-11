@@ -1288,6 +1288,8 @@ function Invoke-SelectedFixes {
                 'Markieren Sie die defekten Verknüpfungen, die bereinigt werden sollen. Verknüpfungen kommen in den Papierkorb, Autostart-Einträge werden deaktiviert (rückgängig über »Änderungen«).'
             } elseif ($vm.FixLabel -match 'doppelte Dateien') {
                 'Vorausgewählt sind alle Kopien außer jeweils der ältesten Datei einer Gruppe (»Vorschlag: behalten«). Passen Sie die Auswahl bei Bedarf an – von jeder Gruppe bleibt zur Sicherheit immer mindestens eine Datei erhalten. Gelöscht wird in den Papierkorb.'
+            } elseif ($vm.FixLabel -match 'Entwickler-Reste') {
+                'Vorausgewählt sind Reste aus Projekten, die seit über 30 Tagen nicht geändert wurden. Diese Ordner enthalten keinen eigenen Code und entstehen beim nächsten Bauen bzw. Starten des Projekts neu. Gelöscht wird in den Papierkorb.'
             } elseif ($vm.FixLabel -match 'leere Ordner') {
                 'Markieren Sie die leeren Ordner, die in den Papierkorb verschoben werden sollen.'
             } elseif ($vm.FixLabel -match 'ENDGÜLTIG') {

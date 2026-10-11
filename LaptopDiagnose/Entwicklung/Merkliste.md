@@ -4,6 +4,10 @@ Stand: 10.10.2026. Neue Wünsche hier ergänzen.
 
 ## Offen (noch nicht gebaut)
 
+– derzeit nichts –
+
+## Erledigt in Version 2.8.0
+
 19. **Werkzeug »Entwickler-Reste finden«** (Bereich »Speicherfresser« und »Reparatur-Werkzeuge«; Anlass: `Dokumente\Codex` belegt 52 GB):
     - Sucht Ordner, die sich jederzeit neu erzeugen lassen: `node_modules`, `.venv`/`venv`/`env` (mit `pyvenv.cfg`), `__pycache__`, `.pytest_cache`, `.mypy_cache`, `build`/`dist`/`out`/`target`/`bin`/`obj` (nur neben einer Projektdatei wie `package.json`, `pyproject.toml`, `Cargo.toml`, `*.csproj`, `pom.xml`), `.gradle`, `.next`, `.nuxt`, `.parcel-cache`, `.turbo`.
     - Zusätzlich die globalen Paket-Caches von npm, pip, NuGet, Yarn und Gradle (im Benutzerprofil).
