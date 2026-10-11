@@ -244,6 +244,9 @@ $Script:Xaml = @'
               <Border x:Name="SevBadge" DockPanel.Dock="Left" CornerRadius="9" Padding="9,2" Background="#079455" VerticalAlignment="Top" Margin="0,1,10,0">
                 <TextBlock Text="{Binding Severity}" Foreground="White" FontSize="11" FontWeight="SemiBold"/>
               </Border>
+              <Button DockPanel.Dock="Right" Tag="HideBtn" Content="Ausblenden" ToolTip="Diese Meldung bei künftigen Prüfungen nicht mehr anzeigen (wieder einblenden unter Einstellungen)"
+                      Visibility="{Binding CanHide, Converter={StaticResource B2V}}" Cursor="Hand" Margin="10,0,0,0" Padding="6,1" FontSize="11"
+                      Background="Transparent" BorderThickness="0" Foreground="{DynamicResource Link}" VerticalAlignment="Top"/>
               <TextBlock DockPanel.Dock="Right" Text="{Binding CategoryTitle}" Foreground="{DynamicResource TextMuted}" FontSize="11" Margin="10,3,0,0"/>
               <TextBlock Text="{Binding Title}" FontWeight="SemiBold" FontSize="14" Foreground="{DynamicResource TextPrimary}" TextWrapping="Wrap"/>
             </DockPanel>
@@ -715,6 +718,29 @@ $Script:Xaml = @'
 
             <Border Style="{StaticResource Card}">
               <StackPanel>
+                <TextBlock Text="Ausgeblendete Meldungen" Style="{StaticResource CardTitle}"/>
+                <TextBlock x:Name="HiddenHint" Style="{StaticResource Muted}" Margin="0,0,0,8" Text="Ausgeblendete Meldungen erscheinen bei Prüfungen nicht mehr und zählen nicht in den Gesundheitswert."/>
+                <ItemsControl x:Name="HiddenList">
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                      <DockPanel Margin="0,3">
+                        <Button DockPanel.Dock="Right" Tag="{Binding Key}" Content="Wieder einblenden" Style="{StaticResource Btn}" Padding="10,4"/>
+                        <StackPanel>
+                          <TextBlock Text="{Binding Title}" Foreground="{DynamicResource TextPrimary}" TextWrapping="Wrap"/>
+                          <TextBlock Text="{Binding Meta}" Foreground="{DynamicResource TextMuted}" FontSize="11"/>
+                        </StackPanel>
+                      </DockPanel>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+                <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+                  <Button x:Name="BtnUnhideAll" Style="{StaticResource Btn}" Margin="0" Content="Alle wieder einblenden"/>
+                </StackPanel>
+              </StackPanel>
+            </Border>
+
+            <Border Style="{StaticResource Card}">
+              <StackPanel>
                 <TextBlock Text="Über PC Repair Pro" Style="{StaticResource CardTitle}"/>
                 <StackPanel Orientation="Horizontal" Margin="0,4,0,12">
                   <Image x:Name="AboutLogo" Width="96" Height="96" Margin="0,0,18,0" VerticalAlignment="Center" RenderOptions.BitmapScalingMode="HighQuality"/>
@@ -855,6 +881,9 @@ function global:Get-GuiSnapshot {
                 Repeatable     = [bool]$f.Repeatable
                 AskFolder      = [bool]$f.AskFolder
                 RunOk          = [bool]$f.RunOk
+                HideKey        = "$($f.HideKey)"
+                CheckKey       = "$($f.CheckKey)"
+                Check          = "$($f.Check)"
                 FixLabel       = $f.FixLabel
                 CanFix         = ([bool]$f.Fix -and -not $f.Fixed)
                 Fixed          = [bool]$f.Fixed
@@ -871,6 +900,7 @@ function global:Get-GuiSnapshot {
         Reboot     = [bool]$Script:RebootNeeded
         Comparison = [string[]]@($Script:LastComparison)
         DeviceKind = (Get-DeviceKind)
+        HiddenCount = $Script:HiddenFindings.Count
     }
 }
 '@
@@ -933,10 +963,10 @@ function Complete-WorkerJob {
 $Script:Pages = [ordered]@{
     'Alle'          = @{ Kind = 'Findings'; Title = 'Übersicht'; Sub = 'Gesamtzustand des Geräts – alle Ergebnisse nach Dringlichkeit sortiert.' }
     'Fehler'        = @{ Kind = 'Findings'; Title = 'Fehlersuche'; Sub = 'Bluescreens mit Ursachen, Abstürze, Problemgeräte, Dienste, Systemdateien, Datenträger, Speichertest und defekte Verknüpfungen.'; Scan = 'Invoke-ErrorScan' }
-    'Sicherheit'    = @{ Kind = 'Findings'; Title = 'Sicherheit'; Sub = 'Datensicherung, Datenschutz, Browser-Erweiterungen, Virenschutz, Firewall, Secure Boot, TPM, Verschlüsselung, Kernisolierung, UAC, SMB1, Freigaben und veraltete Browser.'; Scan = 'Invoke-SecurityScan' }
+    'Sicherheit'    = @{ Kind = 'Findings'; Title = 'Sicherheit'; Sub = 'Datensicherung, Datenschutz, Browser-Erweiterungen, Virenschutz, Ransomware- und PUA-Schutz, SmartScreen, Konten, Fernwartung, Firewall, Secure Boot, TPM, Verschlüsselung, Kernisolierung, UAC, SMB1, Freigaben und veraltete Browser.'; Scan = 'Invoke-SecurityScan' }
     'Speicher'      = @{ Kind = 'Findings'; Title = 'Speicherfresser'; Sub = 'Arbeitsspeicher, freier Speicherplatz, Datenmüll inkl. Browser-Caches, Wiederherstellungspunkte und alte Sicherungen, Speicherbelegung als Grafik – dazu Werkzeuge für Duplikate, große Ordner, Programme und Entwickler-Reste.'; Scan = 'Invoke-MemoryScanDetailed' }
     'Leistung'      = @{ Kind = 'Findings'; Title = 'Leistungsbremsen'; Sub = 'Prozessorlast, Autostart inkl. geplanter Aufgaben und Dienste, Startdauer, Bildwiederholrate, Arbeitsspeicher-Takt, Energie- und Standby-Einstellungen, Laufwerk, Temperatur und Zusatzsoftware.'; Scan = 'Invoke-PerformanceScan' }
-    'Herunterfahren' = @{ Kind = 'Findings'; Title = 'Herunterfahren & Neustart'; Sub = 'Dauer der letzten Herunterfahrvorgänge, bremsende Programme, Dienste und Treiber, Wartezeiten, ausstehende Updates und Netzlaufwerke.'; Scan = 'Invoke-ShutdownScan'; ScanText = 'Herunterfahren prüfen' }
+    'Herunterfahren' = @{ Kind = 'Findings'; Title = 'Herunterfahren & Neustart'; Sub = 'Dauer der letzten Herunterfahrvorgänge, ungewolltes Aufwachen aus dem Energiesparmodus, bremsende Programme, Dienste und Treiber, Wartezeiten, ausstehende Updates und Netzlaufwerke.'; Scan = 'Invoke-ShutdownScan'; ScanText = 'Herunterfahren prüfen' }
     'Akku'          = @{ Kind = 'Findings'; Title = 'Akku'; Sub = 'Gesundheit, Kapazitätsverlauf, Ladezyklen, Ladezustand, Standby und was das Energiesparen verhindert.'; Scan = 'Invoke-BatteryScan' }
     'Netzwerk'      = @{ Kind = 'Findings'; Title = 'Netzwerk & WLAN'; Sub = 'Internetverbindung, WLAN-Signal und -Sicherheit, Netzwerkkabel (LAN), Geschwindigkeit, Latenz, Proxy und WLAN-Treiber.'; Scan = 'Invoke-NetworkScan' }
     'Software'      = @{ Kind = 'Findings'; Title = 'Software-Updates'; Sub = 'Verfügbare Updates für installierte Programme (über WinGet).'; Scan = 'Invoke-SoftwareScan' }
@@ -944,7 +974,7 @@ $Script:Pages = [ordered]@{
     'Werkzeuge'     = @{ Kind = 'Findings'; Title = 'Reparatur-Werkzeuge'; Sub = 'Gezielte Reparaturen und Tests – Werkzeug ankreuzen und »Ausgewählte beheben« klicken.'; Scan = 'Invoke-ToolsScan'; ScanText = 'Werkzeuge laden' }
     'Verlauf'       = @{ Kind = 'History'; Title = 'Verlauf & Trends'; Sub = 'Entwicklung der wichtigsten Kennzahlen über alle Komplett-Diagnosen.' }
     'Aenderungen'   = @{ Kind = 'Changes'; Title = 'Änderungen'; Sub = 'Protokoll aller Änderungen mit Rückgängig-Funktion.' }
-    'Einstellungen' = @{ Kind = 'Settings'; Title = 'Einstellungen'; Sub = 'Design, Umfang der Komplett-Diagnose, geplante Wartung, Berichte und Programm-Updates.' }
+    'Einstellungen' = @{ Kind = 'Settings'; Title = 'Einstellungen'; Sub = 'Design, Umfang der Komplett-Diagnose, geplante Wartung, Berichte, ausgeblendete Meldungen und Programm-Updates.' }
     'Log'           = @{ Kind = 'Log'; Title = 'Protokoll'; Sub = 'Alle Ausgaben dieser Sitzung. Wird zusätzlich lokal unter %LOCALAPPDATA%\LaptopDiagnose\Protokolle gespeichert.' }
 }
 $Script:AreaKeys = @('Fehler', 'Speicher', 'Leistung', 'Herunterfahren', 'Akku', 'Netzwerk', 'Software', 'Sicherheit', 'Windows')
@@ -979,7 +1009,7 @@ $Script:Table = New-Table @(
     @('FixText', [string]), @('Status', [string]), @('HasDetail', [bool]), @('HasItems', [bool]), @('HasStatus', [bool]),
     @('CanFix', [bool]), @('IsFixed', [bool]), @('RequiresReboot', [bool]), @('SelectAll', [bool]), @('ShowFix', [bool]),
     @('IsSelected', [bool]), @('SelectLabels', [object]), @('Chart', [object]), @('HasChart', [bool]), @('Tiles', [object]), @('HasTiles', [bool]),
-    @('RunOk', [bool]), @('HasPaths', [bool]), @('AskFolder', [bool]), @('Repeatable', [bool]), @('SelectDefault', [object])
+    @('RunOk', [bool]), @('HasPaths', [bool]), @('HideKey', [string]), @('CheckKey', [string]), @('CheckName', [string]), @('CanHide', [bool]), @('AskFolder', [bool]), @('Repeatable', [bool]), @('SelectDefault', [object])
 )
 $Script:View = New-Object System.Data.DataView($Script:Table)
 $Script:View.Sort = 'Order ASC'
@@ -1005,7 +1035,7 @@ function Write-UiSetting {
     $s[$Name] = $Value
     try {
         if (-not (Test-Path -LiteralPath $BerichtOrdner)) { $null = New-Item -ItemType Directory -Path $BerichtOrdner -Force }
-        [IO.File]::WriteAllText((Get-SettingsPath), ([pscustomobject]$s | ConvertTo-Json), (New-Object System.Text.UTF8Encoding $false))
+        [IO.File]::WriteAllText((Get-SettingsPath), ([pscustomobject]$s | ConvertTo-Json -Depth 5), (New-Object System.Text.UTF8Encoding $false))
     } catch { Add-LogLine "Einstellungen konnten nicht gespeichert werden: $($_.Exception.Message)" }
 }
 
@@ -1139,6 +1169,10 @@ function Update-FromSnapshot {
         $vm.RunOk = [bool]$f.RunOk
         $vm.AskFolder = [bool]$f.AskFolder
         $vm.Repeatable = [bool]$f.Repeatable
+        $vm.HideKey = "$($f.HideKey)"
+        $vm.CheckKey = "$($f.CheckKey)"
+        $vm.CheckName = "$($f.Check)"
+        $vm.CanHide = ($f.Severity -ne 'OK') -and -not $f.Repeatable -and $f.Category -ne 'Werkzeuge' -and [bool]$f.HideKey
         $fixText = if ($f.Category -eq 'Werkzeuge' -or $f.Repeatable) { "Ausführen: $($f.FixLabel)" } else { "Beheben: $($f.FixLabel)" }
         if ($f.RequiresReboot) { $fixText += '  (Neustart nötig)' }
         if ($vm.SelectLabels.Count -gt 0) { $fixText += '  – Auswahl im nächsten Schritt' }
@@ -1321,6 +1355,8 @@ function Invoke-SelectedFixes {
                 'Markieren Sie die älteren Systemabbilder, die gelöscht werden sollen. Das neueste Abbild je Computer wird nie angeboten.'
             } elseif ($vm.FixLabel -match 'Treiberpakete') {
                 'Markieren Sie die alten, nicht benutzten Treiberpakete, die entfernt werden sollen. Der aktive Treiber bleibt immer erhalten.'
+            } elseif ($vm.FixLabel -match 'Weckberechtigung') {
+                'Markieren Sie die Geräte, die den Computer nicht mehr aufwecken sollen. Vorausgewählt sind Mäuse und Netzwerkadapter; die Tastatur bleibt zum Aufwecken nutzbar. Rückgängig jederzeit unter »Änderungen«.'
             } elseif ($vm.FixLabel -match 'Update') {
                 'Markieren Sie die Updates, die installiert werden sollen.'
             } else { 'Markieren Sie die Einträge, die bearbeitet werden sollen.' }
@@ -1506,6 +1542,7 @@ function Import-SettingsPage {
     if (-not $keepButton) { $keepButton = $Script:UI.Keep30 }
     $keepButton.IsChecked = $true
     $Script:UI.ReportFolderText.Text = $BerichtOrdner
+    Import-HiddenList
     $Script:LoadingSettings = $false
 
     $sig = @()
@@ -1626,6 +1663,61 @@ function Open-PathInExplorer {
     }
 }
 
+function Hide-FindingUi {
+    <# Meldung ausblenden: nur diese Meldung oder alle Meldungen derselben Prüfung. #>
+    param($Row)
+    if ($Script:Job) { $null = Show-Message 'Bitte warten, bis die laufende Aufgabe beendet ist.' 'Ausblenden'; return }
+    $title = "$($Row['Title'])"
+    $check = "$($Row['CheckName'])"
+    $mode = 'Fund'
+    if ($check) {
+        $a = Show-Message "Was soll ausgeblendet werden?`n`nJa = nur diese Meldung:`n»$title«`n`nNein = alle Meldungen der Prüfung »$check«`n`nAusgeblendete Meldungen erscheinen bei künftigen Prüfungen nicht mehr und lassen sich unter »Einstellungen › Ausgeblendete Meldungen« wieder einblenden." 'Meldung ausblenden' 'Question' 'YesNoCancel'
+        if ("$a" -eq 'Cancel') { return }
+        if ("$a" -eq 'No') { $mode = 'Pruefung' }
+    } else {
+        $a = Show-Message "Diese Meldung ausblenden?`n`n»$title«`n`nSie erscheint bei künftigen Prüfungen nicht mehr und lässt sich unter »Einstellungen › Ausgeblendete Meldungen« wieder einblenden." 'Meldung ausblenden' 'Question' 'YesNo'
+        if ("$a" -ne 'Yes') { return }
+    }
+    $key = if ($mode -eq 'Pruefung') { "$($Row['CheckKey'])" } else { "$($Row['HideKey'])" }
+    $label = if ($mode -eq 'Pruefung') { "Alle Meldungen der Prüfung »$check«" } else { $title }
+    $s = Read-UiSettings
+    $rules = @(@($s.Ausgeblendet) | Where-Object { $_ -and $_.Key -and $_.Key -ne $key })
+    $rules += [pscustomobject]@{ Key = $key; Mode = $mode; Title = $label; Category = "$($Row['CategoryTitle'])"; Zeit = (Get-Date).ToString('s') }
+    Write-UiSetting 'Ausgeblendet' ([object[]]$rules)
+    $null = Start-WorkerJob -Code 'param($k) Hide-FindingsNow -Key $k; Get-GuiSnapshot' -Arguments @($key) -Status 'Meldung wird ausgeblendet …' -Silent -OnDone {
+        param($out)
+        Update-FromSnapshot (@($out) | Where-Object { $_.IsSnapshot } | Select-Object -Last 1)
+        $Script:UI.StatusText.Text = 'Ausgeblendet. Wieder einblenden unter »Einstellungen › Ausgeblendete Meldungen«.'
+    }
+}
+
+function Import-HiddenList {
+    $rules = @(@((Read-UiSettings).Ausgeblendet) | Where-Object { $_ -and $_.Key })
+    $t = New-Table @(@('Key', [string]), @('Title', [string]), @('Meta', [string]))
+    foreach ($r in $rules | Sort-Object Zeit -Descending) {
+        $when = try { ([datetime]$r.Zeit).ToString('dd.MM.yyyy HH:mm') } catch { '' }
+        $null = $t.Rows.Add("$($r.Key)", "$($r.Title)", ('{0}{1} · ausgeblendet am {2}' -f "$($r.Category)", $(if ($r.Mode -eq 'Pruefung') { ' · ganze Prüfung' } else { '' }), $when))
+    }
+    $Script:UI.HiddenList.ItemsSource = $t.DefaultView
+    $Script:UI.BtnUnhideAll.Visibility = if ($rules) { 'Visible' } else { 'Collapsed' }
+    $Script:UI.HiddenHint.Text = if ($rules) { "$($rules.Count) Regel(n) aktiv. Ausgeblendete Meldungen erscheinen bei Prüfungen nicht mehr und zählen nicht in den Gesundheitswert." } else { 'Keine Meldungen ausgeblendet. Über »Ausblenden« an einer Ergebniskarte lässt sich eine Meldung dauerhaft verbergen.' }
+}
+
+function Show-HiddenUi {
+    <# Ausgeblendete Meldungen wieder einblenden (eine Regel oder alle). #>
+    param([string]$Key)
+    if ($Script:Job) { $null = Show-Message 'Bitte warten, bis die laufende Aufgabe beendet ist.' 'Einblenden'; return }
+    $s = Read-UiSettings
+    $rules = if ($Key) { @(@($s.Ausgeblendet) | Where-Object { $_ -and $_.Key -and $_.Key -ne $Key }) } else { @() }
+    Write-UiSetting 'Ausgeblendet' ([object[]]$rules)
+    Import-HiddenList
+    $null = Start-WorkerJob -Code 'param($k) Show-HiddenNow -Key $k; Get-GuiSnapshot' -Arguments @("$Key") -Status 'Meldungen werden wieder eingeblendet …' -Silent -OnDone {
+        param($out)
+        Update-FromSnapshot (@($out) | Where-Object { $_.IsSnapshot } | Select-Object -Last 1)
+        $Script:UI.StatusText.Text = 'Wieder eingeblendet – die Meldung(en) erscheinen wieder (spätestens bei der nächsten Prüfung).'
+    }
+}
+
 function Find-ToolUpdate {
     <# Sucht nach einer neueren Programmversion. -BeimStart: still im Hintergrund, fragt nur bei einem Fund nach. #>
     param([switch]$BeimStart)
@@ -1718,7 +1810,7 @@ try {
         'BtnFixText', 'Busy', 'StatusText', 'HistoryPanel', 'HistoryHint', 'HistoryList', 'ChangesPanel', 'ChangesHint', 'ChangesList',
         'SettingsPanel', 'ThemeSystem', 'ThemeLight', 'ThemeDark', 'MaintStatus', 'IntWeekly', 'IntDaily', 'DayRow', 'MaintTime', 'BtnMaintSet',
         'BtnMaintRemove', 'ChkPdf', 'BtnFleet', 'UpdateStatus', 'BtnUpdateCheck', 'BtnUpdateInstall', 'SignatureText', 'ChkAutoUpdate', 'BadgeUpdate', 'AboutText', 'SidebarLogo', 'AboutLogo',
-        'ChkStorageFull', 'ChkAreaFehler', 'ChkAreaSpeicher', 'ChkAreaLeistung', 'ChkAreaHerunterfahren', 'ChkAreaAkku', 'ChkAreaNetzwerk', 'ChkAreaSoftware', 'ChkAreaSicherheit', 'ChkAreaWindows', 'ReportFolderText', 'BtnReportFolderChange', 'BtnReportFolderOpen', 'Keep10', 'Keep30', 'Keep100', 'Keep0'
+         'HiddenHint', 'HiddenList', 'BtnUnhideAll', 'ChkStorageFull', 'ChkAreaFehler', 'ChkAreaSpeicher', 'ChkAreaLeistung', 'ChkAreaHerunterfahren', 'ChkAreaAkku', 'ChkAreaNetzwerk', 'ChkAreaSoftware', 'ChkAreaSicherheit', 'ChkAreaWindows', 'ReportFolderText', 'BtnReportFolderChange', 'BtnReportFolderOpen', 'Keep10', 'Keep30', 'Keep100', 'Keep0'
     )
     $navNames = @('NavAlle') + @($Script:CategoryKeys | ForEach-Object { "Nav$_" }) + @('NavVerlauf', 'NavAenderungen', 'NavEinstellungen', 'NavLog')
     $names += $navNames
@@ -1782,6 +1874,25 @@ try {
             $btn = $e.OriginalSource
             while ($btn -and -not ($btn -is [System.Windows.Controls.Button])) { $btn = [System.Windows.Media.VisualTreeHelper]::GetParent($btn) }
             if ($btn -and $btn.Tag) { Undo-ChangeUi -Id ([string]$btn.Tag) -Text ([string]$btn.DataContext.Row['Beschreibung']) }
+        })
+
+    # Ergebniskarten: »Ausblenden«
+    $Script:UI.FindingsList.AddHandler([System.Windows.Controls.Primitives.ButtonBase]::ClickEvent, [System.Windows.RoutedEventHandler]{
+            param($s, $e)
+            $btn = $e.OriginalSource
+            if (-not ($btn -is [System.Windows.Controls.Button]) -or "$($btn.Tag)" -ne 'HideBtn') { return }
+            $e.Handled = $true
+            Hide-FindingUi $btn.DataContext.Row
+        })
+    # Einstellungen: ausgeblendete Meldungen wieder einblenden
+    $Script:UI.HiddenList.AddHandler([System.Windows.Controls.Primitives.ButtonBase]::ClickEvent, [System.Windows.RoutedEventHandler]{
+            param($s, $e)
+            $btn = $e.OriginalSource
+            if ($btn -is [System.Windows.Controls.Button] -and $btn.Tag) { Show-HiddenUi ([string]$btn.Tag) }
+        })
+    $Script:UI.BtnUnhideAll.Add_Click({
+            $r = Show-Message 'Alle ausgeblendeten Meldungen wieder einblenden?' 'Einblenden' 'Question' 'YesNo'
+            if ("$r" -eq 'Yes') { Show-HiddenUi '' }
         })
 
     # Details: Doppelklick auf eine Zeile mit Pfad öffnet den Ordner im Explorer

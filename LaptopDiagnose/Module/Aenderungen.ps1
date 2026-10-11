@@ -30,7 +30,7 @@ function Register-Change {
     <#
         Protokolliert eine Änderung. -Typ bestimmt, wie Undo-Change sie zurücknimmt.
         Typen: Autostart, Energieplan, Prozessorleistung, TRIM, Auslagerungsdatei, Registry, Feature, Wartungsaufgabe, Netzlaufwerk,
-        Aufgabe, Dienst, Schattenspeicher, Protokoll
+        Aufgabe, Dienst, Schattenspeicher, Konto, Weckgeraet, Energieeinstellung, Protokoll
     #>
     param(
         [Parameter(Mandatory)][string]$Beschreibung,
@@ -131,6 +131,17 @@ function Undo-Change {
         }
         'Wartungsaufgabe' { Unregister-MaintenanceTask -NoLog }
         'Netzlaufwerk' { $null = New-SmbMapping -LocalPath $d.LocalPath -RemotePath $d.RemotePath -Persistent $true -ErrorAction Stop }
+        'Konto' {
+            if ($d.Aktion -eq 'Deaktiviert') { Enable-LocalUser -SID $d.Sid -ErrorAction Stop } else { Disable-LocalUser -SID $d.Sid -ErrorAction Stop }
+        }
+        'Weckgeraet' {
+            foreach ($g in @($d.Geraete)) { $null = & powercfg.exe /deviceenablewake "$g" 2>&1 }
+        }
+        'Energieeinstellung' {
+            $verb = if ($d.Modus -eq 'DC') { '/setdcvalueindex' } else { '/setacvalueindex' }
+            $null = & powercfg.exe $verb SCHEME_CURRENT $d.Sub $d.Setting ([int]$d.Previous)
+            $null = & powercfg.exe /setactive SCHEME_CURRENT
+        }
         'Aufgabe' { foreach ($t in @($d.Aufgaben)) { $null = Enable-ScheduledTask -TaskName $t.Name -TaskPath $t.Path -ErrorAction Stop } }
         'Dienst' {
             foreach ($s in @($d.Dienste)) {

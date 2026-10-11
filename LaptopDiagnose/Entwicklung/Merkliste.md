@@ -1,20 +1,27 @@
-# Merkliste
+﻿# Merkliste
 
-Stand: 10.10.2026. Neue Wünsche hier ergänzen.
+Stand: 11.10.2026. Neue Wünsche hier ergänzen.
 
 ## Offen (noch nicht gebaut)
 
-Geplant: Version 3.0 = 26–28 und 33, Version 3.1 = 29–31.
+Geplant: Version 3.1 = 29–31.
 
-26. **Erweiterte Sicherheit:** überwachter Ordnerzugriff (Ransomware-Schutz), PUA-Schutz, SmartScreen, Konten ohne Passwort, automatische Anmeldung, Gastkonto, installierte bzw. automatisch startende Fernwartungsprogramme (AnyDesk, TeamViewer, RustDesk …) mit Hinweis.
-27. **Treiber sichern:** vor Treiber-Updates (und als Werkzeug) alle Fremdtreiber mit `Export-WindowsDriver` in einen Ordner sichern; Hinweis, wie ein Treiber im Geräte-Manager zurückgesetzt bzw. aus der Sicherung installiert wird.
-28. **Ungewolltes Aufwachen:** letzte Weckquelle (`powercfg /lastwake`), Weck-Zeitgeber, Geräte mit Weckberechtigung (Maus, Netzwerkkarte …), Standby-Abbrüche aus dem Ereignisprotokoll; Weckberechtigung nach Auswahl entziehen (umkehrbar).
 29. **Live-Monitor:** laufende Anzeige von CPU, RAM, Datenträger, Netzwerk und Temperatur mit den größten Verbrauchern; Aufzeichnung über 1–2 Minuten »Was bremst gerade?« mit Auswertung.
 30. **Spiele- und Grafikleistung:** Spielmodus, Hardware-beschleunigte GPU-Planung, Energiemodus (Windows-Leistungsregler), visuelle Effekte, Game-Bar-Aufzeichnung im Hintergrund; Empfehlungen nach Auswahl setzen, umkehrbar.
 31. **Feinschliff:**
     - Vorbereitung für eine echte Code-Signatur (gekauftes Zertifikat, ca. 100–300 €/Jahr; Kauf durch den Benutzer) – Signier-Skript und Anleitung, damit Virenscanner/SmartScreen nicht mehr warnen.
     - Suchfeld und Filter (Schweregrad, behebbar) in den Ergebnissen, Export der Ergebnisse als CSV.
     - »?« an jeder Prüfung mit kurzer Erklärung, warum sie wichtig ist.
+
+Bewusst weiterhin nicht: Registry-Reiniger, Treiber von Drittanbieter-Seiten, automatische Reparaturen ohne Rückfrage, »RAM-Booster« und ähnliche Schein-Optimierer.
+
+## Erledigt in Version 3.0.0
+
+Umsetzungshinweise: Defender-Einstellungen (Ransomware-, PUA-Schutz) werden nur gelesen; geändert wird über »Windows-Sicherheit«, weil direkte Defender-Änderungen von Virenscannern als verdächtig gemeldet werden. Ein Klartext-Kennwort der automatischen Anmeldung wird gelöscht und bewusst nicht im Änderungsprotokoll gesichert (dieser Teil ist nicht umkehrbar). Ausblenden und Wiedereinblenden geschieht im Fenster; Konsole und geplante Wartung halten sich an die Liste. Statt `powercfg /lastwake` werden die Weckquellen der letzten 7 Tage aus dem Ereignisprotokoll ausgewertet.
+
+26. **Erweiterte Sicherheit:** überwachter Ordnerzugriff (Ransomware-Schutz), PUA-Schutz, SmartScreen, Konten ohne Passwort, automatische Anmeldung, Gastkonto, installierte bzw. automatisch startende Fernwartungsprogramme (AnyDesk, TeamViewer, RustDesk …) mit Hinweis.
+27. **Treiber sichern:** vor Treiber-Updates (und als Werkzeug) alle Fremdtreiber mit `Export-WindowsDriver` in einen Ordner sichern; Hinweis, wie ein Treiber im Geräte-Manager zurückgesetzt bzw. aus der Sicherung installiert wird.
+28. **Ungewolltes Aufwachen:** letzte Weckquelle (`powercfg /lastwake`), Weck-Zeitgeber, Geräte mit Weckberechtigung (Maus, Netzwerkkarte …), Standby-Abbrüche aus dem Ereignisprotokoll; Weckberechtigung nach Auswahl entziehen (umkehrbar).
 33. **Meldungen ausblenden:**
     - An jeder Ergebniskarte (Warnung, Hinweis, auch »Kritisch«) ein Knopf »Ausblenden«; die Meldung erscheint bei späteren Prüfungen nicht mehr.
     - Wiedererkennung über Bereich und Prüfung (stabiler Schlüssel), nicht über den genauen Text – z. B. bleibt »Ladegrenze« ausgeblendet, auch wenn sich der Prozentwert ändert.
@@ -22,8 +29,6 @@ Geplant: Version 3.0 = 26–28 und 33, Version 3.1 = 29–31.
     - Ausgeblendete Meldungen zählen nicht in Gesundheitswert und Zählung; der Bericht nennt am Ende »N Meldungen ausgeblendet«.
     - Unter *Einstellungen › Ausgeblendete Meldungen* eine Liste mit Datum des Ausblendens; einzeln oder alle wieder einblenden.
     - Gilt für Fenster, Konsole und geplante Wartung (Benachrichtigungen nur für nicht ausgeblendete Meldungen). Gespeichert in den Einstellungen im Berichtordner.
-
-Bewusst weiterhin nicht: Registry-Reiniger, Treiber von Drittanbieter-Seiten, automatische Reparaturen ohne Rückfrage, »RAM-Booster« und ähnliche Schein-Optimierer.
 
 ## Erledigt in Version 2.9.0
 

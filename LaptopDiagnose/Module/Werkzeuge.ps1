@@ -296,6 +296,7 @@ function Invoke-ToolsScan {
             -Fix { param($d) Start-MpScan -ScanType QuickScan -ErrorAction Stop; $t = Get-MpThreatDetection -ErrorAction SilentlyContinue | Where-Object { $_.InitialDetectionTime -gt (Get-Date).AddHours(-1) }; if ($t) { "Scan abgeschlossen – $(@($t).Count) Bedrohung(en) erkannt, siehe Windows-Sicherheit." } else { 'Scan abgeschlossen – keine Bedrohungen gefunden.' } }
     }
     Add-FileToolFindings -Category $cat
+    Add-DriverBackupToolFinding -Category $cat
     Add-Finding $cat Info 'Wiederherstellungspunkt jetzt erstellen' -FixLabel 'Systemwiederherstellungspunkt erstellen' -Fix { param($d) New-RestorePoint; 'Wiederherstellungspunkt angelegt (sofern Windows es zulässt).' }
 }
 

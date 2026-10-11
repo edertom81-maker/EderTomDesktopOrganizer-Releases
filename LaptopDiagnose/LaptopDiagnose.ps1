@@ -50,7 +50,7 @@ param(
 
 if ($Unbeaufsichtigt) { $NurPruefen = $true }
 
-$Script:ToolVersion = '2.9.0'
+$Script:ToolVersion = '3.0.0'
 $Script:InstallDir = $PSScriptRoot
 $Script:ChangeCounter = 0
 $Script:SoftwareUpdateCache = $null
@@ -226,7 +226,15 @@ function Add-Finding {
         Fixed          = $false
         FixResult      = $null
         Time           = Get-Date
+        Check          = "$Script:CurrentCheck"
+        HideKey        = $null
+        CheckKey       = $null
     }
+    $keys = Get-FindingHideKeys -Category $Category -Check "$Script:CurrentCheck" -Title $Title
+    $finding.HideKey = $keys.Fund
+    $finding.CheckKey = $keys.Pruefung
+    # Vom Benutzer ausgeblendete Meldungen nicht anzeigen und nicht werten
+    if (Test-FindingHidden $finding) { $Script:HiddenFindings.Add($finding); return }
     $Script:Findings.Add($finding)
     if (-not $Silent) { Write-Finding $finding }
     return
@@ -302,16 +310,20 @@ function Clear-CategoryFindings {
     $keep = @($Script:Findings | Where-Object { $_.Category -ne $Category })
     $Script:Findings.Clear()
     foreach ($f in $keep) { $Script:Findings.Add($f) }
+    $keepHidden = @($Script:HiddenFindings | Where-Object { $_.Category -ne $Category })
+    $Script:HiddenFindings.Clear()
+    foreach ($f in $keepHidden) { $Script:HiddenFindings.Add($f) }
 }
 
 function Invoke-Check {
     <# Führt eine Einzelprüfung aus; Fehler in einer Prüfung brechen die Diagnose nicht ab. #>
     param([string]$Category, [string]$Name, [scriptblock]$Check)
     Write-Step $Name
+    $Script:CurrentCheck = $Name
     try { & $Check }
     catch {
         Add-Finding -Category $Category -Severity Info -Title "Prüfung »$Name« konnte nicht vollständig ausgeführt werden" -Detail $_.Exception.Message
-    }
+    } finally { $Script:CurrentCheck = '' }
 }
 
 function Get-FolderSize {
@@ -1429,6 +1441,11 @@ function Search-WindowsUpdates {
 
 function Install-WindowsUpdates {
     param($Updates)
+    # Vor Treiber-Updates die vorhandenen Treiber sichern (höchstens einmal am Tag)
+    $backupNote = ''
+    if (@($Updates | Where-Object { $_.Type -eq 2 }).Count) {
+        try { $backupNote = ' ' + (Backup-Drivers -SkipIfToday) } catch { $backupNote = " Treibersicherung nicht möglich: $($_.Exception.Message)" }
+    }
     $session = New-Object -ComObject Microsoft.Update.Session
     $session.ClientApplicationID = 'LaptopDiagnose'
     $coll = New-Object -ComObject Microsoft.Update.UpdateColl
@@ -1453,6 +1470,7 @@ function Install-WindowsUpdates {
     $msg = "$ok von $($coll.Count) Update(s) installiert."
     if ($failed) { $msg += ' Fehlgeschlagen: ' + ($failed -join '; ') }
     if ($r.RebootRequired) { $msg += ' Neustart erforderlich.' }
+    $msg += $backupNote
     Register-Change -Beschreibung "Windows-/Treiber-Updates installiert ($($coll.Count))" -Typ 'Protokoll' -NichtUmkehrbar -Ergebnis $msg
     return $msg
 }
@@ -1795,6 +1813,7 @@ footer{margin-top:40px;color:var(--muted);font-size:13px;text-align:center}
 <div class="tile"><b style="color:var(--ok)">$($counts['OK'])</b>In Ordnung</div>
 </div>
 $(if ($skippedTitles) { "<div class=""card"" style=""border-left:4px solid var(--warn)""><b>Nicht geprüft</b> (in den Einstellungen abgewählt): $([System.Net.WebUtility]::HtmlEncode($skippedTitles -join ', ')). Gesundheitswert und Zählung beziehen sich nur auf die geprüften Bereiche.</div>" })
+$(if ($Script:HiddenFindings.Count) { "<div class=""card"" style=""border-left:4px solid var(--muted)""><b>$($Script:HiddenFindings.Count) Meldung(en) ausgeblendet</b> – sie zählen nicht in den Gesundheitswert. Wieder einblenden unter »Einstellungen › Ausgeblendete Meldungen«.</div>" })
 <h2>Systemübersicht</h2><div class="card"><table class="kv">
 "@)
     foreach ($k in $Script:SystemInfo.Keys) {
@@ -1916,6 +1935,7 @@ function Show-Summary {
     Write-Host ''
     $fixCount = @($Script:Findings | Where-Object { $_.Fix -and -not $_.Fixed -and $_.Severity -in 'Kritisch', 'Warnung' }).Count
     if ($fixCount) { Write-Host "   $fixCount Problem(e) können automatisch behoben werden." -ForegroundColor DarkGreen }
+    if ($Script:HiddenFindings.Count) { Write-Host "   $($Script:HiddenFindings.Count) Meldung(en) ausgeblendet (verwalten im Programmfenster unter »Einstellungen«)." -ForegroundColor DarkGray }
 }
 
 #endregion

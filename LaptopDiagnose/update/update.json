@@ -1,7 +1,7 @@
 {
-    "version": "2.9.0",
-    "datei": "LaptopDiagnose-2.9.0.zip",
-    "sha256": "3a3c24e114b7fdbf51cb74b4490c68274ea4cfe83729c85c2f7ec7054bc52b91",
-    "notizen": "Neu: Prüfung der Datensicherung, Programme deinstallieren (mit Suche nach Resten), Browser-Caches im Datenmüll und Prüfung der Browser-Erweiterungen, Autostart inklusive geplanter Aufgaben und Dienste, Datenschutz-Einstellungen (umkehrbar) sowie Aufräumen alter Wiederherstellungspunkte, Systemabbilder, Upgrade-Reste und Treiberpakete.",
+    "version": "3.0.0",
+    "datei": "LaptopDiagnose-3.0.0.zip",
+    "sha256": "4ea2bca9c8b4f38c84e415c52344a61e34ea08c8c118b4bc162142a5ca3e916b",
+    "notizen": "Neu: Meldungen ausblenden (bleiben bei späteren Prüfungen ausgeblendet, in den Einstellungen wieder einblendbar), erweiterte Sicherheit (Ransomware- und PUA-Schutz, SmartScreen, Gastkonto, Konten ohne Kennwort, automatische Anmeldung, Fernwartungsprogramme), Treiber sichern (auch automatisch vor Treiber-Updates) und Prüfung auf ungewolltes Aufwachen aus dem Energiesparmodus.",
     "veroeffentlicht": "2026-10-11"
 }
