@@ -1,7 +1,7 @@
 {
-    "version": "2.7.0",
-    "datei": "LaptopDiagnose-2.7.0.zip",
-    "sha256": "975eafb52065aafeb3ed7cad50e2dbef0c65fd07cc40efa84ab1d5ee4264db39",
-    "notizen": "Neu im Bereich Speicherfresser (und unter Reparatur-Werkzeuge): »Doppelte Dateien suchen« (gleicher Inhalt, gruppiert, älteste Kopie bleibt), »Leere Ordner suchen« und »Große Ordner anzeigen und löschen« – jeweils in den Benutzerordnern oder einem selbst gewählten Ordner/Laufwerk. Gelöscht wird nur Angekreuztes, in den Papierkorb; was dort nicht hineinpasst, nur nach ausdrücklicher Bestätigung. Klick auf eine Kachel der Speicherbelegung zeigt deren Unterordner.",
-    "veroeffentlicht": "2026-10-10"
+    "version": "2.8.0",
+    "datei": "LaptopDiagnose-2.8.0.zip",
+    "sha256": "dd9c749bf90f25b5d95b33abe24cb81e50d93d9209415716905f96de193638e7",
+    "notizen": "Neues Werkzeug »Entwickler-Reste finden« (Speicherfresser und Reparatur-Werkzeuge): findet in Programmier-Projekten – z. B. den Codex-Arbeitsordnern – neu erzeugbare Ordner wie node_modules, Python-Umgebungen, Caches und Build-Ausgaben sowie globale Paket-Caches. Eigener Code und Git-Verläufe bleiben unberührt; vorausgewählt sind nur Reste aus Projekten, die seit über 30 Tagen nicht geändert wurden. Außerdem: In den Details öffnet ein Doppelklick auf eine Zeile mit Pfad den Ordner direkt im Explorer.",
+    "veroeffentlicht": "2026-10-11"
 }

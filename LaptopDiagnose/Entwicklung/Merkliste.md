@@ -6,6 +6,18 @@ Stand: 10.10.2026. Neue Wünsche hier ergänzen.
 
 – derzeit nichts –
 
+## Erledigt in Version 2.8.0
+
+20. **Details anklicken:** Doppelklick auf eine Zeile mit Pfad in den Detail-Listen öffnet den Ordner im Explorer (Dateien werden markiert; fehlt der Pfad, öffnet sich der nächste vorhandene Ordner).
+19. **Werkzeug »Entwickler-Reste finden«** (Bereich »Speicherfresser« und »Reparatur-Werkzeuge«; Anlass: `Dokumente\Codex` belegt 52 GB):
+    - Sucht Ordner, die sich jederzeit neu erzeugen lassen: `node_modules`, `.venv`/`venv`/`env` (mit `pyvenv.cfg`), `__pycache__`, `.pytest_cache`, `.mypy_cache`, `build`/`dist`/`out`/`target`/`bin`/`obj` (nur neben einer Projektdatei wie `package.json`, `pyproject.toml`, `Cargo.toml`, `*.csproj`, `pom.xml`), `.gradle`, `.next`, `.nuxt`, `.parcel-cache`, `.turbo`.
+    - Zusätzlich die globalen Paket-Caches von npm, pip, NuGet, Yarn und Gradle (im Benutzerprofil).
+    - Durchsucht Dokumente, Desktop, Downloads, Codex-Arbeitsordner und typische Projektordner (`source\repos`, `Projects`); auf Wunsch eigener Ordner.
+    - Eigener Code und Git-Verläufe (`.git`) werden nie angeboten.
+    - Anzeige gruppiert nach Projekt (Projektordner, Art, Größe, letzte Änderung), sortiert nach Größe. Vorausgewählt nur Reste aus Projekten, die seit mehr als 30 Tagen nicht geändert wurden.
+    - Hinweis in der Karte: Die Ordner werden beim nächsten Bauen/Starten des Projekts neu erzeugt (z. B. `npm install`, `pip install`).
+    - Löschen in den Papierkorb bzw. über die Karte »Endgültig löschen?«, wenn zu groß. Eintrag im Änderungsprotokoll.
+
 ## Erledigt in Version 2.7.0
 
 16. **Doppelte Dateien finden und zum Löschen anzeigen** (bisher nur im Downloads-Ordner):

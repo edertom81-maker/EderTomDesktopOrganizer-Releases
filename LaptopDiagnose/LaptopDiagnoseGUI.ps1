@@ -290,8 +290,12 @@ $Script:Xaml = @'
               </ItemsControl.ItemTemplate>
             </ItemsControl>
             <Expander Header="Details anzeigen" Visibility="{Binding HasItems, Converter={StaticResource B2V}}" Margin="0,6,0,0" Foreground="{DynamicResource Link}">
-              <TextBox Text="{Binding ItemsText, Mode=OneWay}" IsReadOnly="True" FontFamily="Consolas" FontSize="12"
-                       BorderThickness="0" Background="{DynamicResource DetailBg}" Foreground="{DynamicResource DetailText}" TextWrapping="Wrap" Padding="10,8" Margin="0,6,0,0"/>
+              <StackPanel>
+                <TextBlock Text="Doppelklick auf eine Zeile mit Pfad öffnet den Ordner im Explorer." Visibility="{Binding HasPaths, Converter={StaticResource B2V}}"
+                           Foreground="{DynamicResource TextMuted}" FontSize="11" Margin="2,6,0,0"/>
+                <TextBox Tag="DetailBox" Text="{Binding ItemsText, Mode=OneWay}" IsReadOnly="True" FontFamily="Consolas" FontSize="12"
+                         BorderThickness="0" Background="{DynamicResource DetailBg}" Foreground="{DynamicResource DetailText}" TextWrapping="Wrap" Padding="10,8" Margin="0,6,0,0"/>
+              </StackPanel>
             </Expander>
             <CheckBox IsChecked="{Binding IsSelected, Mode=TwoWay}" Visibility="{Binding ShowFix, Converter={StaticResource B2V}}"
                       Margin="0,10,0,0" Cursor="Hand" VerticalContentAlignment="Center">
@@ -975,7 +979,7 @@ $Script:Table = New-Table @(
     @('FixText', [string]), @('Status', [string]), @('HasDetail', [bool]), @('HasItems', [bool]), @('HasStatus', [bool]),
     @('CanFix', [bool]), @('IsFixed', [bool]), @('RequiresReboot', [bool]), @('SelectAll', [bool]), @('ShowFix', [bool]),
     @('IsSelected', [bool]), @('SelectLabels', [object]), @('Chart', [object]), @('HasChart', [bool]), @('Tiles', [object]), @('HasTiles', [bool]),
-    @('RunOk', [bool]), @('AskFolder', [bool]), @('Repeatable', [bool]), @('SelectDefault', [object])
+    @('RunOk', [bool]), @('HasPaths', [bool]), @('AskFolder', [bool]), @('Repeatable', [bool]), @('SelectDefault', [object])
 )
 $Script:View = New-Object System.Data.DataView($Script:Table)
 $Script:View.Sort = 'Order ASC'
@@ -1117,6 +1121,7 @@ function Update-FromSnapshot {
         $vm.HasDetail = [bool]$f.Detail
         $vm.ItemsText = (@($f.Items) -join [Environment]::NewLine)
         $vm.HasItems = @($f.Items).Count -gt 0
+        $vm.HasPaths = $vm.ItemsText -match '[A-Za-z]:\\|%USERPROFILE%'
         if ($f.ChartStyle -eq 'Kacheln') {
             $tileView = New-TreemapView $f.Chart
             if ($tileView) { $vm.Tiles = $tileView; $vm.HasTiles = $true }
@@ -1288,6 +1293,8 @@ function Invoke-SelectedFixes {
                 'Markieren Sie die defekten Verknüpfungen, die bereinigt werden sollen. Verknüpfungen kommen in den Papierkorb, Autostart-Einträge werden deaktiviert (rückgängig über »Änderungen«).'
             } elseif ($vm.FixLabel -match 'doppelte Dateien') {
                 'Vorausgewählt sind alle Kopien außer jeweils der ältesten Datei einer Gruppe (»Vorschlag: behalten«). Passen Sie die Auswahl bei Bedarf an – von jeder Gruppe bleibt zur Sicherheit immer mindestens eine Datei erhalten. Gelöscht wird in den Papierkorb.'
+            } elseif ($vm.FixLabel -match 'Entwickler-Reste') {
+                'Vorausgewählt sind Reste aus Projekten, die seit über 30 Tagen nicht geändert wurden. Diese Ordner enthalten keinen eigenen Code und entstehen beim nächsten Bauen bzw. Starten des Projekts neu. Gelöscht wird in den Papierkorb.'
             } elseif ($vm.FixLabel -match 'leere Ordner') {
                 'Markieren Sie die leeren Ordner, die in den Papierkorb verschoben werden sollen.'
             } elseif ($vm.FixLabel -match 'ENDGÜLTIG') {
@@ -1564,6 +1571,43 @@ $global:BerichtOrdner = $to
     }
 }
 
+function Get-PathFromDetailLine {
+    <# Holt den Pfad aus einer Detailzeile (z. B. »52,2 GB  444720 Dateien  26.09.2026  C:\Users\…«). #>
+    param([string]$Line)
+    $l = [Environment]::ExpandEnvironmentVariables(($Line -replace '%USERPROFILE%', $env:USERPROFILE))
+    # Bei Verknüpfungen (»Name [Ort] → Ziel«) die Verknüpfung selbst ist nicht in der Zeile – dann das Ziel nehmen
+    $m = [regex]::Match($l, '[A-Za-z]:\\[^\r\n]*')
+    if (-not $m.Success) { return $null }
+    $p = $m.Value
+    # Anhänge wie »   (geschützt – nur Anzeige)«, »  –  Grund« oder » (fehlt)« abschneiden
+    $p = ($p -split '\s{2,}|\s+–\s+|\s+→\s+')[0]
+    $p = $p -replace '\s*\((fehlt|Vorschlag: behalten|geschützt[^)]*)\)\s*$', ''
+    return $p.Trim().TrimEnd('\')
+}
+
+function Open-PathInExplorer {
+    <# Ordner öffnen bzw. Datei im Ordner markieren; existiert der Pfad nicht mehr, den nächsten vorhandenen Ordner öffnen. #>
+    param([string]$Path)
+    if (Test-Path -LiteralPath $Path -PathType Container) {
+        Start-Process -FilePath 'explorer.exe' -ArgumentList "`"$Path`""
+        $Script:UI.StatusText.Text = "Geöffnet: $Path"
+        return
+    }
+    if (Test-Path -LiteralPath $Path -PathType Leaf) {
+        Start-Process -FilePath 'explorer.exe' -ArgumentList "/select,`"$Path`""
+        $Script:UI.StatusText.Text = "Im Explorer markiert: $Path"
+        return
+    }
+    $parent = Split-Path -Parent $Path
+    while ($parent -and -not (Test-Path -LiteralPath $parent -PathType Container)) { $parent = Split-Path -Parent $parent }
+    if ($parent) {
+        Start-Process -FilePath 'explorer.exe' -ArgumentList "`"$parent`""
+        $Script:UI.StatusText.Text = "Nicht mehr vorhanden: $Path – übergeordneter Ordner geöffnet."
+    } else {
+        $Script:UI.StatusText.Text = "Nicht mehr vorhanden: $Path"
+    }
+}
+
 function Find-ToolUpdate {
     <# Sucht nach einer neueren Programmversion. -BeimStart: still im Hintergrund, fragt nur bei einem Fund nach. #>
     param([switch]$BeimStart)
@@ -1721,6 +1765,27 @@ try {
             while ($btn -and -not ($btn -is [System.Windows.Controls.Button])) { $btn = [System.Windows.Media.VisualTreeHelper]::GetParent($btn) }
             if ($btn -and $btn.Tag) { Undo-ChangeUi -Id ([string]$btn.Tag) -Text ([string]$btn.DataContext.Row['Beschreibung']) }
         })
+
+    # Details: Doppelklick auf eine Zeile mit Pfad öffnet den Ordner im Explorer
+    $Script:UI.FindingsList.AddHandler([System.Windows.UIElement]::PreviewMouseLeftButtonDownEvent, [System.Windows.Input.MouseButtonEventHandler]{
+            param($s, $e)
+            if ($e.ClickCount -ne 2) { return }
+            $tb = $e.OriginalSource
+            while ($tb -and -not ($tb -is [System.Windows.Controls.TextBox] -and "$($tb.Tag)" -eq 'DetailBox')) { $tb = [System.Windows.Media.VisualTreeHelper]::GetParent($tb) }
+            if (-not $tb) { return }
+            $text = "$($tb.Text)"
+            $idx = $tb.GetCharacterIndexFromPoint($e.GetPosition($tb), $true)
+            if ($idx -lt 0 -or -not $text) { return }
+            # Ganze (logische) Zeile – auch wenn sie im Fenster umbrochen angezeigt wird
+            $start = if ($idx -gt 0) { $text.LastIndexOf("`n", [math]::Min($idx, $text.Length) - 1) + 1 } else { 0 }
+            $end = $text.IndexOf("`n", [math]::Min($idx, $text.Length))
+            if ($end -lt 0) { $end = $text.Length }
+            $line = $text.Substring($start, $end - $start).TrimEnd("`r")
+            $path = Get-PathFromDetailLine $line
+            if (-not $path) { return }
+            $e.Handled = $true
+            Open-PathInExplorer $path
+        }, $true)
 
     # Kachelgrafik: Klick auf eine Kachel zeigt deren Unterordner
     $Script:UI.FindingsList.AddHandler([System.Windows.UIElement]::MouseLeftButtonUpEvent, [System.Windows.Input.MouseButtonEventHandler]{
