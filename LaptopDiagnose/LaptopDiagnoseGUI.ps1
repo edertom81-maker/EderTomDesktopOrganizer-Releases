@@ -401,7 +401,7 @@ $Script:Xaml = @'
           <Button x:Name="BtnFolder" Style="{StaticResource Btn}" Margin="0,8,0,0" Background="Transparent" Foreground="{DynamicResource SidebarMuted}" BorderBrush="Transparent" Padding="4">
             <TextBlock Text="Berichtsordner öffnen" TextDecorations="Underline"/>
           </Button>
-          <TextBlock Text="© 2026 Eder Tom" Foreground="{DynamicResource SidebarMuted}" FontSize="11" Margin="4,12,0,0"/>
+          <TextBlock Text="© 2026 Eder Tom" Foreground="{DynamicResource SidebarText}" FontSize="14" FontWeight="SemiBold" Margin="4,12,0,0"/>
         </StackPanel>
 
         <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">

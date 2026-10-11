@@ -1,7 +1,7 @@
 {
-    "version": "3.6.1",
-    "datei": "LaptopDiagnose-3.6.1.zip",
-    "sha256": "a95f32472c7a8b4b173922f2cd22371e94f9daadecac42db9571502d20db7bd2",
-    "notizen": "Behoben: Im Live-Monitor blieb »Größte Verbraucher (laufend)« leer.",
+    "version": "3.6.2",
+    "datei": "LaptopDiagnose-3.6.2.zip",
+    "sha256": "1a7ae01f4879ef0992a03e295bb6321c7c2f6684e2031e08fded797f260239dc",
+    "notizen": "Copyright-Hinweis unten in der Seitenleiste größer und besser lesbar.",
     "veroeffentlicht": "2026-10-11"
 }

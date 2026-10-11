@@ -8,6 +8,10 @@ Zurzeit nichts offen.
 
 Bewusst weiterhin nicht: Registry-Reiniger, Treiber von Drittanbieter-Seiten, automatische Reparaturen ohne Rückfrage, »RAM-Booster« und ähnliche Schein-Optimierer.
 
+## Erledigt in Version 3.6.2
+
+51. **Copyright in der Seitenleiste größer:** »© 2026 Eder Tom« unten in der Seitenleiste von 11 auf 14 pt, halbfett und etwas heller, damit es besser lesbar ist.
+
 ## Erledigt in Version 3.6.1
 
 - Live-Monitor »Größte Verbraucher (laufend)« blieb leer. Die Liste war seit 3.1 nie mit dem Fenster verknüpft. Eine neue Prüfung im Test stellt sicher, dass jedes verwendete Oberflächenelement verknüpft ist.
