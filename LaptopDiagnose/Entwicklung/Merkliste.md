@@ -14,6 +14,11 @@ Stand: 11.10.2026. Neue Wünsche hier ergänzen.
     - **In NTFS umwandeln ohne Datenverlust** (FAT32/exFAT → NTFS, nur in diese Richtung; Hinweis, dass Mac/TV/Autoradio danach meist nicht mehr schreiben können).
     - Sicherheit wie bisher: Prüfung vor jeder Änderung, Bestätigung durch Eintippen bei Löschen/Aufteilen, Protokoll. Bewusst nicht: Partitionen verschieben oder zusammenführen mit Datenerhalt (kann Windows nicht von sich aus, riskant).
 
+37. **Datenträger klonen** (Bereich »Externe Datenträger«; Quelle/Ziel: externe Datenträger und interne Zusatzlaufwerke – das Ziel ist nie der Windows-Datenträger):
+    - **A) Kopie auf Dateiebene** (für Datenlaufwerke): kompletter Inhalt mit Robocopy (Ordnerstruktur, Zeitstempel, Attribute), Ziel auf Wunsch vorher passend einrichten (Dateisystem, Name), danach Vergleich beider Laufwerke; Fortschritt, Restzeit, Abbrechen. Ergebnis nicht bootfähig.
+    - **B) Systemlaufwerk auf neue SSD umziehen** (Assistent): (1) Marke der neuen SSD erkennen und das kostenlose Umzugsprogramm des Herstellers verlinken (z. B. Samsung Data Migration, Acronis für WD/Crucial/Kingston); (2) alternativ mit Windows-Bordmitteln: Systemabbild erstellen und Schritt-für-Schritt-Anleitung zur Wiederherstellung auf die neue SSD (Installationsstick, »Computerreparaturoptionen«), inkl. Prüfung, ob die neue SSD groß genug ist.
+    - **C) 1:1-Klon Sektor für Sektor** (inkl. Partitionen, bootfähig): direkt von Datenträger zu Datenträger, auf Wunsch auch als Abbilddatei (.img) speichern bzw. zurückschreiben (z. B. SD-Karten für Raspberry Pi); Lesefehler überspringen und protokollieren (Rettung von defekten Sticks/Karten); Ziel muss mindestens so groß sein; Bestätigung durch Eintippen; Fortschritt, Restzeit, Abbrechen; danach Prüfsummenvergleich. Quelle nicht der laufende Windows-Datenträger (inkonsistente Kopie – dafür B). **Hinweis:** braucht direkten Sektorzugriff, den Windows PowerShell nicht von sich aus kann – der dafür nötige Hilfscode wird erst beim Start dieser Funktion geladen und deutlich gekennzeichnet; Virenscanner können darauf anschlagen (vom Benutzer ausdrücklich gewünscht).
+
 Bewusst weiterhin nicht: Registry-Reiniger, Treiber von Drittanbieter-Seiten, automatische Reparaturen ohne Rückfrage, »RAM-Booster« und ähnliche Schein-Optimierer.
 
 ## Erledigt in Version 3.2.0
