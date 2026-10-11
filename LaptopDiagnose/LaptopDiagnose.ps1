@@ -50,7 +50,7 @@ param(
 
 if ($Unbeaufsichtigt) { $NurPruefen = $true }
 
-$Script:ToolVersion = '3.0.0'
+$Script:ToolVersion = '3.1.0'
 $Script:InstallDir = $PSScriptRoot
 $Script:ChangeCounter = 0
 $Script:SoftwareUpdateCache = $null
@@ -227,6 +227,7 @@ function Add-Finding {
         FixResult      = $null
         Time           = Get-Date
         Check          = "$Script:CurrentCheck"
+        Help           = (Get-CheckHelp "$Script:CurrentCheck")
         HideKey        = $null
         CheckKey       = $null
     }
@@ -346,8 +347,10 @@ function Remove-FolderContent {
     Get-ChildItem -LiteralPath $Path -Recurse -Force -File -ErrorAction SilentlyContinue |
         Where-Object { $_.LastWriteTime -lt $limit } |
         ForEach-Object {
-            $len = $_.Length
-            try { Remove-Item -LiteralPath $_.FullName -Force -ErrorAction Stop; $freed += $len } catch { }
+            $file = $_; $len = $file.Length
+            # [IO.File]::Delete ist um ein Vielfaches schneller als Remove-Item; schreibgeschützte Dateien vorher freigeben
+            try { [IO.File]::Delete($file.FullName); $freed += $len }
+            catch { try { $file.Attributes = 'Normal'; [IO.File]::Delete($file.FullName); $freed += $len } catch { } }
         }
     Get-ChildItem -LiteralPath $Path -Recurse -Force -Directory -ErrorAction SilentlyContinue |
         Sort-Object { $_.FullName.Length } -Descending |
@@ -684,11 +687,11 @@ function Measure-Junk {
         if ($size -gt 0) { $result += [pscustomobject]@{ Location = $loc; Size = [double]$size } }
     }
     # Papierkorb aller Laufwerke
-    $rb = [double]0
-    Get-CimInstance Win32_LogicalDisk -Filter 'DriveType=3' -ErrorAction SilentlyContinue | ForEach-Object {
-        $rb += Get-FolderSize -Path (Join-Path $_.DeviceID '$Recycle.Bin')
+    $rb = Measure-RecycleBinFast
+    if ($rb.Size -gt 0) {
+        $name = if ($rb.Orphaned -gt 0) { "Papierkorb (davon $(Format-Bytes $rb.Orphaned) gelöschter Konten)" } else { 'Papierkorb' }
+        $result += [pscustomobject]@{ Location = @{ Name = $name; RecycleBin = $true }; Size = [double]$rb.Size }
     }
-    if ($rb -gt 0) { $result += [pscustomobject]@{ Location = @{ Name = 'Papierkorb'; RecycleBin = $true }; Size = $rb } }
     return $result
 }
 
@@ -698,15 +701,17 @@ function Clear-Junk {
     $skipped = @()
     foreach ($e in $Entries) {
         $loc = $e.Location
-        Write-Host "     – $($loc.Name)" -ForegroundColor DarkGray
+        Write-Host "     – $($loc.Name) ($(Format-Bytes $e.Size)) …" -ForegroundColor DarkGray
         if ($loc.Process -and (Get-Process -Name $loc.Process -ErrorAction SilentlyContinue)) {
             $skipped += $loc.Browser
             continue
         }
+        $sw = [Diagnostics.Stopwatch]::StartNew()
+        $freedBefore = $freed
         if ($loc.Paths) {
             foreach ($p in $loc.Paths) { $freed += Remove-FolderContent -Path $p -OlderThanHours $loc.Hours }
         } elseif ($loc.RecycleBin) {
-            try { Clear-RecycleBin -Force -ErrorAction Stop; $freed += $e.Size } catch { }
+            $freed += Clear-RecycleBinFast
         } elseif ($loc.File) {
             try { Remove-Item -LiteralPath $loc.File -Force -ErrorAction Stop; $freed += $e.Size } catch { }
         } elseif ($loc.Filter) {
@@ -721,6 +726,8 @@ function Clear-Junk {
         } else {
             $freed += Remove-FolderContent -Path $loc.Path -OlderThanHours $loc.Hours
         }
+        $sw.Stop()
+        Write-Host ("       {0} freigegeben in {1:N1} s" -f (Format-Bytes ($freed - $freedBefore)), $sw.Elapsed.TotalSeconds) -ForegroundColor DarkGray
     }
     $msg = "$(Format-Bytes $freed) freigegeben."
     if ($skipped) { $msg += " Übersprungen, weil geöffnet: $($skipped -join ', ') – Browser schließen und erneut ausführen." }
@@ -1158,6 +1165,7 @@ function Invoke-PerformanceScan {
         }
     }
 
+    Invoke-Check $cat 'Spiele- und Grafikleistung' { Add-GamingFindings -Category $cat }
     Invoke-Check $cat 'Vorinstallierte Zusatzsoftware' { Add-BloatwareFindings -Category $cat }
 }
 

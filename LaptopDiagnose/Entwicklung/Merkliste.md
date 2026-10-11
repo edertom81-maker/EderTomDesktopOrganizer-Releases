@@ -4,7 +4,17 @@ Stand: 11.10.2026. Neue Wünsche hier ergänzen.
 
 ## Offen (noch nicht gebaut)
 
-Geplant: Version 3.1 = 29–31.
+Derzeit keine offenen Punkte.
+
+Bewusst weiterhin nicht: Registry-Reiniger, Treiber von Drittanbieter-Seiten, automatische Reparaturen ohne Rückfrage, »RAM-Booster« und ähnliche Schein-Optimierer.
+
+## Erledigt in Version 3.1.0
+
+Umsetzungshinweise:
+- Papierkorb: Statt `SHEmptyRecycleBin` (das wie `Clear-RecycleBin` über die Windows-Shell arbeitet und zur Laufzeit übersetzten Code bräuchte) wird der Papierkorb direkt im Dateisystem geleert. Das gilt für den eigenen Papierkorb und für verwaiste Papierkörbe gelöschter Konten. Papierkörbe anderer vorhandener Konten bleiben unberührt und werden nicht mitgezählt. Temporäre Dateien werden schneller gelöscht (`[IO.File]::Delete` statt `Remove-Item`). Die Dauer je Bereich steht im Protokoll.
+- Spiele: Energiemodus und visuelle Effekte werden nur angezeigt und über die Windows-Einstellungen geändert. Spielmodus, Hintergrundaufzeichnung und GPU-Planung (nur bei eigener Grafikkarte) setzt das Tool nach Auswahl, umkehrbar.
+- Live-Monitor: Prozessorlast je Programm aus den Prozessorzeiten, gruppiert nach Programmname. Datenträger und Netzwerk gibt es nur als Gesamtwerte. Die Aufzeichnung gibt es zusätzlich als Werkzeug »Was bremst gerade?« (auch in der Konsole).
+- Feinschliff: CSV-Export und Suche gibt es im Programmfenster. Die Signatur-Vorbereitung umfasst USB-Token, Cloud-Signatur, eine Prüfung nach dem Signieren und den Zertifikatwechsel bei Updates (gekauft und derselbe Herausgebername). Den Kauf des Zertifikats erledigt der Benutzer, die Anleitung steht in `Entwicklung/Code-Signatur.md`.
 
 29. **Live-Monitor:** laufende Anzeige von CPU, RAM, Datenträger, Netzwerk und Temperatur mit den größten Verbrauchern; Aufzeichnung über 1–2 Minuten »Was bremst gerade?« mit Auswertung.
 30. **Spiele- und Grafikleistung:** Spielmodus, Hardware-beschleunigte GPU-Planung, Energiemodus (Windows-Leistungsregler), visuelle Effekte, Game-Bar-Aufzeichnung im Hintergrund; Empfehlungen nach Auswahl setzen, umkehrbar.
@@ -13,7 +23,7 @@ Geplant: Version 3.1 = 29–31.
     - Suchfeld und Filter (Schweregrad, behebbar) in den Ergebnissen, Export der Ergebnisse als CSV.
     - »?« an jeder Prüfung mit kurzer Erklärung, warum sie wichtig ist.
 
-Bewusst weiterhin nicht: Registry-Reiniger, Treiber von Drittanbieter-Seiten, automatische Reparaturen ohne Rückfrage, »RAM-Booster« und ähnliche Schein-Optimierer.
+34. **Datenmüll entfernen beschleunigen:** Das Entfernen dauert sehr lange, obwohl das meiste im Papierkorb liegt. Vermutete Ursachen: `Clear-RecycleBin` leert über die Windows-Shell Datei für Datei; dazu wird der Papierkorb vorher und für den Vorher/Nachher-Vergleich erneut vollständig vermessen. Geplant: Papierkorb direkt über die Windows-Funktion `SHEmptyRecycleBin` (ohne Rückfrage, Fortschrittsanzeige und Ton) leeren, Größe über `SHQueryRecycleBin` statt Ordnerdurchlauf ermitteln, Fortschritt je Bereich anzeigen (»Papierkorb wird geleert …«), Dauer der einzelnen Bereiche im Protokoll festhalten.
 
 ## Erledigt in Version 3.0.0
 

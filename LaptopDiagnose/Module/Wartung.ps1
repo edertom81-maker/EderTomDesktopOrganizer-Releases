@@ -202,6 +202,24 @@ function Test-SignatureIntact {
     return [bool]($Signature -and $Signature.SignerCertificate -and "$($Signature.Status)" -in 'Valid', 'UnknownError', 'NotTrusted')
 }
 
+function Get-CertCommonName {
+    param($Cert)
+    if ("$($Cert.Subject)" -match '(?:^|,\s*)CN=("?)([^,"]+)\1') { return $Matches[2].Trim() }
+    return ''
+}
+
+function Test-CertificateRollover {
+    <#
+        Wechsel auf ein neues Zertifikat (z. B. vom selbst ausgestellten auf ein gekauftes): nur erlaubt, wenn Windows
+        dem neuen Zertifikat vertraut (Status »Valid«, also von einer Zertifizierungsstelle geprüft) und der Herausgebername
+        (CN) mit dem bisherigen übereinstimmt.
+    #>
+    param($OldSignature, $NewSignature)
+    if ("$($NewSignature.Status)" -ne 'Valid') { return $false }
+    $old = Get-CertCommonName $OldSignature.SignerCertificate
+    return [bool]($old -and $old -eq (Get-CertCommonName $NewSignature.SignerCertificate))
+}
+
 function Install-ToolUpdate {
     <# Lädt das Update, prüft SHA-256 und Signatur und ersetzt die Programmdateien. #>
     param([Parameter(Mandatory)]$Release)
@@ -239,7 +257,7 @@ function Install-ToolUpdate {
                 throw "$($ps1.Name) wurde nach dem Signieren verändert – Update wurde verworfen."
             }
             if ($pinned) {
-                if (-not (Test-SignatureIntact $sig) -or $sig.SignerCertificate.Thumbprint -ne $pinned) {
+                if (-not (Test-SignatureIntact $sig) -or ($sig.SignerCertificate.Thumbprint -ne $pinned -and -not (Test-CertificateRollover $currentSig $sig))) {
                     throw "$($ps1.Name) ist nicht mit demselben Zertifikat signiert wie die installierte Version – Update wurde verworfen."
                 }
             } elseif ("$($sig.Status)" -notin 'Valid', 'NotSigned', 'UnknownError', 'NotTrusted') {

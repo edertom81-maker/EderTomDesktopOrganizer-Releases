@@ -297,6 +297,7 @@ function Invoke-ToolsScan {
     }
     Add-FileToolFindings -Category $cat
     Add-DriverBackupToolFinding -Category $cat
+    Add-LoadRecordingToolFinding -Category $cat
     Add-Finding $cat Info 'Wiederherstellungspunkt jetzt erstellen' -FixLabel 'Systemwiederherstellungspunkt erstellen' -Fix { param($d) New-RestorePoint; 'Wiederherstellungspunkt angelegt (sofern Windows es zulässt).' }
 }
 
