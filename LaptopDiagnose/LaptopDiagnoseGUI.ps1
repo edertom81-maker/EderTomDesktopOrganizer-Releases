@@ -305,6 +305,28 @@ $Script:Xaml = @'
                 </DataTemplate>
               </ItemsControl.ItemTemplate>
             </ItemsControl>
+            <ItemsControl ItemsSource="{Binding Bar}" Visibility="{Binding HasBar, Converter={StaticResource B2V}}" Margin="0,10,0,0"
+                          Width="700" Height="56" HorizontalAlignment="Left" ClipToBounds="True">
+              <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate><Canvas/></ItemsPanelTemplate>
+              </ItemsControl.ItemsPanel>
+              <ItemsControl.ItemContainerStyle>
+                <Style TargetType="ContentPresenter">
+                  <Setter Property="Canvas.Left" Value="{Binding X}"/>
+                  <Setter Property="Canvas.Top" Value="{Binding Y}"/>
+                </Style>
+              </ItemsControl.ItemContainerStyle>
+              <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                  <Border Width="{Binding W}" Height="{Binding H}" Background="{Binding Fill}" BorderBrush="{DynamicResource BgCard}" BorderThickness="1" ToolTip="{Binding Tip}">
+                    <StackPanel Margin="6,4,4,2" Visibility="{Binding ShowText, Converter={StaticResource B2V}}">
+                      <TextBlock Text="{Binding Label}" Foreground="White" FontWeight="SemiBold" FontSize="12" TextTrimming="CharacterEllipsis"/>
+                      <TextBlock Text="{Binding Text}" Foreground="White" FontSize="11" Opacity="0.85" TextTrimming="CharacterEllipsis"/>
+                    </StackPanel>
+                  </Border>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
             <Expander Header="Details anzeigen" Visibility="{Binding HasItems, Converter={StaticResource B2V}}" Margin="0,6,0,0" Foreground="{DynamicResource Link}">
               <StackPanel>
                 <TextBlock Text="Doppelklick auf eine Zeile mit Pfad öffnet den Ordner im Explorer." Visibility="{Binding HasPaths, Converter={StaticResource B2V}}"
@@ -1063,13 +1085,14 @@ function global:Get-GuiSnapshot {
                 Detail         = $f.Detail
                 Items          = [string[]]@($f.Items | Where-Object { $_ })
                 Chart          = @($f.Chart | Where-Object { $_ } | ForEach-Object {
-                        [pscustomobject]@{ Label = "$($_.Label)"; Value = [double]$_.Value; Text = "$($_.Text)"; X = [double]$_.X; Y = [double]$_.Y; W = [double]$_.W; H = [double]$_.H; Anteil = [double]$_.Anteil; Path = "$($_.Path)" }
+                        [pscustomobject]@{ Label = "$($_.Label)"; Value = [double]$_.Value; Text = "$($_.Text)"; X = [double]$_.X; Y = [double]$_.Y; W = [double]$_.W; H = [double]$_.H; Anteil = [double]$_.Anteil; Path = "$($_.Path)"; Color = "$($_.Color)" }
                     })
                 ChartStyle     = "$($f.ChartStyle)"
                 SelectDefault  = [bool[]]@($f.SelectDefault)
                 Repeatable     = [bool]$f.Repeatable
                 AskFolder      = [bool]$f.AskFolder
                 AskFormat      = [bool]$f.AskFormat
+                AskParams      = $f.AskParams
                 RunOk          = [bool]$f.RunOk
                 HideKey        = "$($f.HideKey)"
                 CheckKey       = "$($f.CheckKey)"
@@ -1205,7 +1228,7 @@ $Script:Table = New-Table @(
     @('FixText', [string]), @('Status', [string]), @('HasDetail', [bool]), @('HasItems', [bool]), @('HasStatus', [bool]),
     @('CanFix', [bool]), @('IsFixed', [bool]), @('RequiresReboot', [bool]), @('SelectAll', [bool]), @('ShowFix', [bool]),
     @('IsSelected', [bool]), @('SelectLabels', [object]), @('Chart', [object]), @('HasChart', [bool]), @('Tiles', [object]), @('HasTiles', [bool]),
-    @('RunOk', [bool]), @('HasPaths', [bool]), @('HideKey', [string]), @('CheckKey', [string]), @('CheckName', [string]), @('CanHide', [bool]), @('AskFolder', [bool]), @('AskFormat', [bool]), @('Repeatable', [bool]), @('SelectDefault', [object]),
+    @('RunOk', [bool]), @('HasPaths', [bool]), @('HideKey', [string]), @('CheckKey', [string]), @('CheckName', [string]), @('CanHide', [bool]), @('AskFolder', [bool]), @('AskFormat', [bool]), @('AskParams', [object]), @('HasParams', [bool]), @('Bar', [object]), @('HasBar', [bool]), @('Repeatable', [bool]), @('SelectDefault', [object]),
     @('Help', [string]), @('HasHelp', [bool])
 )
 $Script:View = New-Object System.Data.DataView($Script:Table)
@@ -1307,19 +1330,19 @@ $Script:TreemapHeight = 280
 
 function New-TreemapView {
     <# Kachelgrafik: Positionen kommen als Anteile (0–1) aus der Diagnose und werden hier auf Pixel umgerechnet. #>
-    param($Chart)
+    param($Chart, [double]$Height = $Script:TreemapHeight)
     $points = @($Chart)
     if (-not $points) { return $null }
     $t = New-Table @(@('X', [double]), @('Y', [double]), @('W', [double]), @('H', [double]), @('Label', [string]), @('Text', [string]), @('Tip', [string]), @('Fill', [object]), @('ShowText', [bool]), @('Path', [string]), @('Cursor', [object]))
     for ($i = 0; $i -lt $points.Count; $i++) {
         $p = $points[$i]
         $w = [math]::Max(1, $p.W * $Script:TreemapWidth)
-        $h = [math]::Max(1, $p.H * $Script:TreemapHeight)
-        $brush = Get-Brush $Script:TreemapColors[$i % $Script:TreemapColors.Count]
+        $h = [math]::Max(1, $p.H * $Height)
+        $brush = Get-Brush $(if ($p.Color) { $p.Color } else { $Script:TreemapColors[$i % $Script:TreemapColors.Count] })
         $brush.Freeze()
         $tip = '{0}: {1} ({2} %)' -f $p.Label, $p.Text, $p.Anteil
         if ($p.Path) { $tip += "`nKlicken, um die Unterordner anzuzeigen" }
-        $null = $t.Rows.Add($p.X * $Script:TreemapWidth, $p.Y * $Script:TreemapHeight, $w, $h, "$($p.Label)", "$($p.Text)",
+        $null = $t.Rows.Add($p.X * $Script:TreemapWidth, $p.Y * $Height, $w, $h, "$($p.Label)", "$($p.Text)",
             $tip, $brush, ($w -ge 70 -and $h -ge 36), "$($p.Path)", $(if ($p.Path) { [System.Windows.Input.Cursors]::Hand } else { [System.Windows.Input.Cursors]::Arrow }))
     }
     return $t.DefaultView
@@ -1349,7 +1372,10 @@ function Update-FromSnapshot {
         $vm.ItemsText = (@($f.Items) -join [Environment]::NewLine)
         $vm.HasItems = @($f.Items).Count -gt 0
         $vm.HasPaths = $vm.ItemsText -match '[A-Za-z]:\\|%USERPROFILE%'
-        if ($f.ChartStyle -eq 'Kacheln') {
+        if ($f.ChartStyle -eq 'Leiste') {
+            $barView = New-TreemapView $f.Chart -Height 56
+            if ($barView) { $vm.Bar = $barView; $vm.HasBar = $true }
+        } elseif ($f.ChartStyle -eq 'Kacheln') {
             $tileView = New-TreemapView $f.Chart
             if ($tileView) { $vm.Tiles = $tileView; $vm.HasTiles = $true }
         } else {
@@ -1366,6 +1392,7 @@ function Update-FromSnapshot {
         $vm.RunOk = [bool]$f.RunOk
         $vm.AskFolder = [bool]$f.AskFolder
         $vm.AskFormat = [bool]$f.AskFormat
+        if ($f.AskParams) { $vm.AskParams = $f.AskParams; $vm.HasParams = $true }
         $vm.Repeatable = [bool]$f.Repeatable
         $vm.HideKey = "$($f.HideKey)"
         $vm.CheckKey = "$($f.CheckKey)"
@@ -1544,6 +1571,117 @@ function Show-SelectionDialog {
     return , $idx.ToArray()
 }
 
+$Script:ParamXaml = @'
+<Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Width="700" SizeToContent="Height" MaxHeight="900" WindowStartupLocation="CenterOwner"
+        Background="{DynamicResource BgWindow}" FontFamily="Segoe UI" FontSize="13" ShowInTaskbar="False" ResizeMode="NoResize">
+  <Window.Resources>
+%PALETTE%
+  </Window.Resources>
+  <StackPanel Margin="22">
+    <TextBlock x:Name="PrmTitle" FontSize="18" FontWeight="Bold" Foreground="{DynamicResource TextHeading}" TextWrapping="Wrap"/>
+    <TextBlock x:Name="PrmText" Foreground="{DynamicResource TextSecondary}" TextWrapping="Wrap" Margin="0,6,0,10"/>
+    <StackPanel x:Name="PrmFields"/>
+    <Border x:Name="PrmWarnBox" Background="#FEF3F2" BorderBrush="#FDA29B" BorderThickness="1" CornerRadius="8" Padding="12,10" Margin="0,12,0,0" Visibility="Collapsed">
+      <TextBlock x:Name="PrmWarn" Foreground="#B42318" FontWeight="SemiBold" TextWrapping="Wrap"/>
+    </Border>
+    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,16,0,0">
+      <Button x:Name="PrmCancel" Content="Abbrechen" Padding="14,7" MinWidth="90" IsCancel="True"/>
+      <Button x:Name="PrmOk" Content="Ausführen" Padding="14,7" MinWidth="130" Margin="8,0,0,0"/>
+    </StackPanel>
+  </StackPanel>
+</Window>
+'@
+$Script:ParamXaml = $Script:ParamXaml.Replace('%PALETTE%', (Get-PaletteXaml))
+
+function Show-ParamDialog {
+    <# Eingabedialog für Werkzeuge mit Angaben (Auswahl, Zahl, Text, Haken, Datei, Bestätigung durch Eintippen). #>
+    param([string]$Title, $Spec)
+    $dlg = [Windows.Markup.XamlReader]::Parse($Script:ParamXaml)
+    foreach ($k in $Script:CurrentPalette.Keys) { $dlg.Resources[$k] = Get-Brush $Script:CurrentPalette[$k] }
+    $dlg.Owner = $Script:Window
+    $dlg.Title = $Title
+    $dlg.FindName('PrmTitle').Text = $Title
+    $dlg.FindName('PrmText').Text = "$($Spec.Text)"
+    if ($Spec.Warning) { $dlg.FindName('PrmWarn').Text = $Spec.Warning; $dlg.FindName('PrmWarnBox').Visibility = 'Visible' }
+    $panel = $dlg.FindName('PrmFields')
+    $ok = $dlg.FindName('PrmOk')
+    $ctl = @{}
+    $confirms = New-Object System.Collections.Generic.List[object]
+    $fg = $dlg.Resources['TextPrimary']
+    foreach ($f in @($Spec.Fields)) {
+        if ($f.Type -ne 'Haken') {
+            $lbl = New-Object System.Windows.Controls.TextBlock
+            $lbl.Text = "$($f.Label)"; $lbl.FontWeight = 'SemiBold'; $lbl.Margin = '0,8,0,3'; $lbl.TextWrapping = 'Wrap'; $lbl.Foreground = $fg
+            if ($f.Type -eq 'Bestaetigung') { $lbl.Foreground = Get-Brush '#B42318' }
+            $null = $panel.Children.Add($lbl)
+        }
+        switch ($f.Type) {
+            'Auswahl' {
+                $c = New-Object System.Windows.Controls.ComboBox
+                foreach ($it in @($f.Items)) { $null = $c.Items.Add("$it") }
+                $c.SelectedIndex = [math]::Min([int]$f.Default, $c.Items.Count - 1)
+                $null = $panel.Children.Add($c); $ctl[$f.Name] = $c
+            }
+            'Haken' {
+                $c = New-Object System.Windows.Controls.CheckBox
+                $tb = New-Object System.Windows.Controls.TextBlock
+                $tb.Text = "$($f.Label)"; $tb.TextWrapping = 'Wrap'; $tb.Foreground = $fg
+                $c.Content = $tb; $c.IsChecked = [bool]$f.Default; $c.Margin = '0,8,0,0'
+                $null = $panel.Children.Add($c); $ctl[$f.Name] = $c
+            }
+            'Datei' {
+                $dp = New-Object System.Windows.Controls.DockPanel
+                $b = New-Object System.Windows.Controls.Button
+                $b.Content = 'Durchsuchen …'; $b.Padding = '10,3'; $b.Margin = '8,0,0,0'
+                [System.Windows.Controls.DockPanel]::SetDock($b, 'Right')
+                $tbx = New-Object System.Windows.Controls.TextBox
+                $tbx.Text = "$($f.Default)"; $tbx.Padding = '4,3'
+                $mode = "$($f.Mode)"; $filter = "$($f.Filter)"
+                $b.Add_Click({
+                        $fd = if ($mode -eq 'Speichern') { New-Object Microsoft.Win32.SaveFileDialog } else { New-Object Microsoft.Win32.OpenFileDialog }
+                        $fd.Filter = $filter
+                        if ($mode -eq 'Speichern') { $fd.FileName = 'Datentraeger_{0:yyyyMMdd_HHmm}.img' -f (Get-Date) }
+                        if ($fd.ShowDialog($dlg)) { $tbx.Text = $fd.FileName }
+                    }.GetNewClosure())
+                $null = $dp.Children.Add($b); $null = $dp.Children.Add($tbx)
+                $null = $panel.Children.Add($dp); $ctl[$f.Name] = $tbx
+            }
+            default {
+                $c = New-Object System.Windows.Controls.TextBox
+                $c.Text = "$($f.Default)"; $c.Padding = '4,3'
+                if ($f.Type -eq 'Bestaetigung') { $c.Width = 140; $c.HorizontalAlignment = 'Left'; $confirms.Add(@{ Box = $c; Field = $f; Label = $lbl; BaseText = "$($f.Label)" }) }
+                $null = $panel.Children.Add($c); $ctl[$f.Name] = $c
+            }
+        }
+    }
+    # Bestätigung: erwarteter Text hängt von der Auswahl im Bezugsfeld ab
+    $update = {
+        $all = $true
+        foreach ($cf in $confirms) {
+            $src = @($Spec.Fields | Where-Object { $_.Name -eq $cf.Field.From })[0]
+            $tok = "$(@($src.Tokens)[$ctl[$cf.Field.From].SelectedIndex])"
+            $cf.Label.Text = "$($cf.BaseText) »$tok« eintippen:"
+            if ("$($cf.Box.Text)".Trim().TrimEnd(':').ToUpperInvariant() -ne $tok.ToUpperInvariant() -or -not $tok) { $all = $false }
+        }
+        $ok.IsEnabled = $all
+    }.GetNewClosure()
+    foreach ($cf in $confirms) {
+        $cf.Box.Add_TextChanged({ & $update }.GetNewClosure())
+        $ctl[$cf.Field.From].Add_SelectionChanged({ foreach ($x in $confirms) { $x.Box.Text = '' }; & $update }.GetNewClosure())
+    }
+    & $update
+    $ok.Add_Click({ $dlg.DialogResult = $true }.GetNewClosure())
+    if (-not $dlg.ShowDialog()) { return $null }
+    $res = @{}
+    foreach ($f in @($Spec.Fields)) {
+        $c = $ctl[$f.Name]
+        $res[$f.Name] = switch ($f.Type) { 'Auswahl' { $c.SelectedIndex } 'Haken' { [bool]$c.IsChecked } default { "$($c.Text)" } }
+    }
+    return $res
+}
+
 function Show-FormatDialog {
     <# Formatier-Dialog: Laufwerk, Dateisystem, Name, Optionen; »Endgültig formatieren« erst nach Eintippen des Laufwerksbuchstabens. #>
     param([string[]]$Labels)
@@ -1626,7 +1764,14 @@ function Invoke-SelectedFixes {
     foreach ($vm in $chosen) {
         $selection = $null
         $options = $null
-        if ($vm.AskFormat) {
+        if ($vm.HasParams) {
+            $prm = Show-ParamDialog -Title $vm.FixLabel -Spec $vm.AskParams
+            if (-not $prm) { continue }
+            $options = $prm
+            $first = @($vm.AskParams.Fields | Where-Object { $_.Type -eq 'Auswahl' } | Select-Object -First 1)
+            $what = if ($first) { " – $(@($first[0].Items)[[int]$prm[$first[0].Name]])" } else { '' }
+            $labels.Add("• $($vm.FixLabel)$what")
+        } elseif ($vm.AskFormat) {
             $fmt = Show-FormatDialog -Labels $vm.SelectLabels
             if (-not $fmt) { continue }
             $selection = [int[]]@($fmt.Index)
@@ -1707,6 +1852,7 @@ function Invoke-SelectedFixes {
     if ($chosen | Where-Object { $_.FixLabel -match 'beenden' }) {
         $warn = "`n`nAchtung: Beim Beenden von Programmen gehen ungespeicherte Daten verloren."
     }
+    foreach ($w in @($chosen | Where-Object { $_.HasParams -and $_.AskParams.Warning } | ForEach-Object { $_.AskParams.Warning })) { $warn += "`n`n$w" }
     if ($chosen | Where-Object { $_.AskFormat }) {
         $warn += "`n`nACHTUNG: Formatieren löscht alle Daten auf dem gewählten Datenträger endgültig."
     }
