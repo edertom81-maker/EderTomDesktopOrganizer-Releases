@@ -106,6 +106,7 @@ $Script:CheckHelp = @{
     'Bluetooth'                                                 = 'Deaktivierte Adapter, ein gestoppter Bluetooth-Dienst oder fehlerhaft gekoppelte Geräte verhindern, dass sich Kopfhörer, Maus oder Tastatur verbinden.'
     'Browser-Entführer (Startseite, Suche, DNS, Hosts)'         = 'Adware verändert Startseite, Suchmaschine oder DNS-Server, um Werbung einzublenden oder auf gefälschte Seiten umzuleiten – oft so, dass es sich in den Browser-Einstellungen nicht mehr ändern lässt.'
     'Geräte im Heimnetz'                                        = 'Zeigt, welche Geräte im eigenen Netz sind. Ein unbekanntes Gerät kann bedeuten, dass jemand Fremdes das WLAN mitbenutzt.'
+    'Windows-Reparaturumgebung und Startkonfiguration'         = 'Ohne Reparaturumgebung gibt es bei Startproblemen keine Starthilfe und keine Systemwiederherstellung. Ein vergessener abgesicherter Modus lässt Windows bei jedem Start eingeschränkt laufen.'
     # Externe Datenträger
     'Externe Datenträger: Übersicht'                            = 'Zeigt angeschlossene USB-Sticks, externe Festplatten und SD-Karten mit Dateisystem, Größe und freiem Platz.'
     'Externe Datenträger: Zustand'                              = 'Lese- und Schreibfehler kündigen den Ausfall eines Datenträgers an. Dann sofort die Daten auf einen anderen Datenträger kopieren.'

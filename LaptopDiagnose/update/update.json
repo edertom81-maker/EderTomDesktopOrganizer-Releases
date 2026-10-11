@@ -1,7 +1,7 @@
 {
-    "version": "3.5.0",
-    "datei": "LaptopDiagnose-3.5.0.zip",
-    "sha256": "5f901b736b33011f3e4049b40b87d1cc51c6cc75c50468c2649ca5b0660cee59",
-    "notizen": "Neu: Browser-Entführer erkennen (Richtlinien, Startseiten, Proxy-Skript, DNS, Hosts-Datei, Verknüpfungen), »Wer ist in meinem WLAN?«, Drucker-Diagnose, Audio- und Bluetooth-Prüfung mit Lautsprecher-Test. Außerdem behoben: Live-Monitor (Aufzeichnung endete nicht, Listen blieben leer).",
+    "version": "3.6.0",
+    "datei": "LaptopDiagnose-3.6.0.zip",
+    "sha256": "8418ee3a9056403b86aa7023045e336ed9a984c965cf75dd626367e6c289cceb",
+    "notizen": "Neu: Gerätecheck mit Bericht »Zustand des Geräts« (Tastatur, Pixelfehler, Lautsprecher, Kamera, Mikrofon, Akku, Datenträger), Garantie und Inventar, Notfall-Starthilfe (abgesicherter Modus mit Rückweg, Reparaturumgebung, Prüfung der Startkonfiguration), Windows reparieren ohne Datenverlust (In-Place-Upgrade-Assistent). Werkzeuge erscheinen jetzt sofort beim Öffnen eines Bereichs.",
     "veroeffentlicht": "2026-10-11"
 }

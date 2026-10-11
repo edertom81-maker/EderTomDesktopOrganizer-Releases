@@ -30,7 +30,7 @@ function Register-Change {
     <#
         Protokolliert eine Änderung. -Typ bestimmt, wie Undo-Change sie zurücknimmt.
         Typen: Autostart, Energieplan, Prozessorleistung, TRIM, Auslagerungsdatei, Registry, Feature, Wartungsaufgabe, Netzlaufwerk,
-        Aufgabe, Dienst, Schattenspeicher, Konto, Weckgeraet, Energieeinstellung, Protokoll
+        Aufgabe, Dienst, Schattenspeicher, Konto, Weckgeraet, Energieeinstellung, Abgesichert, Protokoll
     #>
     param(
         [Parameter(Mandatory)][string]$Beschreibung,
@@ -159,6 +159,7 @@ function Undo-Change {
         'Geraet' {
             foreach ($id in @($d.Ids)) { Disable-PnpDevice -InstanceId $id -Confirm:$false -ErrorAction Stop }
         }
+        'Abgesichert' { Clear-SafeBoot; $Script:RebootNeeded = $true }
         'Weckgeraet' {
             foreach ($g in @($d.Geraete)) { $null = & powercfg.exe /deviceenablewake "$g" 2>&1 }
         }
