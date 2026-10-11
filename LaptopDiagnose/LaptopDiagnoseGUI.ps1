@@ -2566,7 +2566,7 @@ try {
         'BtnMaintRemove', 'ChkPdf', 'BtnFleet', 'UpdateStatus', 'BtnUpdateCheck', 'BtnUpdateInstall', 'SignatureText', 'ChkAutoUpdate', 'BadgeUpdate', 'AboutText', 'SidebarLogo', 'AboutLogo',
          'HiddenHint', 'HiddenList', 'BtnUnhideAll', 'ChkStorageFull', 'ChkAreaFehler', 'ChkAreaSpeicher', 'ChkAreaLeistung', 'ChkAreaHerunterfahren', 'ChkAreaAkku', 'ChkAreaNetzwerk', 'ChkAreaSoftware', 'ChkAreaSicherheit', 'ChkAreaWindows', 'ReportFolderText', 'BtnReportFolderChange', 'BtnReportFolderOpen', 'Keep10', 'Keep30', 'Keep100', 'Keep0',
         'MonitorPanel', 'MonCpu', 'MonCpuSub', 'MonCpuLine', 'MonRam', 'MonRamSub', 'MonRamLine', 'MonDisk', 'MonDiskSub', 'MonDiskLine', 'MonNet', 'MonNetSub', 'MonNetLine',
-        'MonTemp', 'MonTempSub', 'MonTempLine', 'BtnMonRecord', 'BtnMonRecordText', 'MonRecStatus', 'MonRecVerdict', 'MonRecDetail', 'MonDiskList',
+        'MonTemp', 'MonTempSub', 'MonTempLine', 'BtnMonRecord', 'BtnMonRecordText', 'MonRecStatus', 'MonRecVerdict', 'MonRecDetail', 'MonDiskList', 'MonProcList',
         'FilterBar', 'SearchBox', 'SearchHint', 'FilterSeverity', 'ChkOnlyFixable', 'BtnExportCsv', 'ChkAreaExtern', 'BtnCancel'
     )
     $navNames = @('NavAlle') + @($Script:CategoryKeys | ForEach-Object { "Nav$_" }) + @('NavMonitor', 'NavVerlauf', 'NavAenderungen', 'NavEinstellungen', 'NavLog')

@@ -8,6 +8,10 @@ Zurzeit nichts offen.
 
 Bewusst weiterhin nicht: Registry-Reiniger, Treiber von Drittanbieter-Seiten, automatische Reparaturen ohne Rückfrage, »RAM-Booster« und ähnliche Schein-Optimierer.
 
+## Erledigt in Version 3.6.1
+
+- Live-Monitor »Größte Verbraucher (laufend)« blieb leer. Die Liste war seit 3.1 nie mit dem Fenster verknüpft. Eine neue Prüfung im Test stellt sicher, dass jedes verwendete Oberflächenelement verknüpft ist.
+
 ## Erledigt in Version 3.6.0
 
 Umsetzungshinweise:
