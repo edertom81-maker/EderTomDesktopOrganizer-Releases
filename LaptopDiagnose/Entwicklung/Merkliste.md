@@ -4,7 +4,7 @@ Stand: 11.10.2026. Neue Wünsche hier ergänzen.
 
 ## Offen (noch nicht gebaut)
 
-Geplant: Version 3.1 = 29–31.
+Geplant: Version 3.1 = 29–31 und 34.
 
 29. **Live-Monitor:** laufende Anzeige von CPU, RAM, Datenträger, Netzwerk und Temperatur mit den größten Verbrauchern; Aufzeichnung über 1–2 Minuten »Was bremst gerade?« mit Auswertung.
 30. **Spiele- und Grafikleistung:** Spielmodus, Hardware-beschleunigte GPU-Planung, Energiemodus (Windows-Leistungsregler), visuelle Effekte, Game-Bar-Aufzeichnung im Hintergrund; Empfehlungen nach Auswahl setzen, umkehrbar.
@@ -12,6 +12,8 @@ Geplant: Version 3.1 = 29–31.
     - Vorbereitung für eine echte Code-Signatur (gekauftes Zertifikat, ca. 100–300 €/Jahr; Kauf durch den Benutzer) – Signier-Skript und Anleitung, damit Virenscanner/SmartScreen nicht mehr warnen.
     - Suchfeld und Filter (Schweregrad, behebbar) in den Ergebnissen, Export der Ergebnisse als CSV.
     - »?« an jeder Prüfung mit kurzer Erklärung, warum sie wichtig ist.
+
+34. **Datenmüll entfernen beschleunigen:** Das Entfernen dauert sehr lange, obwohl das meiste im Papierkorb liegt. Vermutete Ursachen: `Clear-RecycleBin` leert über die Windows-Shell Datei für Datei; dazu wird der Papierkorb vorher und für den Vorher/Nachher-Vergleich erneut vollständig vermessen. Geplant: Papierkorb direkt über die Windows-Funktion `SHEmptyRecycleBin` (ohne Rückfrage, Fortschrittsanzeige und Ton) leeren, Größe über `SHQueryRecycleBin` statt Ordnerdurchlauf ermitteln, Fortschritt je Bereich anzeigen (»Papierkorb wird geleert …«), Dauer der einzelnen Bereiche im Protokoll festhalten.
 
 Bewusst weiterhin nicht: Registry-Reiniger, Treiber von Drittanbieter-Seiten, automatische Reparaturen ohne Rückfrage, »RAM-Booster« und ähnliche Schein-Optimierer.
 
