@@ -432,6 +432,11 @@ $Script:Xaml = @'
                 <Border x:Name="BadgeWindows" DockPanel.Dock="Right" Style="{StaticResource Badge}"><TextBlock x:Name="BadgeWindowsText" Style="{StaticResource BadgeText}"/></Border>
                 <TextBlock Text="Windows &amp; Treiber" VerticalAlignment="Center"/></DockPanel>
             </RadioButton>
+            <RadioButton x:Name="NavExtern" Tag="Extern" Style="{StaticResource Nav}">
+              <DockPanel><TextBlock Text="&#xE88E;" Style="{StaticResource NavIcon}"/>
+                <Border x:Name="BadgeExtern" DockPanel.Dock="Right" Style="{StaticResource Badge}"><TextBlock x:Name="BadgeExternText" Style="{StaticResource BadgeText}"/></Border>
+                <TextBlock Text="Externe Datenträger" VerticalAlignment="Center"/></DockPanel>
+            </RadioButton>
             <RadioButton x:Name="NavWerkzeuge" Tag="Werkzeuge" Style="{StaticResource Nav}">
               <DockPanel><TextBlock Text="&#xE90F;" Style="{StaticResource NavIcon}"/>
                 <Border x:Name="BadgeWerkzeuge" DockPanel.Dock="Right" Style="{StaticResource Badge}"><TextBlock x:Name="BadgeWerkzeugeText" Style="{StaticResource BadgeText}"/></Border>
@@ -777,6 +782,7 @@ $Script:Xaml = @'
                   <CheckBox x:Name="ChkAreaSoftware" Tag="Software" Width="210" Margin="0,3,0,3" Cursor="Hand"><TextBlock Text="Software-Updates" Foreground="{DynamicResource TextPrimary}"/></CheckBox>
                   <CheckBox x:Name="ChkAreaSicherheit" Tag="Sicherheit" Width="210" Margin="0,3,0,3" Cursor="Hand"><TextBlock Text="Sicherheit" Foreground="{DynamicResource TextPrimary}"/></CheckBox>
                   <CheckBox x:Name="ChkAreaWindows" Tag="Windows" Width="210" Margin="0,3,0,3" Cursor="Hand"><TextBlock Text="Windows &amp; Treiber" Foreground="{DynamicResource TextPrimary}"/></CheckBox>
+                  <CheckBox x:Name="ChkAreaExtern" Tag="Extern" Width="210" Margin="0,3,0,3" Cursor="Hand"><TextBlock Text="Externe Datenträger" Foreground="{DynamicResource TextPrimary}"/></CheckBox>
                 </WrapPanel>
                 <CheckBox x:Name="ChkStorageFull" Margin="0,4,0,6" Cursor="Hand">
                   <TextBlock Text="Speicherbelegung (Kachelgrafik) in die Komplett-Diagnose aufnehmen" Foreground="{DynamicResource TextPrimary}"/>
@@ -921,6 +927,7 @@ $Script:Xaml = @'
           <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
             <ProgressBar x:Name="Busy" Width="120" Height="6" IsIndeterminate="True" Visibility="Collapsed" Margin="0,0,12,0" Foreground="#0B5CAD"/>
             <TextBlock x:Name="StatusText" Text="Bereit." Foreground="{DynamicResource TextSecondary}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" MaxWidth="520"/>
+            <Button x:Name="BtnCancel" Content="Abbrechen" Visibility="Collapsed" Margin="12,0,0,0" Padding="10,3" VerticalAlignment="Center" ToolTip="Laufenden Test abbrechen (bereits geschriebene Testdaten werden gelöscht)"/>
           </StackPanel>
         </DockPanel>
       </Border>
@@ -974,7 +981,47 @@ $Script:SelectXaml = @'
 </Window>
 '@
 
+$Script:FormatXaml = @'
+<Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Width="660" SizeToContent="Height" WindowStartupLocation="CenterOwner" Title="Datenträger formatieren"
+        Background="{DynamicResource BgWindow}" FontFamily="Segoe UI" FontSize="13" ShowInTaskbar="False" ResizeMode="NoResize">
+  <Window.Resources>
+%PALETTE%
+  </Window.Resources>
+  <StackPanel Margin="22">
+    <TextBlock Text="Datenträger formatieren" FontSize="18" FontWeight="Bold" Foreground="{DynamicResource TextHeading}"/>
+    <TextBlock Foreground="{DynamicResource TextSecondary}" TextWrapping="Wrap" Margin="0,6,0,14" Text="Es werden nur externe Datenträger angeboten. Interne Laufwerke und das Systemlaufwerk lassen sich hier nicht formatieren."/>
+    <TextBlock Text="Laufwerk" Foreground="{DynamicResource TextPrimary}" FontWeight="SemiBold"/>
+    <ComboBox x:Name="FmtDrive" Margin="0,4,0,4"/>
+    <TextBlock x:Name="FmtContent" Foreground="{DynamicResource TextSecondary}" TextWrapping="Wrap" Margin="0,0,0,12"/>
+    <TextBlock Text="Dateisystem" Foreground="{DynamicResource TextPrimary}" FontWeight="SemiBold"/>
+    <ComboBox x:Name="FmtFs" Margin="0,4,0,4" SelectedIndex="0">
+      <ComboBoxItem Content="exFAT – empfohlen: Windows, Mac, Fernseher, Kameras, Spielkonsolen" Tag="exFAT"/>
+      <ComboBoxItem Content="FAT32 – für Autoradios und ältere Geräte (nur bis 32 GB, Dateien max. 4 GB)" Tag="FAT32"/>
+      <ComboBoxItem Content="NTFS – nur Windows, z. B. für Sicherungen (Mac/TV meist nur lesend)" Tag="NTFS"/>
+    </ComboBox>
+    <TextBlock Text="Name des Laufwerks" Foreground="{DynamicResource TextPrimary}" FontWeight="SemiBold" Margin="0,10,0,0"/>
+    <TextBox x:Name="FmtLabel" Margin="0,4,0,10" Padding="4,3"/>
+    <CheckBox x:Name="FmtFull" Margin="0,2" Cursor="Hand"><TextBlock TextWrapping="Wrap" Foreground="{DynamicResource TextPrimary}" Text="Vollständig formatieren – überschreibt und prüft jeden Sektor (dauert je nach Größe bis zu Stunden)"/></CheckBox>
+    <CheckBox x:Name="FmtReinit" Margin="0,4,0,0" Cursor="Hand"><TextBlock TextWrapping="Wrap" Foreground="{DynamicResource TextPrimary}" Text="Komplett neu einrichten – alle Partitionen löschen und die volle Größe nutzen (z. B. nach einem Installationsstick)"/></CheckBox>
+    <Border Background="#FEF3F2" BorderBrush="#FDA29B" BorderThickness="1" CornerRadius="8" Padding="12,10" Margin="0,14,0,0">
+      <StackPanel>
+        <TextBlock Foreground="#B42318" FontWeight="SemiBold" TextWrapping="Wrap" Text="ACHTUNG: Formatieren löscht ALLE Daten auf diesem Laufwerk endgültig. Das lässt sich nicht rückgängig machen."/>
+        <TextBlock x:Name="FmtConfirmText" Foreground="#B42318" TextWrapping="Wrap" Margin="0,8,0,4"/>
+        <TextBox x:Name="FmtConfirm" Width="120" HorizontalAlignment="Left" Padding="4,3"/>
+      </StackPanel>
+    </Border>
+    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,16,0,0">
+      <Button x:Name="FmtCancel" Content="Abbrechen" Padding="14,7" MinWidth="90" IsCancel="True"/>
+      <Button x:Name="FmtOk" Content="Endgültig formatieren" Padding="14,7" MinWidth="150" Margin="8,0,0,0" IsEnabled="False"/>
+    </StackPanel>
+  </StackPanel>
+</Window>
+'@
+
 $Script:Xaml = $Script:Xaml.Replace('%PALETTE%', (Get-PaletteXaml))
+$Script:FormatXaml = $Script:FormatXaml.Replace('%PALETTE%', (Get-PaletteXaml))
 $Script:SelectXaml = $Script:SelectXaml.Replace('%PALETTE%', (Get-PaletteXaml))
 
 #endregion
@@ -1022,6 +1069,7 @@ function global:Get-GuiSnapshot {
                 SelectDefault  = [bool[]]@($f.SelectDefault)
                 Repeatable     = [bool]$f.Repeatable
                 AskFolder      = [bool]$f.AskFolder
+                AskFormat      = [bool]$f.AskFormat
                 RunOk          = [bool]$f.RunOk
                 HideKey        = "$($f.HideKey)"
                 CheckKey       = "$($f.CheckKey)"
@@ -1068,6 +1116,9 @@ function Start-WorkerJob {
     <# Startet Code im Hintergrund-Runspace; $OnDone erhält die Ausgabe, sobald der Code fertig ist. #>
     param([string]$Code, [object[]]$Arguments = @(), [scriptblock]$OnDone, [string]$Status, [switch]$Silent)
     if ($Script:Job) { return $false }
+    $Script:Sync.Cancel = $false
+    $Script:Sync.CanCancel = $false
+    if ($Script:UI.BtnCancel) { $Script:UI.BtnCancel.IsEnabled = $true }
     $ps = [powershell]::Create()
     $ps.Runspace = $Script:Runspace
     $null = $ps.AddScript($Code)
@@ -1114,6 +1165,7 @@ $Script:Pages = [ordered]@{
     'Netzwerk'      = @{ Kind = 'Findings'; Title = 'Netzwerk & WLAN'; Sub = 'Internetverbindung, WLAN-Signal und -Sicherheit, Netzwerkkabel (LAN), Geschwindigkeit, Latenz, Proxy und WLAN-Treiber.'; Scan = 'Invoke-NetworkScan' }
     'Software'      = @{ Kind = 'Findings'; Title = 'Software-Updates'; Sub = 'Verfügbare Updates für installierte Programme (über WinGet).'; Scan = 'Invoke-SoftwareScan' }
     'Windows'       = @{ Kind = 'Findings'; Title = 'Windows & Treiber'; Sub = 'Windows-Updates, Treiber-Updates, Grafiktreiber, BIOS-Alter und Hersteller-Tools für BIOS und Firmware.'; Scan = 'Invoke-WindowsUpdateScan' }
+    'Extern'        = @{ Kind = 'Findings'; Title = 'Externe Datenträger'; Sub = 'USB-Sticks, externe Festplatten und SD-Karten: Zustand, Dateisystem und Probleme prüfen und reparieren, Geschwindigkeits- und Echtheitstest, formatieren und sicher entfernen. Interne Laufwerke werden nie angeboten.'; Scan = 'Invoke-ExternalDriveScanDetailed'; ScanText = 'Datenträger prüfen' }
     'Werkzeuge'     = @{ Kind = 'Findings'; Title = 'Reparatur-Werkzeuge'; Sub = 'Gezielte Reparaturen und Tests – Werkzeug ankreuzen und »Ausgewählte beheben« klicken.'; Scan = 'Invoke-ToolsScan'; ScanText = 'Werkzeuge laden' }
     'Monitor'       = @{ Kind = 'Monitor'; Title = 'Live-Monitor'; Sub = 'Laufende Anzeige von Prozessor, Arbeitsspeicher, Datenträger, Netzwerk und Temperatur mit den größten Verbrauchern – und Aufzeichnung »Was bremst gerade?«.' }
     'Verlauf'       = @{ Kind = 'History'; Title = 'Verlauf & Trends'; Sub = 'Entwicklung der wichtigsten Kennzahlen über alle Komplett-Diagnosen.' }
@@ -1121,9 +1173,9 @@ $Script:Pages = [ordered]@{
     'Einstellungen' = @{ Kind = 'Settings'; Title = 'Einstellungen'; Sub = 'Design, Umfang der Komplett-Diagnose, geplante Wartung, Berichte, ausgeblendete Meldungen und Programm-Updates.' }
     'Log'           = @{ Kind = 'Log'; Title = 'Protokoll'; Sub = 'Alle Ausgaben dieser Sitzung. Wird zusätzlich lokal unter %LOCALAPPDATA%\LaptopDiagnose\Protokolle gespeichert.' }
 }
-$Script:AreaKeys = @('Fehler', 'Speicher', 'Leistung', 'Herunterfahren', 'Akku', 'Netzwerk', 'Software', 'Sicherheit', 'Windows')
+$Script:AreaKeys = @('Fehler', 'Speicher', 'Leistung', 'Herunterfahren', 'Akku', 'Netzwerk', 'Software', 'Sicherheit', 'Windows', 'Extern')
 $Script:DeviceKind = $null
-$Script:CategoryKeys = @('Fehler', 'Sicherheit', 'Speicher', 'Leistung', 'Herunterfahren', 'Akku', 'Netzwerk', 'Software', 'Windows', 'Werkzeuge')
+$Script:CategoryKeys = @('Fehler', 'Sicherheit', 'Speicher', 'Leistung', 'Herunterfahren', 'Akku', 'Netzwerk', 'Software', 'Windows', 'Extern', 'Werkzeuge')
 $Script:SeverityOrder = @{ 'Kritisch' = 0; 'Warnung' = 1; 'Info' = 2; 'OK' = 3 }
 $Script:Page = 'Alle'
 $Script:Items = New-Object System.Collections.Generic.List[object]
@@ -1153,7 +1205,7 @@ $Script:Table = New-Table @(
     @('FixText', [string]), @('Status', [string]), @('HasDetail', [bool]), @('HasItems', [bool]), @('HasStatus', [bool]),
     @('CanFix', [bool]), @('IsFixed', [bool]), @('RequiresReboot', [bool]), @('SelectAll', [bool]), @('ShowFix', [bool]),
     @('IsSelected', [bool]), @('SelectLabels', [object]), @('Chart', [object]), @('HasChart', [bool]), @('Tiles', [object]), @('HasTiles', [bool]),
-    @('RunOk', [bool]), @('HasPaths', [bool]), @('HideKey', [string]), @('CheckKey', [string]), @('CheckName', [string]), @('CanHide', [bool]), @('AskFolder', [bool]), @('Repeatable', [bool]), @('SelectDefault', [object]),
+    @('RunOk', [bool]), @('HasPaths', [bool]), @('HideKey', [string]), @('CheckKey', [string]), @('CheckName', [string]), @('CanHide', [bool]), @('AskFolder', [bool]), @('AskFormat', [bool]), @('Repeatable', [bool]), @('SelectDefault', [object]),
     @('Help', [string]), @('HasHelp', [bool])
 )
 $Script:View = New-Object System.Data.DataView($Script:Table)
@@ -1313,6 +1365,7 @@ function Update-FromSnapshot {
         $vm.SelectDefault = [bool[]]@($f.SelectDefault)
         $vm.RunOk = [bool]$f.RunOk
         $vm.AskFolder = [bool]$f.AskFolder
+        $vm.AskFormat = [bool]$f.AskFormat
         $vm.Repeatable = [bool]$f.Repeatable
         $vm.HideKey = "$($f.HideKey)"
         $vm.CheckKey = "$($f.CheckKey)"
@@ -1491,6 +1544,51 @@ function Show-SelectionDialog {
     return , $idx.ToArray()
 }
 
+function Show-FormatDialog {
+    <# Formatier-Dialog: Laufwerk, Dateisystem, Name, Optionen; »Endgültig formatieren« erst nach Eintippen des Laufwerksbuchstabens. #>
+    param([string[]]$Labels)
+    $dlg = [Windows.Markup.XamlReader]::Parse($Script:FormatXaml)
+    foreach ($k in $Script:CurrentPalette.Keys) { $dlg.Resources[$k] = Get-Brush $Script:CurrentPalette[$k] }
+    $dlg.Owner = $Script:Window
+    $c = @{}
+    foreach ($n in 'FmtDrive', 'FmtContent', 'FmtFs', 'FmtLabel', 'FmtFull', 'FmtReinit', 'FmtConfirmText', 'FmtConfirm', 'FmtOk') { $c[$n] = $dlg.FindName($n) }
+    foreach ($l in $Labels) { $null = $c.FmtDrive.Items.Add(($l -split ' – ')[0..1] -join ' – ') }
+    $tokenOf = {
+        param([string]$Label)
+        if ($Label -match '^([A-Z]):') { return $Matches[1] }
+        if ($Label -match '^Datenträger (\d+)') { return $Matches[1] }
+        return ''
+    }
+    $update = {
+        $i = $c.FmtDrive.SelectedIndex
+        if ($i -lt 0) { $c.FmtOk.IsEnabled = $false; return }
+        $lab = $Labels[$i]
+        $tok = & $tokenOf $lab
+        $c.FmtContent.Text = $lab
+        $noLetter = $lab -notmatch '^[A-Z]:'
+        if ($noLetter) { $c.FmtReinit.IsChecked = $true; $c.FmtReinit.IsEnabled = $false } else { $c.FmtReinit.IsEnabled = $true }
+        $c.FmtConfirmText.Text = if ($noLetter) { "Zur Bestätigung die Datenträgernummer »$tok« eintippen:" } else { "Zur Bestätigung den Laufwerksbuchstaben »$tok« eintippen:" }
+        $c.FmtOk.IsEnabled = ($c.FmtConfirm.Text.Trim().TrimEnd(':').ToUpperInvariant() -eq $tok) -and $tok
+    }.GetNewClosure()
+    $c.FmtDrive.Add_SelectionChanged({ $c.FmtConfirm.Text = ''; & $update }.GetNewClosure())
+    $c.FmtConfirm.Add_TextChanged({ & $update }.GetNewClosure())
+    $c.FmtOk.Add_Click({ $dlg.DialogResult = $true }.GetNewClosure())
+    if ($Labels.Count -eq 1) { $c.FmtDrive.SelectedIndex = 0 }
+    & $update
+    if (-not $dlg.ShowDialog()) { return $null }
+    $i = $c.FmtDrive.SelectedIndex
+    [pscustomobject]@{
+        Index   = $i
+        Options = @{
+            FileSystem = "$($c.FmtFs.SelectedItem.Tag)"
+            Label      = $c.FmtLabel.Text
+            Full       = [bool]$c.FmtFull.IsChecked
+            Reinit     = [bool]$c.FmtReinit.IsChecked
+            Confirm    = $c.FmtConfirm.Text
+        }
+    }
+}
+
 #endregion
 
 #region ---------- Aktionen ----------
@@ -1527,7 +1625,14 @@ function Invoke-SelectedFixes {
     $labels = New-Object System.Collections.Generic.List[string]
     foreach ($vm in $chosen) {
         $selection = $null
-        if ($vm.SelectLabels.Count -gt 0) {
+        $options = $null
+        if ($vm.AskFormat) {
+            $fmt = Show-FormatDialog -Labels $vm.SelectLabels
+            if (-not $fmt) { continue }
+            $selection = [int[]]@($fmt.Index)
+            $options = $fmt.Options
+            $labels.Add("• FORMATIEREN: $($vm.SelectLabels[$fmt.Index]) → $($fmt.Options.FileSystem)$(if ($fmt.Options.Reinit) { ', komplett neu einrichten' })$(if ($fmt.Options.Full) { ', vollständig' })")
+        } elseif ($vm.SelectLabels.Count -gt 0) {
             $text = if ($vm.FixLabel -match 'Autostart') {
                 'Markieren Sie die Programme, die NICHT mehr automatisch starten sollen. Virenschutz sowie Touchpad-, Audio- und Grafiktreiber-Tools sollten aktiv bleiben. Rückgängig jederzeit unter »Änderungen«.'
             } elseif ($vm.FixLabel -match 'Verknüpfungen') {
@@ -1564,6 +1669,12 @@ function Invoke-SelectedFixes {
                 'Markieren Sie die alten, nicht benutzten Treiberpakete, die entfernt werden sollen. Der aktive Treiber bleibt immer erhalten.'
             } elseif ($vm.FixLabel -match 'Weckberechtigung') {
                 'Markieren Sie die Geräte, die den Computer nicht mehr aufwecken sollen. Vorausgewählt sind Mäuse und Netzwerkadapter; die Tastatur bleibt zum Aufwecken nutzbar. Rückgängig jederzeit unter »Änderungen«.'
+            } elseif ($vm.FixLabel -match 'Geschwindigkeit der') {
+                'Markieren Sie die Laufwerke, deren Geschwindigkeit gemessen werden soll. Je Laufwerk dauert der Test 1–5 Minuten; vorhandene Dateien bleiben unberührt.'
+            } elseif ($vm.FixLabel -match 'Echtheit der') {
+                'Markieren Sie die Laufwerke für den Echtheitstest. Der freie Platz wird komplett mit Testdaten beschrieben und wieder gelesen – das kann je nach Größe Stunden dauern. Vorhandene Dateien bleiben unberührt; Abbrechen ist jederzeit unten rechts möglich.'
+            } elseif ($vm.FixLabel -match 'sicher entfernen') {
+                'Markieren Sie die Datenträger, die sicher entfernt werden sollen. Vorher alle Dateien und Fenster auf diesen Laufwerken schließen.'
             } elseif ($vm.FixLabel -match 'Spiele-Einstellungen') {
                 'Markieren Sie die Einstellungen, die gesetzt werden sollen. Die GPU-Planung wirkt erst nach einem Neustart. Rückgängig jederzeit unter »Änderungen«.'
             } elseif ($vm.FixLabel -match 'Update') {
@@ -1588,13 +1699,16 @@ function Invoke-SelectedFixes {
                 $labels[$labels.Count - 1] = "• $($vm.FixLabel) in $folder"
             }
         }
-        $requests.Add(@{ Index = $vm.Index; Selection = $selection; Folder = $folder; AskFolder = [bool]$vm.AskFolder })
+        $requests.Add(@{ Index = $vm.Index; Selection = $selection; Folder = $folder; AskFolder = [bool]$vm.AskFolder; Options = $options })
     }
     if (-not $requests.Count) { return }
 
     $warn = ''
     if ($chosen | Where-Object { $_.FixLabel -match 'beenden' }) {
         $warn = "`n`nAchtung: Beim Beenden von Programmen gehen ungespeicherte Daten verloren."
+    }
+    if ($chosen | Where-Object { $_.AskFormat }) {
+        $warn += "`n`nACHTUNG: Formatieren löscht alle Daten auf dem gewählten Datenträger endgültig."
     }
     if ($chosen | Where-Object { $_.FixLabel -match 'ENDGÜLTIG' }) {
         $warn += "`n`nACHTUNG: Ein Teil wird ENDGÜLTIG gelöscht und lässt sich nicht wiederherstellen."
@@ -1615,6 +1729,7 @@ $list = foreach ($r in $requests) {
     $f = $Script:Findings[$r.Index]
     $f.Selection = $r.Selection
     if ($r.AskFolder) { $f.FixData = @{ Folder = $r.Folder } }
+    $f.FixOptions = $r.Options
     $f
 }
 Invoke-FixList -Findings @($list) -RestorePoint:$restore
@@ -2072,7 +2187,7 @@ function Update-LiveMonitorUi {
     $ui.MonCpuLine.Points = ConvertTo-MonPoints $Script:MonHist['Cpu'] 100
     $ui.MonRamLine.Points = ConvertTo-MonPoints $Script:MonHist['Ram'] 100
     $ui.MonDiskLine.Points = ConvertTo-MonPoints $Script:MonHist['Disk'] 100
-    $ui.MonNetLine.Points = ConvertTo-MonPoints $Script:MonHist['Net'] ([math]::Max(100KB, (@($Script:MonHist['Net']) | Measure-Object -Maximum).Maximum))
+    $ui.MonNetLine.Points = ConvertTo-MonPoints $Script:MonHist['Net'] ([math]::Max([double]100KB, (@($Script:MonHist['Net']) | Measure-Object -Maximum).Maximum))
     $ui.MonTempLine.Points = ConvertTo-MonPoints $Script:MonHist['Temp'] 100
 
     $top = @($s.Procs | Sort-Object Cpu, Ram -Descending | Select-Object -First 12)
@@ -2166,7 +2281,7 @@ try {
          'HiddenHint', 'HiddenList', 'BtnUnhideAll', 'ChkStorageFull', 'ChkAreaFehler', 'ChkAreaSpeicher', 'ChkAreaLeistung', 'ChkAreaHerunterfahren', 'ChkAreaAkku', 'ChkAreaNetzwerk', 'ChkAreaSoftware', 'ChkAreaSicherheit', 'ChkAreaWindows', 'ReportFolderText', 'BtnReportFolderChange', 'BtnReportFolderOpen', 'Keep10', 'Keep30', 'Keep100', 'Keep0',
         'MonitorPanel', 'MonCpu', 'MonCpuSub', 'MonCpuLine', 'MonRam', 'MonRamSub', 'MonRamLine', 'MonDisk', 'MonDiskSub', 'MonDiskLine', 'MonNet', 'MonNetSub', 'MonNetLine',
         'MonTemp', 'MonTempSub', 'MonTempLine', 'BtnMonRecord', 'BtnMonRecordText', 'MonRecStatus', 'MonRecVerdict', 'MonRecDetail',
-        'FilterBar', 'SearchBox', 'SearchHint', 'FilterSeverity', 'ChkOnlyFixable', 'BtnExportCsv'
+        'FilterBar', 'SearchBox', 'SearchHint', 'FilterSeverity', 'ChkOnlyFixable', 'BtnExportCsv', 'ChkAreaExtern', 'BtnCancel'
     )
     $navNames = @('NavAlle') + @($Script:CategoryKeys | ForEach-Object { "Nav$_" }) + @('NavMonitor', 'NavVerlauf', 'NavAenderungen', 'NavEinstellungen', 'NavLog')
     $names += $navNames
@@ -2214,6 +2329,11 @@ try {
         })
     $Script:UI.BtnFix.Add_Click({ Invoke-SelectedFixes })
     $Script:UI.BtnMonRecord.Add_Click({ Start-LoadRecording })
+    $Script:UI.BtnCancel.Add_Click({
+            $Script:Sync.Cancel = $true
+            $Script:UI.BtnCancel.IsEnabled = $false
+            $Script:UI.StatusText.Text = 'Wird abgebrochen – Testdaten werden gelöscht …'
+        })
     $Script:UI.SearchBox.Add_TextChanged({
             $Script:UI.SearchHint.Visibility = if ($Script:UI.SearchBox.Text) { 'Collapsed' } else { 'Visible' }
             Update-View
@@ -2377,6 +2497,7 @@ try {
                     if ($Script:Job -and $t -match '^(›|▶)') { $Script:UI.StatusText.Text = $t.TrimStart('›', '▶', ' ').TrimEnd('.', ' ') + ' …' }
                 }
                 if ($Script:Job -and $Script:Job.Handle.IsCompleted) { Complete-WorkerJob }
+                $Script:UI.BtnCancel.Visibility = if ($Script:Job -and $Script:Sync.CanCancel) { 'Visible' } else { 'Collapsed' }
                 if (([DateTime]::UtcNow - $Script:LastLogFlush).TotalSeconds -ge 5) { Save-LogBuffer }
                 Update-FixButtons
             } catch {

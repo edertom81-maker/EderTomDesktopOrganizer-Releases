@@ -4,6 +4,18 @@ Stand: 11.10.2026. Neue Wünsche hier ergänzen.
 
 ## Offen (noch nicht gebaut)
 
+Derzeit keine offenen Punkte.
+
+Bewusst weiterhin nicht: Registry-Reiniger, Treiber von Drittanbieter-Seiten, automatische Reparaturen ohne Rückfrage, »RAM-Booster« und ähnliche Schein-Optimierer.
+
+## Erledigt in Version 3.2.0
+
+Umsetzungshinweise:
+- Die Geschwindigkeit misst der Windows-Leistungstest (WinSAT), weil er den Zwischenspeicher umgeht. Steht er nicht zur Verfügung, misst das Tool selbst mit einer großen Testdatei.
+- Der Echtheitstest hängt das Laufwerk zwischen Schreiben und Lesen aus (`fsutil volume dismount`), damit wirklich vom Datenträger gelesen wird.
+- Die vollständige Dateisystemprüfung läuft nur bei »Datenträger prüfen«. In der Komplett-Diagnose wird nur der Fehlerzustand abgefragt, das ist schneller.
+- Neu ist »Abbrechen« unten rechts für lange Tests.
+
 35. **Externe Datenträger prüfen, reparieren, formatieren** (eigener Bereich in der Seitenleiste; nur USB-Sticks, externe Festplatten/SSDs und SD-Karten – interne Laufwerke und das Systemlaufwerk werden nie angeboten):
     - **Prüfen (nur lesen):** Übersicht je Datenträger (Name, Größe, Dateisystem, belegt/frei, BitLocker To Go), Zustand (SMART, soweit das USB-Gehäuse es durchreicht; Lese-/Schreibfehler aus dem Ereignisprotokoll), Dateisystem nur prüfen. Erkennen: FAT32 (keine Dateien über 4 GB), nicht ordnungsgemäß entfernt, kein Laufwerksbuchstabe, offline, schreibgeschützt, Dateisystem »RAW«.
     - **Ausführlicher Geschwindigkeitstest:** sequenzielles Schreiben und Lesen mit großer Testdatei (z. B. 1 GB bzw. passend zum freien Platz), zufälliges Lesen/Schreiben kleiner Blöcke (4 KB), mehrere Durchgänge, Ergebnis in MB/s mit Diagramm und Einordnung (z. B. »typisch für USB 2.0 – steckt der Stick an einem USB-3-Anschluss?«). Testdateien werden danach gelöscht.
@@ -12,8 +24,6 @@ Stand: 11.10.2026. Neue Wünsche hier ergänzen.
     - **Formatieren (doppelt abgesichert):** Dateisystem mit Empfehlung (exFAT für Austausch mit Mac/TV/Kamera, FAT32 bis 32 GB für Autoradio/ältere Geräte, NTFS nur Windows/Sicherungen), Name, Schnell- oder vollständige Formatierung; Option »komplett neu einrichten« bei falscher Partitionierung bzw. fehlender Kapazität. Vorher Anzeige des Inhalts, Bestätigung durch Eintippen des Laufwerksbuchstabens, deutlicher Hinweis »nicht umkehrbar«, Eintrag im Protokoll.
     - Knopf **»Sicher entfernen«**.
     - **Komplett-Diagnose:** nur der Prüfteil und nur bei angestecktem externem Datenträger; in den Einstellungen abwählbar. Reparieren, Tests und Formatieren nie automatisch.
-
-Bewusst weiterhin nicht: Registry-Reiniger, Treiber von Drittanbieter-Seiten, automatische Reparaturen ohne Rückfrage, »RAM-Booster« und ähnliche Schein-Optimierer.
 
 ## Erledigt in Version 3.1.0
 

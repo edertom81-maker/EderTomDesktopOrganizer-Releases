@@ -101,6 +101,12 @@ $Script:CheckHelp = @{
     'SmartScreen'                                               = 'SmartScreen warnt vor bekannten Schadprogrammen und Betrugsseiten, bevor sie Schaden anrichten.'
     'Benutzerkonten und Anmeldung'                              = 'Konten ohne Kennwort, ein aktives Gastkonto oder automatische Anmeldung machen das Gerät für jeden offen.'
     'Fernwartungsprogramme'                                     = 'Fernwartungsprogramme erlauben die Steuerung aus der Ferne – praktisch, aber auch beliebtes Werkzeug von Betrügern.'
+    # Externe Datenträger
+    'Externe Datenträger: Übersicht'                            = 'Zeigt angeschlossene USB-Sticks, externe Festplatten und SD-Karten mit Dateisystem, Größe und freiem Platz.'
+    'Externe Datenträger: Zustand'                              = 'Lese- und Schreibfehler kündigen den Ausfall eines Datenträgers an. Dann sofort die Daten auf einen anderen Datenträger kopieren.'
+    'Externe Datenträger: Dateisystem'                          = 'Wird ein Datenträger ohne »Sicher entfernen« abgezogen, kann das Dateisystem beschädigt werden – Dateien fehlen oder sind unlesbar.'
+    'Externe Datenträger: Probleme'                             = 'Schreibschutz, fehlender Laufwerksbuchstabe, ein unlesbares (RAW) Dateisystem oder ungenutzter Platz verhindern die normale Nutzung.'
+    'Externe Datenträger: Werkzeuge'                            = 'Geschwindigkeits- und Echtheitstest zeigen, ob ein Datenträger hält, was er verspricht – gefälschte Sticks verlieren unbemerkt Daten.'
 }
 
 function Get-CheckHelp {

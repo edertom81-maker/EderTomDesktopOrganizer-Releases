@@ -1,7 +1,7 @@
 {
-    "version": "3.1.0",
-    "datei": "LaptopDiagnose-3.1.0.zip",
-    "sha256": "0ddee6ba8a1a39b0bb7fbd9b665a871a47c1ac5d437b6c2099c4e375d6fbab58",
-    "notizen": "Neu: Live-Monitor mit Aufzeichnung »Was bremst gerade?«, Prüfung der Spiele- und Grafikleistung, Suche, Filter und CSV-Export in den Ergebnissen, »?«-Erklärung an jeder Prüfung, deutlich schnelleres Entfernen von Datenmüll und Papierkorb sowie Vorbereitung für ein gekauftes Signaturzertifikat.",
+    "version": "3.2.0",
+    "datei": "LaptopDiagnose-3.2.0.zip",
+    "sha256": "c63efe14d814873c42d01c5977f9e47a31612435d8f9f7a6d33d43ad3ae0e0de",
+    "notizen": "Neu: Bereich »Externe Datenträger« für USB-Sticks, externe Festplatten und SD-Karten – Zustand und Dateisystem prüfen und reparieren, Schreibschutz und fehlende Laufwerksbuchstaben beheben, ausführlicher Geschwindigkeitstest, Echtheitstest gegen gefälschte Kapazität, sicheres Formatieren und »Sicher entfernen«. Lange Tests lassen sich abbrechen.",
     "veroeffentlicht": "2026-10-11"
 }
