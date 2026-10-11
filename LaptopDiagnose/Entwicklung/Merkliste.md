@@ -15,6 +15,7 @@ Umsetzungshinweise:
 - **Garantie:** Die Herstellerseiten erlauben keine automatische Abfrage. Das Tool öffnet die richtige Seite und legt die Seriennummer in die Zwischenablage. Ein Kaufdatum steht nicht im Gerät; im Inventar stehen BIOS-Datum und Windows-Installationsdatum.
 - **Reparaturinstallation:** Die ISO lädt man selbst von Microsoft herunter (die Seite wird geöffnet). Das Tool prüft Platz, Build, Sprache, Edition und Architektur und startet das Setup erst, wenn alles passt.
 - **Werkzeuge automatisch laden:** Beim Öffnen eines Bereichs werden nur die Werkzeug-Karten geladen, die Prüfungen weiterhin mit »… prüfen«.
+- **Fehler behoben:** Live-Monitor »Größte Verbraucher (laufend)« blieb leer. Die Liste war seit 3.1 nie mit dem Fenster verknüpft. Eine neue Prüfung im Test stellt sicher, dass jedes verwendete Oberflächenelement verknüpft ist.
 
 44. **Gerätecheck (z. B. beim Gebrauchtkauf):** Tastaturtest (jede Taste leuchtet auf), Pixelfehler-Test (Vollbild in Farben), Lautsprecher links/rechts, Mikrofon- und Kameratest, dazu Akkuzustand, Datenträger-Gesundheit, Seriennummern – zusammengefasst als Bericht »Zustand des Geräts«.
 45. **Garantie und Inventar:** Hersteller, Modell, Seriennummer, ggf. Herstell-/Kaufdatum; direkter Link zur Garantieabfrage beim Hersteller (Lenovo, HP, Dell, ASUS, Acer, MSI …); Export als Datei.
