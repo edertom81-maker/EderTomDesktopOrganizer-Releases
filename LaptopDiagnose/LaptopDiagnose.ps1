@@ -12,7 +12,7 @@
 
 .PARAMETER Modus
     Menue (Standard), Komplett, Fehler, Sicherheit, Speicher, Leistung, Herunterfahren, Akku, Netzwerk, Software, Windows,
-    Werkzeuge, Verlauf, Aenderungen, Wartung, Update
+    Extern, Werkzeuge, Verlauf, Aenderungen, Wartung, Update
 
 .PARAMETER NurPruefen
     Nur Diagnose und Bericht – es werden keine Reparaturen oder Updates angeboten.
@@ -40,7 +40,7 @@
 [CmdletBinding()]
 param(
     [ValidateSet('Menue', 'Komplett', 'Fehler', 'Sicherheit', 'Speicher', 'Leistung', 'Herunterfahren', 'Akku', 'Netzwerk', 'Software', 'Windows',
-        'Werkzeuge', 'Verlauf', 'Aenderungen', 'Wartung', 'Update')]
+        'Extern', 'Werkzeuge', 'Verlauf', 'Aenderungen', 'Wartung', 'Update')]
     [string]$Modus = 'Menue',
     [switch]$NurPruefen,
     [string]$BerichtOrdner,
@@ -50,7 +50,7 @@ param(
 
 if ($Unbeaufsichtigt) { $NurPruefen = $true }
 
-$Script:ToolVersion = '3.1.0'
+$Script:ToolVersion = '3.2.0'
 $Script:InstallDir = $PSScriptRoot
 $Script:ChangeCounter = 0
 $Script:SoftwareUpdateCache = $null
@@ -71,6 +71,7 @@ $Script:Categories = [ordered]@{
     'Netzwerk'   = 'Netzwerk & WLAN'
     'Software'   = 'Software-Updates'
     'Windows'    = 'Windows- & Treiber-Updates'
+    'Extern'     = 'Externe Datenträger'
     'Werkzeuge'  = 'Reparatur-Werkzeuge'
 }
 
@@ -195,6 +196,7 @@ function Add-Finding {
         [string]$Key,
         [switch]$Repeatable,
         [switch]$AskFolder,
+        [switch]$AskFormat,
         [switch]$Silent
     )
     $chartPoints = @($Chart | Where-Object { $_ })
@@ -221,6 +223,8 @@ function Add-Finding {
         Key            = $Key
         Repeatable     = [bool]$Repeatable
         AskFolder      = [bool]$AskFolder
+        AskFormat      = [bool]$AskFormat
+        FixOptions     = $null
         RunOk          = $false
         Selection      = $null
         Fixed          = $false
@@ -1643,6 +1647,7 @@ function Invoke-FixList {
         }
         try {
             $before = $Script:ChangeCounter
+            $Script:CurrentFixOptions = $f.FixOptions
             $res = & $f.Fix $data $preselected
             $res = (@($res) | Where-Object { $_ -is [string] }) -join ' '
             if (-not $res) { $res = 'Erledigt.' }
@@ -1952,12 +1957,13 @@ function Show-Summary {
 
 # Reihenfolge der Prüfungen der Komplett-Diagnose (Software vor Sicherheit, damit WinGet nur einmal läuft)
 $Script:FullScanOrder = @('Invoke-ErrorScan', 'Invoke-MemoryScan', 'Invoke-PerformanceScan', 'Invoke-ShutdownScan', 'Invoke-BatteryScan', 'Invoke-NetworkScan',
-    'Invoke-SoftwareScan', 'Invoke-SecurityScan', 'Invoke-WindowsUpdateScan')
+    'Invoke-SoftwareScan', 'Invoke-SecurityScan', 'Invoke-WindowsUpdateScan', 'Invoke-ExternalDriveScan')
 
 # Prüfbereiche der Komplett-Diagnose (Schlüssel = Kategorie) in der Reihenfolge von $Script:FullScanOrder
 $Script:FullScanAreas = [ordered]@{
     'Fehler' = 'Invoke-ErrorScan'; 'Speicher' = 'Invoke-MemoryScan'; 'Leistung' = 'Invoke-PerformanceScan'; 'Herunterfahren' = 'Invoke-ShutdownScan'
     'Akku' = 'Invoke-BatteryScan'; 'Netzwerk' = 'Invoke-NetworkScan'; 'Software' = 'Invoke-SoftwareScan'; 'Sicherheit' = 'Invoke-SecurityScan'; 'Windows' = 'Invoke-WindowsUpdateScan'
+    'Extern' = 'Invoke-ExternalDriveScan'
 }
 $Script:LastFullScanSkipped = @()
 
@@ -2027,6 +2033,7 @@ function Invoke-SingleModule {
         'Netzwerk'    { Invoke-NetworkScan; Invoke-Repairs -Category 'Netzwerk' }
         'Software'    { Invoke-SoftwareScan -Interactive }
         'Windows'     { Invoke-WindowsUpdateScan -Interactive }
+        'Extern'      { Invoke-ExternalDriveScanDetailed; Invoke-Repairs -Category 'Extern' }
         'Werkzeuge'   { Invoke-ToolsScan; Invoke-Repairs -Category 'Werkzeuge' }
         'Verlauf'     { Show-HistoryConsole }
         'Aenderungen' { Show-ChangeLogConsole }
@@ -2066,6 +2073,7 @@ function Show-Menu {
         Write-Host '    6) Akku                         7) Netzwerk & WLAN'
         Write-Host '    8) Software-Updates             9) Windows & Treiber'
         Write-Host '    H) Herunterfahren & Neustart    W) Reparatur-Werkzeuge'
+        Write-Host '    E) Externe Datenträger (USB-Sticks, Festplatten, SD-Karten)'
         Write-Host '    B) Gefundene Probleme beheben'
         Write-Host '    V) Verlauf & Trends             R) Änderungen rückgängig machen'
         Write-Host '    P) Geplante Wartung             G) Geräteübersicht erstellen'
@@ -2087,6 +2095,7 @@ function Show-Menu {
             '9' { Invoke-SingleModule 'Windows' }
             'H' { Invoke-SingleModule 'Herunterfahren' }
             'W' { Invoke-SingleModule 'Werkzeuge' }
+            'E' { Invoke-SingleModule 'Extern' }
             'B' { if ($found) { Invoke-Repairs } else { Write-Host '   Bitte zuerst eine Diagnose durchführen.' -ForegroundColor Yellow } }
             'V' { Invoke-SingleModule 'Verlauf' }
             'R' { Invoke-SingleModule 'Aenderungen' }
