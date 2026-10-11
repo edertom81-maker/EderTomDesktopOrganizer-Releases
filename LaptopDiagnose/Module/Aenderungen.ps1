@@ -134,6 +134,15 @@ function Undo-Change {
         'Konto' {
             if ($d.Aktion -eq 'Deaktiviert') { Enable-LocalUser -SID $d.Sid -ErrorAction Stop } else { Disable-LocalUser -SID $d.Sid -ErrorAction Stop }
         }
+        'Laufwerksbuchstabe' {
+            $part = Get-Partition -DiskNumber $d.Disk -PartitionNumber $d.Partition -ErrorAction Stop
+            $cur = [string]$part.DriveLetter
+            if ($cur -match '^[A-Za-z]$') { Remove-PartitionAccessPath -DiskNumber $d.Disk -PartitionNumber $d.Partition -AccessPath "$($cur):\" -ErrorAction Stop }
+            if ($d.Previous) { Add-PartitionAccessPath -DiskNumber $d.Disk -PartitionNumber $d.Partition -AccessPath "$($d.Previous):\" -ErrorAction Stop }
+        }
+        'Volumename' {
+            Get-Partition -DiskNumber $d.Disk -PartitionNumber $d.Partition -ErrorAction Stop | Get-Volume -ErrorAction Stop | Set-Volume -NewFileSystemLabel "$($d.Previous)" -ErrorAction Stop
+        }
         'Weckgeraet' {
             foreach ($g in @($d.Geraete)) { $null = & powercfg.exe /deviceenablewake "$g" 2>&1 }
         }

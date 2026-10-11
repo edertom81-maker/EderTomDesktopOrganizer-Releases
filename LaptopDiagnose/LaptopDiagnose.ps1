@@ -50,7 +50,7 @@ param(
 
 if ($Unbeaufsichtigt) { $NurPruefen = $true }
 
-$Script:ToolVersion = '3.2.0'
+$Script:ToolVersion = '3.3.0'
 $Script:InstallDir = $PSScriptRoot
 $Script:ChangeCounter = 0
 $Script:SoftwareUpdateCache = $null
@@ -136,7 +136,7 @@ function Write-Finding {
     foreach ($item in ($Finding.Items | Select-Object -First 10)) {
         Write-Host "                • $item" -ForegroundColor DarkGray
     }
-    foreach ($c in @($Finding.Chart | Where-Object { $Finding.ChartStyle -ne 'Kacheln' })) {
+    foreach ($c in @($Finding.Chart | Where-Object { $Finding.ChartStyle -eq 'Balken' })) {
         Write-Host ('                • {0,-34} {1,12}' -f $c.Label, $c.Text) -ForegroundColor DarkGray
     }
     if (@($Finding.Items).Count -gt 10) {
@@ -158,6 +158,68 @@ function Read-YesNo {
             '^(n|nein|no)$'  { return $false }
         }
     }
+}
+
+function Read-ParamsConsole {
+    <# Abfrage der Angaben eines Werkzeugs in der Konsole (Gegenstück zum Eingabedialog im Programmfenster). #>
+    param($Spec)
+    $o = @{}
+    if ($Spec.Text) { Write-Host "   $($Spec.Text)" -ForegroundColor Gray }
+    foreach ($f in @($Spec.Fields)) {
+        switch ($f.Type) {
+            'Auswahl' {
+                $items = @($f.Items)
+                for ($i = 0; $i -lt $items.Count; $i++) { Write-Host ('    {0,3}) {1}' -f ($i + 1), $items[$i]) }
+                $def = [int]$f.Default + 1
+                $a = Read-Host "   $($f.Label) (Nummer, leer = $def)"
+                $n = if ($a -match '^\d+$') { [int]$a } else { $def }
+                if ($n -lt 1 -or $n -gt $items.Count) { throw 'Ungültige Auswahl – abgebrochen.' }
+                $o[$f.Name] = $n - 1
+            }
+            'Haken' { $o[$f.Name] = Read-YesNo $f.Label ([bool]$f.Default) }
+            'Bestaetigung' {
+                $tok = "$(@($Spec.Fields | Where-Object { $_.Name -eq $f.From })[0].Tokens[$o[$f.From]])"
+                if ($Spec.Warning) { Write-Host "   $($Spec.Warning)" -ForegroundColor Red }
+                $o[$f.Name] = Read-Host "   $($f.Label) »$tok« eintippen"
+            }
+            default {
+                $a = Read-Host "   $($f.Label)$(if ("$($f.Default)") { " (leer = $($f.Default))" })"
+                $o[$f.Name] = if ([string]::IsNullOrWhiteSpace($a)) { "$($f.Default)" } else { $a.Trim().Trim('"') }
+            }
+        }
+    }
+    return $o
+}
+
+function Resolve-FixParams {
+    <# Angaben für das laufende Werkzeug: aus dem Dialog des Programmfensters oder per Konsolenabfrage. #>
+    param($Spec)
+    if ($Script:CurrentFixOptions) { return $Script:CurrentFixOptions }
+    return Read-ParamsConsole $Spec
+}
+
+function Get-Choice {
+    <# Gewählter Eintrag einer Liste – ein ungültiger Index bricht ab (statt z. B. mit -1 den letzten Eintrag zu treffen). #>
+    param($List, $Index)
+    $all = @($List); $i = -1
+    if (-not [int]::TryParse("$Index", [ref]$i) -or $i -lt 0 -or $i -ge $all.Count) { throw 'Ungültige Auswahl – nichts geändert.' }
+    return $all[$i]
+}
+
+function Test-ParamConfirmation {
+    <# Prüft die eingetippte Bestätigung (Groß-/Kleinschreibung und Doppelpunkt egal). #>
+    param([string]$Typed, [string]$Expected)
+    if (-not $Expected -or "$Typed".Trim().TrimEnd(':').ToUpperInvariant() -ne "$Expected".Trim().TrimEnd(':').ToUpperInvariant()) {
+        throw 'Bestätigung stimmt nicht mit dem gewählten Ziel überein – nichts geändert.'
+    }
+}
+
+function ConvertTo-GBValue {
+    param([string]$Text)
+    $t = "$Text".Trim() -replace '\s*(GB|G)$', '' -replace ',', '.'
+    $v = 0.0
+    if (-not [double]::TryParse($t, [Globalization.NumberStyles]::Float, [Globalization.CultureInfo]::InvariantCulture, [ref]$v) -or $v -le 0) { throw "Ungültige Größe »$Text«." }
+    return $v * 1GB
 }
 
 function Read-Selection {
@@ -191,12 +253,13 @@ function Add-Finding {
         [string[]]$SelectLabels,
         [switch]$SelectAllByDefault,
         [object[]]$Chart,
-        [ValidateSet('Balken', 'Kacheln')][string]$ChartStyle = 'Balken',
+        [ValidateSet('Balken', 'Kacheln', 'Leiste')][string]$ChartStyle = 'Balken',
         [bool[]]$SelectDefault,
         [string]$Key,
         [switch]$Repeatable,
         [switch]$AskFolder,
         [switch]$AskFormat,
+        $AskParams,
         [switch]$Silent
     )
     $chartPoints = @($Chart | Where-Object { $_ })
@@ -204,6 +267,8 @@ function Add-Finding {
         $chartPoints = @(Get-TreemapLayout -Items $chartPoints)
         # Kleine Kacheln haben keinen Platz für Text – die Werte stehen deshalb zusätzlich in den Details
         if (-not $Items) { $Items = @($chartPoints | ForEach-Object { '{0,-34} {1,10}  ({2} %)' -f $_.Label, $_.Text, $_.Anteil }) }
+    } elseif ($ChartStyle -eq 'Leiste' -and $chartPoints) {
+        $chartPoints = @(Get-BarLayout -Items $chartPoints)
     }
     $finding = [pscustomobject]@{
         Category       = $Category
@@ -224,6 +289,7 @@ function Add-Finding {
         Repeatable     = [bool]$Repeatable
         AskFolder      = [bool]$AskFolder
         AskFormat      = [bool]$AskFormat
+        AskParams      = $AskParams
         FixOptions     = $null
         RunOk          = $false
         Selection      = $null
@@ -243,6 +309,26 @@ function Add-Finding {
     $Script:Findings.Add($finding)
     if (-not $Silent) { Write-Finding $finding }
     return
+}
+
+function Get-BarLayout {
+    <#
+        Leiste (z. B. Partitionen eines Datenträgers): Abschnitte nebeneinander in Reihenfolge, Breite nach Anteil,
+        mindestens 4 %, damit auch kleine Partitionen sichtbar bleiben. X und W sind Anteile (0–1), Y = 0, H = 1.
+    #>
+    param([object[]]$Items)
+    $vals = @($Items | Where-Object { [double]$_.Value -gt 0 })
+    if (-not $vals) { return @() }
+    $total = [double](($vals | Measure-Object Value -Sum).Sum)
+    $widths = @($vals | ForEach-Object { [math]::Max(0.04, [double]$_.Value / $total) })
+    $scale = 1.0 / [double](($widths | Measure-Object -Sum).Sum)
+    $x = 0.0
+    for ($i = 0; $i -lt $vals.Count; $i++) {
+        $w = $widths[$i] * $scale
+        [pscustomobject]@{ Label = $vals[$i].Label; Text = $vals[$i].Text; Value = [double]$vals[$i].Value; Color = "$($vals[$i].Color)"
+            X = $x; Y = 0.0; W = $w; H = 1.0; Anteil = [math]::Round(100 * [double]$vals[$i].Value / $total, 1); Path = $null }
+        $x += $w
+    }
 }
 
 function Get-TreemapLayout {
@@ -1811,7 +1897,7 @@ table.kv{width:100%;border-collapse:collapse}table.kv td{padding:6px 8px;border-
 .bar .bt{background:var(--track);border-radius:6px;height:12px;overflow:hidden}.bar .bt i{display:block;height:100%;background:var(--info);border-radius:6px}
 .bar .bl{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.bar .bv{text-align:right;color:var(--muted);font-variant-numeric:tabular-nums}
 .tm{position:relative;width:100%;aspect-ratio:5/2;margin-top:10px;border-radius:8px;overflow:hidden}.tmc{position:absolute;box-sizing:border-box;border:1px solid var(--card);color:#fff;padding:5px 7px;overflow:hidden;font-size:12px;line-height:1.3}
-.tmc b{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.tmc span{opacity:.85;white-space:nowrap}
+.tm.lb{aspect-ratio:auto;height:56px}.tmc b{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.tmc span{opacity:.85;white-space:nowrap}
 .better{color:var(--ok)}.worse{color:var(--warn)}.same{color:var(--muted)}
 .fix{margin-top:8px;font-size:13px}.fix.done{color:var(--ok)}.fix.open{color:var(--accent)}
 footer{margin-top:40px;color:var(--muted);font-size:13px;text-align:center}
@@ -1861,15 +1947,15 @@ $(if ($Script:HiddenFindings.Count) { "<div class=""card"" style=""border-left:4
                 $null = $sb.Append('</ul>')
             }
             $chart = @($f.Chart)
-            if ($chart -and $f.ChartStyle -eq 'Kacheln') {
+            if ($chart -and $f.ChartStyle -in 'Kacheln', 'Leiste') {
                 $inv = [Globalization.CultureInfo]::InvariantCulture
                 $colors = @('#1570ef', '#0e9384', '#7a5af8', '#dc6803', '#079455', '#c11574', '#3e4784', '#b54708', '#155eef', '#667085')
-                $null = $sb.Append('<div class="tm">')
+                $null = $sb.Append($(if ($f.ChartStyle -eq 'Leiste') { '<div class="tm lb">' } else { '<div class="tm">' }))
                 for ($ci = 0; $ci -lt $chart.Count; $ci++) {
                     $c = $chart[$ci]
-                    $style = [string]::Format($inv, 'left:{0:0.###}%;top:{1:0.###}%;width:{2:0.###}%;height:{3:0.###}%;background:{4}', $c.X * 100, $c.Y * 100, $c.W * 100, $c.H * 100, $colors[$ci % $colors.Count])
+                    $style = [string]::Format($inv, 'left:{0:0.###}%;top:{1:0.###}%;width:{2:0.###}%;height:{3:0.###}%;background:{4}', $c.X * 100, $c.Y * 100, $c.W * 100, $c.H * 100, $(if ($c.Color) { $c.Color } else { $colors[$ci % $colors.Count] }))
                     $tip = [System.Net.WebUtility]::HtmlEncode("$($c.Label): $($c.Text) ($($c.Anteil) %)")
-                    $label = if ($c.W * $c.H -ge 0.012) { "<b>$([System.Net.WebUtility]::HtmlEncode("$($c.Label)"))</b><span>$([System.Net.WebUtility]::HtmlEncode("$($c.Text)"))</span>" } else { '' }
+                    $label = if ($c.W * $c.H -ge 0.012 -or ($f.ChartStyle -eq 'Leiste' -and $c.W -ge 0.08)) { "<b>$([System.Net.WebUtility]::HtmlEncode("$($c.Label)"))</b><span>$([System.Net.WebUtility]::HtmlEncode("$($c.Text)"))</span>" } else { '' }
                     $null = $sb.Append("<div class=""tmc"" style=""$style"" title=""$tip"">$label</div>")
                 }
                 $null = $sb.Append('</div>')

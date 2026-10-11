@@ -23,18 +23,29 @@ function Get-PartitionLetter {
     return ''
 }
 
+function Get-PageFileLetters {
+    try { @(Get-CimInstance Win32_PageFileUsage -ErrorAction Stop | ForEach-Object { "$($_.Name)".Substring(0, 1).ToUpperInvariant() }) } catch { @() }
+}
+
 function Get-ExternalDisks {
-    <# Alle externen Datenträger mit Partitionen und Volumes. Boot-, System- und interne Datenträger sind ausgeschlossen. #>
+    <#
+        Externe Datenträger mit Partitionen und Volumes; mit -IncludeInternal zusätzlich interne Zusatzlaufwerke.
+        Immer ausgeschlossen: Boot- und Systemdatenträger, der Datenträger mit Windows und Datenträger mit Auslagerungsdatei.
+    #>
+    param([switch]$IncludeInternal)
     $sys = "$env:SystemDrive".TrimEnd(':', '\').ToUpperInvariant()
-    $disks = @(Get-Disk -ErrorAction Stop | Where-Object { "$($_.BusType)" -in $Script:ExternalBusTypes -and -not $_.IsBoot -and -not $_.IsSystem })
+    $pagefile = @(Get-PageFileLetters)
+    $disks = @(Get-Disk -ErrorAction Stop | Where-Object {
+            ("$($_.BusType)" -in $Script:ExternalBusTypes -or $IncludeInternal) -and -not $_.IsBoot -and -not $_.IsSystem })
     foreach ($d in $disks) {
         $parts = @(Get-Partition -DiskNumber $d.Number -ErrorAction SilentlyContinue)
-        if ($parts | Where-Object { (Get-PartitionLetter $_) -eq $sys }) { continue }
+        if ($parts | Where-Object { $l = Get-PartitionLetter $_; $l -and ($l -eq $sys -or $pagefile -contains $l) }) { continue }
         $vols = @(foreach ($p in $parts) {
                 $v = $null
                 try { $v = Get-Volume -Partition $p -ErrorAction Stop } catch { }
                 [pscustomobject]@{
                     PartitionNumber = $p.PartitionNumber
+                    Offset          = [double]$p.Offset
                     Letter          = Get-PartitionLetter $p
                     Size            = [double]$p.Size
                     Type            = "$($p.Type)"
@@ -57,15 +68,21 @@ function Get-ExternalDisks {
             Health     = "$($d.HealthStatus)"
             Status     = "$($d.OperationalStatus)"
             Partitions = $vols
+            IsInternal = "$($d.BusType)" -notin $Script:ExternalBusTypes
+            FreeExtent = [double]$d.LargestFreeExtent
+            SectorSize = $(if ($d.LogicalSectorSize) { [int]$d.LogicalSectorSize } else { 512 })
         }
     }
 }
 
 function Assert-ExternalDisk {
     <# Sicherheitsnetz vor jeder Änderung: Der Datenträger muss (noch) ein externer, nicht-System-Datenträger sein. #>
-    param([int]$Number, [string]$Letter)
-    $d = @(Get-ExternalDisks) | Where-Object { $_.Number -eq $Number } | Select-Object -First 1
-    if (-not $d) { throw "Datenträger $Number ist kein externer Datenträger (mehr) – aus Sicherheitsgründen abgebrochen." }
+    param([int]$Number, [string]$Letter, [switch]$AllowInternal)
+    $d = @(Get-ExternalDisks -IncludeInternal:$AllowInternal) | Where-Object { $_.Number -eq $Number } | Select-Object -First 1
+    if (-not $d) {
+        $what = if ($AllowInternal) { 'ein bearbeitbarer Datenträger (Windows-, Boot- und Systemdatenträger sind gesperrt)' } else { 'ein externer Datenträger' }
+        throw "Datenträger $Number ist nicht (mehr) $what – aus Sicherheitsgründen abgebrochen."
+    }
     if ($Letter -and -not ($d.Partitions | Where-Object { $_.Letter -eq $Letter.TrimEnd(':').ToUpperInvariant() })) {
         throw "Laufwerk $($Letter): gehört nicht (mehr) zu diesem Datenträger – aus Sicherheitsgründen abgebrochen."
     }
@@ -165,7 +182,7 @@ function Invoke-ExternalDriveScan {
     try { $disks = @(Get-ExternalDisks) } catch { Write-Host "     ✖ Datenträger konnten nicht gelesen werden: $($_.Exception.Message)" -ForegroundColor Red }
     Invoke-Check $cat 'Externe Datenträger: Übersicht' {
         if (-not $disks) {
-            Add-Finding $cat OK 'Kein externer Datenträger angeschlossen' -Detail 'USB-Stick, externe Festplatte oder SD-Karte anstecken und »Datenträger prüfen« klicken.'
+            Add-Finding $cat OK 'Kein externer Datenträger angeschlossen' -Detail 'USB-Stick, externe Festplatte oder SD-Karte anstecken und »Datenträger prüfen« klicken. Partitionswerkzeuge und Klonen stehen für interne Zusatzlaufwerke trotzdem zur Verfügung.'
             return
         }
         foreach ($d in $disks) {
@@ -186,10 +203,14 @@ function Invoke-ExternalDriveScan {
             $main = @($d.Partitions | Where-Object { $_.Letter } | Select-Object -First 1)
             $title = if ($main) { '{0} ({1}:) – {2}, {3}, {4} frei' -f $d.Name, $main[0].Letter, (Format-Bytes $d.Size), $(if ($main[0].FileSystem) { $main[0].FileSystem } else { 'RAW' }), (Format-Bytes $main[0].Free) }
             else { '{0} – {1}' -f $d.Name, (Format-Bytes $d.Size) }
-            Add-Finding $cat OK $title -Items $items
+            Add-Finding $cat OK $title -Items $items -Chart (Get-DiskBarChart $d) -ChartStyle Leiste
         }
     }
-    if (-not $disks) { return }
+    Invoke-Check $cat 'Zusatzlaufwerke: Partitionen' { Add-PartitionOverviewFindings -Category $cat }
+    if (-not $disks) {
+        Invoke-Check $cat 'Partitionen und Klonen: Werkzeuge' { Add-PartitionToolFindings -Category $cat; Add-CloneToolFindings -Category $cat }
+        return
+    }
 
     Invoke-Check $cat 'Externe Datenträger: Zustand' {
         foreach ($d in $disks) {
@@ -249,6 +270,7 @@ function Invoke-ExternalDriveScan {
 
     Invoke-Check $cat 'Externe Datenträger: Probleme' { Add-ExternalProblemFindings -Category $cat -Disks $disks }
     Invoke-Check $cat 'Externe Datenträger: Werkzeuge' { Add-ExternalToolFindings -Category $cat }
+    Invoke-Check $cat 'Partitionen und Klonen: Werkzeuge' { Add-PartitionToolFindings -Category $cat; Add-CloneToolFindings -Category $cat }
 }
 
 function Invoke-ExternalDriveScanDetailed { Invoke-ExternalDriveScan -Tiefenpruefung }

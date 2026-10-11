@@ -8,6 +8,30 @@ Derzeit keine offenen Punkte.
 
 Bewusst weiterhin nicht: Registry-Reiniger, Treiber von Drittanbieter-Seiten, automatische Reparaturen ohne Rückfrage, »RAM-Booster« und ähnliche Schein-Optimierer.
 
+## Erledigt in Version 3.3.0
+
+Umsetzungshinweise:
+- Alle neuen Werkzeuge nutzen einen gemeinsamen Eingabedialog. In der Konsole fragt das Tool dasselbe per Texteingabe ab.
+- Neben dem Windows-Datenträger sind auch Datenträger mit Auslagerungsdatei gesperrt.
+- In NTFS umwandeln geht nur mit FAT32 (Windows' »convert« kann kein exFAT).
+- Die Hersteller-Programme für den SSD-Umzug werden über die Support-Seite des Herstellers geöffnet.
+- Ein 1:1-Klon auf einen internen Datenträger schaltet diesen währenddessen offline. Bei Wechseldatenträgern sperrt und hängt das Tool stattdessen die Laufwerke aus.
+
+36. **Partitionswerkzeuge** (Bereich »Externe Datenträger«; gilt auch für **interne Zusatzlaufwerke**, z. B. eine zweite Festplatte im Desktop-PC – der Datenträger mit Windows bzw. Boot-/Systempartitionen bleibt immer ausgeschlossen):
+    - **Partitionsübersicht als Grafik** je Datenträger (Leiste wie in der Datenträgerverwaltung mit Partitionen und freiem Bereich) plus Tabelle: Buchstabe, Name, Dateisystem, Größe, belegt.
+    - **Partition erstellen** im freien Bereich (Größe, Dateisystem, Name, Laufwerksbuchstabe).
+    - **Datenträger aufteilen** (Assistent, z. B. 32 GB FAT32 fürs Autoradio + Rest exFAT; löscht alle Daten).
+    - **Partition löschen** (Inhalt anzeigen, Bestätigung durch Eintippen des Laufwerksbuchstabens).
+    - **Vergrößern** in angrenzenden freien Platz und **Verkleinern** ohne Datenverlust – Windows kann das nur bei NTFS; bei exFAT/FAT32 Erklärung statt Versuch; vor dem Verkleinern Dateisystem prüfen.
+    - **Laufwerksbuchstaben ändern/entfernen**, **Namen ändern**.
+    - **In NTFS umwandeln ohne Datenverlust** (FAT32/exFAT → NTFS, nur in diese Richtung; Hinweis, dass Mac/TV/Autoradio danach meist nicht mehr schreiben können).
+    - Sicherheit wie bisher: Prüfung vor jeder Änderung, Bestätigung durch Eintippen bei Löschen/Aufteilen, Protokoll. Bewusst nicht: Partitionen verschieben oder zusammenführen mit Datenerhalt (kann Windows nicht von sich aus, riskant).
+
+37. **Datenträger klonen** (Bereich »Externe Datenträger«; Quelle/Ziel: externe Datenträger und interne Zusatzlaufwerke – das Ziel ist nie der Windows-Datenträger):
+    - **A) Kopie auf Dateiebene** (für Datenlaufwerke): kompletter Inhalt mit Robocopy (Ordnerstruktur, Zeitstempel, Attribute), Ziel auf Wunsch vorher passend einrichten (Dateisystem, Name), danach Vergleich beider Laufwerke; Fortschritt, Restzeit, Abbrechen. Ergebnis nicht bootfähig.
+    - **B) Systemlaufwerk auf neue SSD umziehen** (Assistent): (1) Marke der neuen SSD erkennen und das kostenlose Umzugsprogramm des Herstellers verlinken (z. B. Samsung Data Migration, Acronis für WD/Crucial/Kingston); (2) alternativ mit Windows-Bordmitteln: Systemabbild erstellen und Schritt-für-Schritt-Anleitung zur Wiederherstellung auf die neue SSD (Installationsstick, »Computerreparaturoptionen«), inkl. Prüfung, ob die neue SSD groß genug ist.
+    - **C) 1:1-Klon Sektor für Sektor** (inkl. Partitionen, bootfähig): direkt von Datenträger zu Datenträger, auf Wunsch auch als Abbilddatei (.img) speichern bzw. zurückschreiben (z. B. SD-Karten für Raspberry Pi); Lesefehler überspringen und protokollieren (Rettung von defekten Sticks/Karten); Ziel muss mindestens so groß sein; Bestätigung durch Eintippen; Fortschritt, Restzeit, Abbrechen; danach Prüfsummenvergleich. Quelle nicht der laufende Windows-Datenträger (inkonsistente Kopie – dafür B). **Hinweis:** braucht direkten Sektorzugriff, den Windows PowerShell nicht von sich aus kann – der dafür nötige Hilfscode wird erst beim Start dieser Funktion geladen und deutlich gekennzeichnet; Virenscanner können darauf anschlagen (vom Benutzer ausdrücklich gewünscht).
+
 ## Erledigt in Version 3.2.0
 
 Umsetzungshinweise:
