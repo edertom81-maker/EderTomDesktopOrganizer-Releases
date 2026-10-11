@@ -50,7 +50,7 @@ param(
 
 if ($Unbeaufsichtigt) { $NurPruefen = $true }
 
-$Script:ToolVersion = '2.8.0'
+$Script:ToolVersion = '2.9.0'
 $Script:InstallDir = $PSScriptRoot
 $Script:ChangeCounter = 0
 $Script:SoftwareUpdateCache = $null
@@ -649,6 +649,10 @@ function Get-JunkLocations {
     )
     $memDump = Join-Path $env:windir 'MEMORY.DMP'
     if (Test-Path -LiteralPath $memDump) { $list += @{ Name = 'Großes Speicherabbild (MEMORY.DMP)'; File = $memDump } }
+    # Windows-Protokolle (Komponenten- und DISM-Logs) älter als 7 Tage
+    $list += @{ Name = 'Windows-Protokolle (CBS/DISM, älter als 7 Tage)'; Paths = @((Join-Path $env:windir 'Logs\CBS'), (Join-Path $env:windir 'Logs\DISM')); Hours = 168 }
+    # Browser-Caches (Cookies, Passwörter, Verlauf und Lesezeichen bleiben unberührt)
+    if (Get-Command Get-BrowserCacheLocations -ErrorAction SilentlyContinue) { $list += @(Get-BrowserCacheLocations) }
     return $list
 }
 
@@ -658,6 +662,8 @@ function Measure-Junk {
         $size = [double]0
         if ($loc.File) {
             $size = (Get-Item -LiteralPath $loc.File -Force -ErrorAction SilentlyContinue).Length
+        } elseif ($loc.Paths) {
+            foreach ($p in $loc.Paths) { $size += Get-FolderSize -Path $p -OlderThanHours $loc.Hours }
         } elseif ($loc.Filter) {
             Get-ChildItem -LiteralPath $loc.Path -Filter $loc.Filter -Force -File -ErrorAction SilentlyContinue | ForEach-Object { $size += $_.Length }
         } else {
@@ -677,10 +683,17 @@ function Measure-Junk {
 function Clear-Junk {
     param($Entries)
     $freed = [double]0
+    $skipped = @()
     foreach ($e in $Entries) {
         $loc = $e.Location
         Write-Host "     – $($loc.Name)" -ForegroundColor DarkGray
-        if ($loc.RecycleBin) {
+        if ($loc.Process -and (Get-Process -Name $loc.Process -ErrorAction SilentlyContinue)) {
+            $skipped += $loc.Browser
+            continue
+        }
+        if ($loc.Paths) {
+            foreach ($p in $loc.Paths) { $freed += Remove-FolderContent -Path $p -OlderThanHours $loc.Hours }
+        } elseif ($loc.RecycleBin) {
             try { Clear-RecycleBin -Force -ErrorAction Stop; $freed += $e.Size } catch { }
         } elseif ($loc.File) {
             try { Remove-Item -LiteralPath $loc.File -Force -ErrorAction Stop; $freed += $e.Size } catch { }
@@ -697,7 +710,9 @@ function Clear-Junk {
             $freed += Remove-FolderContent -Path $loc.Path -OlderThanHours $loc.Hours
         }
     }
-    return "$(Format-Bytes $freed) freigegeben."
+    $msg = "$(Format-Bytes $freed) freigegeben."
+    if ($skipped) { $msg += " Übersprungen, weil geöffnet: $($skipped -join ', ') – Browser schließen und erneut ausführen." }
+    return $msg
 }
 
 function Invoke-MemoryScanDetailed { Invoke-MemoryScan -Tiefenanalyse }
@@ -821,6 +836,7 @@ function Invoke-MemoryScan {
     }
 
     Invoke-Check $cat 'Downloads-Ordner (alte Installationsdateien, Duplikate, große Dateien)' { Add-DownloadCleanupFindings -Category $cat }
+    Add-RecoveryDataFindings -Category $cat -Tiefenanalyse:$Tiefenanalyse
     Add-FileToolFindings -Category $cat
 }
 
@@ -960,6 +976,8 @@ function Invoke-PerformanceScan {
                 -FixLabel "»$($p.Name)« beenden" -FixData @{ Name = $p.Name } -Fix { param($d) Stop-ProcessGroup $d }
         }
     }
+
+    Invoke-Check $cat 'Geplante Aufgaben und Dienste beim Start' { Add-ExtendedAutostartFindings -Category $cat }
 
     Invoke-Check $cat 'Autostart-Programme' {
         $all = @(Get-AutostartEntries)

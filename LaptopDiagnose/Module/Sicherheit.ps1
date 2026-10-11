@@ -9,6 +9,10 @@ function Invoke-SecurityScan {
     Clear-CategoryFindings $cat
     Write-Title 'Sicherheit'
 
+    Invoke-Check $cat 'Datensicherung' { Add-BackupStatusFindings -Category $cat }
+    Invoke-Check $cat 'Datenschutz-Einstellungen' { Add-PrivacyFindings -Category $cat }
+    Invoke-Check $cat 'Browser-Erweiterungen' { Add-BrowserExtensionFindings -Category $cat }
+
     Invoke-Check $cat 'Virenschutz' {
         $av = @(Get-CimInstance -Namespace root/SecurityCenter2 -ClassName AntiVirusProduct -ErrorAction SilentlyContinue)
         $activeAv = @($av | Where-Object { (([int]$_.productState -shr 12) -band 0xF) -eq 1 })

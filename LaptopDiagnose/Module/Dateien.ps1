@@ -595,6 +595,9 @@ function Add-FileToolFindings {
     Add-Finding $Category Info 'Werkzeug: Große Ordner anzeigen und löschen' -Silent -Repeatable -AskFolder `
         -Detail "Listet die größten Ordner (bis zwei Ebenen tief) mit Größe, Dateianzahl und Datum; ganze Ordner lassen sich zum Löschen auswählen. $common" `
         -FixLabel 'Große Ordner anzeigen' -FixData @{ Folder = $null } -Fix { param($d, $pre) if (-not $pre -and -not $d.Folder) { $d = Read-FolderChoice }; Invoke-LargeFolderSearch $d }
+    Add-Finding $Category Info 'Werkzeug: Programme deinstallieren' -Silent -Repeatable `
+        -Detail 'Listet alle installierten Programme und Store-Apps mit Größe, Hersteller und Installationsdatum. Deinstalliert wird nach Auswahl über den offiziellen Deinstaller; danach werden zurückgebliebene Ordner zur Auswahl angeboten.' `
+        -FixLabel 'Programme anzeigen' -Fix { param($d, $pre) Invoke-ProgramListTool $d }
     Add-Finding $Category Info 'Werkzeug: Entwickler-Reste finden' -Silent -Repeatable -AskFolder `
         -Detail 'Findet neu erzeugbare Ordner in Programmier-Projekten (z. B. Codex-Arbeitsordner): node_modules, Python-Umgebungen, Caches und Build-Ausgaben, dazu globale Paket-Caches von npm, pip, NuGet, Yarn und Gradle. Eigener Code und Git-Verläufe werden nie angeboten. Gesucht wird in Dokumente, Desktop, Downloads und typischen Projektordnern – auf Wunsch in einem anderen Ordner.' `
         -FixLabel 'Entwickler-Reste finden' -FixData @{ Folder = $null } -Fix { param($d, $pre) if (-not $pre -and -not $d.Folder) { $d = Read-FolderChoice }; Invoke-DevLeftoverSearch $d }

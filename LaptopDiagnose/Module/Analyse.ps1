@@ -219,7 +219,8 @@ function Get-StorageBreakdown {
         }
         try {
             $vol = Get-CimInstance Win32_Volume -Filter "DriveLetter='$($Path.TrimEnd('\'))'" -ErrorAction Stop
-            $shadow = Get-CimInstance Win32_ShadowStorage -ErrorAction Stop | Where-Object { $_.Volume -match [regex]::Escape($vol.DeviceID) }
+            $guid = if ("$($vol.DeviceID)" -match '\{[0-9A-Fa-f-]+\}') { $Matches[0] } else { "$($vol.DeviceID)" }
+            $shadow = Get-CimInstance Win32_ShadowStorage -ErrorAction Stop | Where-Object { "$($_.Volume)" -match [regex]::Escape($guid) }
             if ($shadow -and $shadow.UsedSpace) { $entries.Add([pscustomobject]@{ Label = 'Wiederherstellungspunkte'; Value = [double]$shadow.UsedSpace }) }
         } catch { }
     }
